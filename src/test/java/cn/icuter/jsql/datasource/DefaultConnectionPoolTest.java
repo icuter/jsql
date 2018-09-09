@@ -13,11 +13,15 @@ import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
 import java.sql.Connection;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 /**
  * @author edward
@@ -30,14 +34,18 @@ public class DefaultConnectionPoolTest {
     int threadSize = 50;
 
     @BeforeClass
-    public static void setup() {
+    public static void setup() throws Exception {
         PoolConfiguration poolConfiguration = PoolConfiguration.defaultPoolCfg();
         poolConfiguration.setIdleCheckInterval(200L);
 //        poolConfiguration.setPollTimeout(500);
 
-        JSQLDataSource dataSource = new JSQLDataSource("jdbc:mysql://xt5:3308/cmxt?serverTimezone=GMT%2B8",
-                "coremail", "3020509829");
-        pool = dataSource.createConnectionPool(poolConfiguration);
+        Properties properties = new Properties();
+        String icuterHome = System.getenv("ICUTER_HOME"); // only for test
+        try (InputStream in = new FileInputStream(new File(icuterHome, "conf/jdbc.properties"))) {
+            properties.load(in);
+            JSQLDataSource dataSource = new JSQLDataSource(properties);
+            pool = dataSource.createConnectionPool(poolConfiguration);
+        }
     }
 
     @Test
@@ -107,12 +115,10 @@ public class DefaultConnectionPoolTest {
         }};
         JdbcExecutor jdbcExecutor = new DefaultJdbcExecutor(connection);
         List<Map<String, Object>> resultMap = jdbcExecutor.execQuery(builder);
-        List<OrgUnit> result = jdbcExecutor.execQuery(builder, OrgUnit.class);
-
-        jdbcExecutor.execQuery(builder);
+        List<OrgUnit> resultORM = jdbcExecutor.execQuery(builder, OrgUnit.class);
 
         System.out.println("resultMap: " + resultMap);
-        System.out.println("result: " + result);
+        System.out.println("result: " + resultORM);
     }
 
     @Test
