@@ -41,9 +41,8 @@ public class JSQLDataSource {
      * </pre>
      * @param jdbcProp jdbc properties in file or create by manually
      */
-    public JSQLDataSource(Properties jdbcProp) {
+    public JSQLDataSource(final Properties jdbcProp) {
         String dialectInProp = jdbcProp.getProperty("dialect");
-        Dialect dialect;
         if (dialectInProp != null) {
             dialect = Dialects.parseName(dialectInProp);
             // dialect name or dialectClass not found
@@ -109,7 +108,7 @@ public class JSQLDataSource {
     public ObjectPool<JdbcExecutor> createExecutorPool() {
         return createExecutorPool(null);
     }
-    
+
     public ObjectPool<JdbcExecutor> createExecutorPool(PoolConfiguration poolConfiguration) {
         PooledObjectManager<JdbcExecutor> manager = new PooledExecutorManager(url, username, password, driverClassName);
         return poolConfiguration == null ? new DefaultObjectPool<>(manager)

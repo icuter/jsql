@@ -5,8 +5,16 @@ import cn.icuter.jsql.datasource.PoolConfiguration;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.concurrent.BlockingDeque;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -98,8 +106,7 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
                         try {
                             pooledObject = idlePooledObjects.pollFirst(poolConfiguration.getPollTimeout(), TimeUnit.MILLISECONDS);
                             if (pooledObject == null) {
-                                throw new TimeoutException("get pool object timeout, waited for " +
-                                        poolConfiguration.getPollTimeout() + "ms");
+                                throw new TimeoutException("get pool object timeout, waited for " + poolConfiguration.getPollTimeout() + "ms");
                             }
                         } catch (InterruptedException e) {
                             throw new Exception("get pool object fail!", e);
@@ -126,8 +133,7 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
 
     private boolean isIdleObjectTimeout(PooledObject<T> pooledObject) {
         long lastReturnedTime = pooledObject.getLastReturnedTime();
-        return lastReturnedTime > 0 &&
-                System.currentTimeMillis() - lastReturnedTime > poolConfiguration.getIdleTimeout();
+        return lastReturnedTime > 0 && System.currentTimeMillis() - lastReturnedTime > poolConfiguration.getIdleTimeout();
     }
 
     private boolean isPoolNotFull() {
@@ -223,8 +229,8 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
 
     @Override
     public String debugInfo() {
-        return "Pool State: " + (closed ? "closed" : "running") + ", " + poolStats + "; " + poolConfiguration +
-                "; idle size: " + idlePooledObjects.size();
+        return "Pool State: " + (closed ? "closed" : "running") + ", " + poolStats + "; " + poolConfiguration
+                + "; idle size: " + idlePooledObjects.size();
     }
 
     PoolStats getPoolStats() {
@@ -269,13 +275,12 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
 
         @Override
         public String toString() {
-            return "PoolStats {poolSize=" + poolSize +
-                    ", createdCnt=" + createdCnt +
-                    ", invalidCnt=" + invalidCnt +
-                    ", borrowedCnt=" + borrowedCnt +
-                    ", returnedCnt=" + returnedCnt +
-                    ", lastAccessTime=" + formattedLastAccessTime +
-                    "}";
+            return "PoolStats {poolSize=" + poolSize
+                    + ", createdCnt=" + createdCnt
+                    + ", invalidCnt=" + invalidCnt
+                    + ", borrowedCnt=" + borrowedCnt
+                    + ", returnedCnt=" + returnedCnt
+                    + ", lastAccessTime=" + formattedLastAccessTime + "}";
         }
     }
 
@@ -293,7 +298,7 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
                     return;
                 }
                 long idleTimeout = poolConfiguration.getIdleTimeout();
-                if (idleTimeout >= Long.MAX_VALUE) {
+                if (idleTimeout == -1) {
                     // idle pooled object never timeout
                     return;
                 }

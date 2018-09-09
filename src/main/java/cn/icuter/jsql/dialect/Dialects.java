@@ -11,7 +11,7 @@ import java.util.Set;
  * @author edward
  * @since 2018-08-30
  */
-public class Dialects {
+public abstract class Dialects {
 
     public static final Dialect MYSQL = new MySQLDialect();
     public static final Dialect MARIADB = new MariadbDialect();

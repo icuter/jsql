@@ -1,6 +1,9 @@
 package cn.icuter.jsql.builder;
 
-import cn.icuter.jsql.condition.*;
+import cn.icuter.jsql.condition.Cond;
+import cn.icuter.jsql.condition.Condition;
+import cn.icuter.jsql.condition.PrepareType;
+import cn.icuter.jsql.condition.Var;
 import cn.icuter.jsql.dialect.Dialect;
 import cn.icuter.jsql.dialect.Dialects;
 
@@ -123,13 +126,6 @@ public abstract class AbstractBuilder implements Builder {
     }
 
     @Override
-    public Builder outerJoinOn(String tableName, Var var) {
-        addCondition(var);
-        preparedSql.append(" outer join ").append(tableName).append(" var").append(var.toSql());
-        return this;
-    }
-
-    @Override
     public Builder having(Condition... conditions) {
         addCondition(conditions);
         preparedSql.append(" having").append(Cond.and(conditions).toSql());
@@ -137,30 +133,37 @@ public abstract class AbstractBuilder implements Builder {
     }
 
     @Override
+    public Builder outerJoinOn(String tableName, Var var) {
+        addCondition(var);
+        preparedSql.append(" outer join ").append(tableName).append(" on").append(var.toSql());
+        return this;
+    }
+
+    @Override
     public Builder joinOn(String tableName, Var var) {
         addCondition(var);
-        preparedSql.append(" join ").append(tableName).append(" var").append(var.toSql());
+        preparedSql.append(" join ").append(tableName).append(" on").append(var.toSql());
         return this;
     }
 
     @Override
     public Builder leftJoinOn(String tableName, Var var) {
         addCondition(var);
-        preparedSql.append(" left join ").append(tableName).append(" var").append(var.toSql());
+        preparedSql.append(" left join ").append(tableName).append(" on").append(var.toSql());
         return this;
     }
 
     @Override
     public Builder rightJoinOn(String tableName, Var var) {
         addCondition(var);
-        preparedSql.append(" right join ").append(tableName).append(" var").append(var.toSql());
+        preparedSql.append(" right join ").append(tableName).append(" on").append(var.toSql());
         return this;
     }
 
     @Override
     public Builder fullJoinOn(String tableName, Var var) {
         addCondition(var);
-        preparedSql.append(" full join ").append(tableName).append(" var").append(var.toSql());
+        preparedSql.append(" full join ").append(tableName).append(" on").append(var.toSql());
         return this;
     }
 

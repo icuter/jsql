@@ -8,7 +8,9 @@ import cn.icuter.jsql.builder.BuilderContext;
  */
 public interface Dialect {
     String getDriverClassName();
-    String getDialectName();
+    default String getDialectName() {
+        return null;
+    }
 
     default void injectOffsetLimit(BuilderContext builderCtx) {
         throw new UnsupportedOperationException();

@@ -37,7 +37,7 @@ public class BuilderTest {
                     .forUpdate()
                     .build();
         }};
-        assertEquals(select.getSql(), "select distinct * from t_table1 left join t_table2 var t_table1.id=t_table2.id " +
+        assertEquals(select.getSql(), "select distinct * from t_table1 left join t_table2 on t_table1.id=t_table2.id " +
                 "where ( name = ? or age = ? or tall = ?) and ( id = ? and name like ?) and birth = ? or post = ? " +
                 "and user in (?,?,?) for update");
         assertArrayEquals(select.getPreparedValues().toArray(), new Object[]{"Edward", 30, 170, "123", "%Lee",

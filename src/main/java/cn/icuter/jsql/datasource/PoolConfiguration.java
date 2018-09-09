@@ -9,30 +9,21 @@ import java.util.concurrent.TimeUnit;
 public class PoolConfiguration {
 
     private int maxPoolSize;    // default 12
-    private String validateSql;
     /**
-     * idle timeout = Long.MAX_VALUE means never timeout (default)
-     * idle timeout <= 0 means always timeout
+     * idle timeout -1 means never timeout (default)
+     * idle timeout 0 means always timeout
      */
-    private long idleTimeout;       // milliseconds, default Long.MAX_VALUE
+    private long idleTimeout;       // milliseconds, default -1
     private long idleCheckInterval; // milliseconds, default 15 minus
     private long pollTimeout;       // milliseconds, default -1
 
     public static PoolConfiguration defaultPoolCfg() {
         PoolConfiguration poolConfiguration = new PoolConfiguration();
         poolConfiguration.setMaxPoolSize(12);
-        poolConfiguration.setPollTimeout(-1);             // never timeout
-        poolConfiguration.setIdleTimeout(Long.MAX_VALUE); // never timeout
+        poolConfiguration.setPollTimeout(-1); // never timeout
+        poolConfiguration.setIdleTimeout(-1); // never timeout
         poolConfiguration.setIdleCheckInterval(TimeUnit.MILLISECONDS.convert(15L, TimeUnit.MINUTES));
         return poolConfiguration;
-    }
-
-    public String getValidateSql() {
-        return validateSql;
-    }
-
-    public void setValidateSql(String validateSql) {
-        this.validateSql = validateSql;
     }
 
     public int getMaxPoolSize() {
@@ -69,12 +60,10 @@ public class PoolConfiguration {
 
     @Override
     public String toString() {
-        return "PoolConfiguration{" +
-                "maxPoolSize=" + maxPoolSize +
-                ", validateSql='" + validateSql + '\'' +
-                ", idleTimeout=" + idleTimeout +
-                ", idleCheckInterval=" + idleCheckInterval +
-                ", pollTimeout=" + pollTimeout +
-                '}';
+        return "PoolConfiguration{"
+                + "maxPoolSize=" + maxPoolSize
+                + ", idleTimeout=" + idleTimeout
+                + ", idleCheckInterval=" + idleCheckInterval
+                + ", pollTimeout=" + pollTimeout + '}';
     }
 }

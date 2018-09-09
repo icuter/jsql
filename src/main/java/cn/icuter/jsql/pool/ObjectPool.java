@@ -23,7 +23,8 @@ public interface ObjectPool<T> extends AutoCloseable {
     void returnObject(T object) throws Exception;
 
     /**
-     * close the object pool, especially, while closing object pool, {@link #borrowObject} and {@link #returnObject} will be lock till pool was closed.
+     * close the object pool, especially, while closing object pool, {@link #borrowObject}
+     * and {@link #returnObject} will be lock till pool was closed.
      * <br/>
      * if pooled object was borrowed will not be invalided by {@link cn.icuter.jsql.pool.PooledObjectManager} but {@link #returnObject} do
      *

@@ -44,7 +44,7 @@ public class In extends AbstractCondition {
         int placeHolderCnt = 0;
         if (Collection.class.isAssignableFrom(value.getClass())) {
             placeHolderCnt = ((Collection) value).size();
-        } else if (value.getClass().isArray()){
+        } else if (value.getClass().isArray()) {
             placeHolderCnt = ((Object[]) value).length;
         }
         String placeHolder = Arrays.stream(new String[placeHolderCnt])

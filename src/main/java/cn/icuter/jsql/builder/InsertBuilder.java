@@ -41,7 +41,7 @@ public class InsertBuilder extends AbstractBuilder implements DMLBuilder {
             throw new IllegalArgumentException("values must not be null or empty! ");
         }
         preparedSql.append("(")
-                .append(Arrays.stream(values).map(Condition::getField).reduce((f,s) -> f + "," + s).orElse(""))
+                .append(Arrays.stream(values).map(Condition::getField).reduce((f, s) -> f + "," + s).orElse(""))
                 .append(")")
                 .append(" values(").append(createPlaceHolder(values.length)).append(")");
         addCondition(values);

@@ -32,7 +32,6 @@ public class DefaultConnectionPoolTest {
     @BeforeClass
     public static void setup() {
         PoolConfiguration poolConfiguration = PoolConfiguration.defaultPoolCfg();
-        poolConfiguration.setValidateSql("select 1 from dual");
         poolConfiguration.setIdleCheckInterval(200L);
 //        poolConfiguration.setPollTimeout(500);
 

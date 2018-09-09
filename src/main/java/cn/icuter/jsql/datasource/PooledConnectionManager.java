@@ -3,7 +3,9 @@ package cn.icuter.jsql.datasource;
 import cn.icuter.jsql.pool.PooledObject;
 import cn.icuter.jsql.pool.PooledObjectManager;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.util.Objects;
 
 /**
@@ -19,31 +21,21 @@ public class PooledConnectionManager implements PooledObjectManager<Connection> 
     private final String username;
     private final String password;
     private final String driverClassName;
-    /**
-     * validationSql does not suggest to set, because network error timeout too long,
-     * as default using {@link java.sql.Connection#isValid(int)}
-     */
-    private final String validationSql;
 
     PooledConnectionManager(String url, String username, String password, String driverClassName) {
-        this(url, username, password, driverClassName, 5, -1, 5, null);
-    }
-
-    PooledConnectionManager(String url, String username, String password, String driverClassName, String validationSql) {
-        this(url, username, password, driverClassName, 5, -1, 5, validationSql);
+        this(url, username, password, driverClassName, 5, -1, 5);
     }
 
     PooledConnectionManager(String url, String username, String password, String driverClassName, int checkValidTimeout) {
-        this(url, username, password, driverClassName, 5, -1, checkValidTimeout, null);
+        this(url, username, password, driverClassName, 5, -1, checkValidTimeout);
     }
 
     private PooledConnectionManager(String url, String username, String password, String driverClassName,
-                                    int loginTimeout, int invalidTimeout, int checkValidTimeout, String validationSql) {
+                                    int loginTimeout, int invalidTimeout, int checkValidTimeout) {
         this.url = url;
         this.username = username;
         this.password = password;
         this.driverClassName = driverClassName;
-        this.validationSql = validationSql;
         this.loginTimeout = loginTimeout;
         this.invalidTimeout = invalidTimeout;
         this.checkValidTimeout = checkValidTimeout;
@@ -110,15 +102,7 @@ public class PooledConnectionManager implements PooledObjectManager<Connection> 
     }
 
     private boolean validateQuery(Connection connection) throws SQLException {
-        if (validationSql == null || validationSql.length() <= 0) {
-            return connection.isValid(checkValidTimeout);
-        }
-        try (Statement s = connection.createStatement()) {
-            s.setQueryTimeout(checkValidTimeout); // doesn't work while network error
-            try (ResultSet resultSet = s.executeQuery(validationSql)) {
-                return resultSet.next();
-            }
-        }
+        return connection.isValid(checkValidTimeout);
     }
 
     public void setInvalidTimeout(int invalidTimeout) {

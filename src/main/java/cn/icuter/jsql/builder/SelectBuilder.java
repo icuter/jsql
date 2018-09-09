@@ -24,7 +24,7 @@ public class SelectBuilder extends AbstractBuilder implements DQLBuilder {
         builderContext.forUpdatePosition = preparedSql.length();
         preparedSql.append(" for update");
         if (columns != null && columns.length > 0) {
-            preparedSql.append(" of ").append(Arrays.stream(columns).reduce((f,s) -> f + "," + s).orElse(""));
+            preparedSql.append(" of ").append(Arrays.stream(columns).reduce((f, s) -> f + "," + s).orElse(""));
         }
         return this;
     }
@@ -38,7 +38,6 @@ public class SelectBuilder extends AbstractBuilder implements DQLBuilder {
         builderContext.hasOrderBy = true;
         return this;
     }
-
 
     @Override
     public String toSql() {

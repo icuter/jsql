@@ -1,7 +1,6 @@
 package cn.icuter.jsql.datasource;
 
 import cn.icuter.jsql.builder.Builder;
-import cn.icuter.jsql.executor.BatchResult;
 import cn.icuter.jsql.executor.DefaultJdbcExecutor;
 import cn.icuter.jsql.executor.JdbcExecutor;
 import cn.icuter.jsql.pool.PooledObject;

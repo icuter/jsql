@@ -2,12 +2,9 @@ package cn.icuter.jsql.builder;
 
 import cn.icuter.jsql.condition.Condition;
 import cn.icuter.jsql.condition.Eq;
-import cn.icuter.jsql.condition.Value;
 import cn.icuter.jsql.condition.Var;
 
-import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 
 /**
  * @author edward

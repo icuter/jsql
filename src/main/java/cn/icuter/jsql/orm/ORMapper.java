@@ -1,14 +1,13 @@
 package cn.icuter.jsql.orm;
 
 import cn.icuter.jsql.ColumnName;
-import cn.icuter.jsql.condition.Cond;
-import cn.icuter.jsql.condition.Eq;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
-import java.sql.ResultSetMetaData;
-import java.sql.SQLException;
-import java.util.*;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 
 /**
  * @author edward

@@ -18,7 +18,7 @@ public class PooledObjectManagerTest {
     public static void setup() {
         manager = new PooledConnectionManager(
                 "jdbc:mysql://xt5:3308/cmxt?serverTimezone=GMT%2B8",
-                "coremail", "3020509829", "com.mysql.cj.jdbc.Driver", "select 1 from dual");
+                "coremail", "3020509829", "com.mysql.cj.jdbc.Driver");
     }
 
     @Test

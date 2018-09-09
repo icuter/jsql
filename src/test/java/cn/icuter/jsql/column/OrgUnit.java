@@ -26,12 +26,12 @@ public class OrgUnit {
     @Override
     public String toString() {
         return "OrgUnit{" +
-                "orgId='" + orgId + '\'' +
-                ", ouId='" + ouId + '\'' +
-                ", pOuId='" + pOuId + '\'' +
-                ", ouName='" + ouName + '\'' +
-                ", ouListRank=" + ouListRank +
-                '}';
+                "orgId='" + orgId + '\''
+                + ", ouId='" + ouId + '\''
+                + ", pOuId='" + pOuId + '\''
+                + ", ouName='" + ouName + '\''
+                + ", ouListRank=" + ouListRank
+                + '}';
     }
 
     public String getOrgId() {
