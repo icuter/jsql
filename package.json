@@ -1,0 +1,28 @@
+{
+  "name": "jsql",
+  "version": "1.0.0",
+  "description": "JSQL ======",
+  "main": "index.js",
+  "dependencies": {},
+  "devDependencies": {
+    "cz-conventional-changelog": "^2.1.0"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/edwardjhl/jsql.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/edwardjhl/jsql/issues"
+  },
+  "homepage": "https://github.com/edwardjhl/jsql#readme",
+  "config": {
+    "commitizen": {
+      "path": "./node_modules/cz-conventional-changelog"
+    }
+  }
+}
