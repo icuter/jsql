@@ -23,6 +23,7 @@ public abstract class Dialects {
     public static final Dialect POSTGRESQL = new PostgreSQLDialect();
     public static final Dialect CUBRID = new CubridDialect();
     public static final Dialect DB2 = new DB2Dialect();
+    public static final Dialect SQLITE = new SQLiteDialect();
     public static final Dialect UNKNOWN = new UnknownDialect();
 
     public static final Set<Dialect> SUPPORTED_DIALECT = new LinkedHashSet<>();
@@ -37,6 +38,8 @@ public abstract class Dialects {
         SUPPORTED_DIALECT.add(POSTGRESQL);
         SUPPORTED_DIALECT.add(CUBRID);
         SUPPORTED_DIALECT.add(DB2);
+        SUPPORTED_DIALECT.add(SQLITE);
+        SUPPORTED_DIALECT.add(UNKNOWN);
     }
 
     public static Dialect parseUrl(String url) {
@@ -59,9 +62,9 @@ public abstract class Dialects {
         boolean offsetExists = builderContext.getOffset() > 0;
         StringBuilder offsetLimitBuilder = new StringBuilder(offsetExists ? " limit ?,?" : " limit ?");
         if (offsetExists) {
-            builderContext.getConditionList().add(Cond.value(builderContext.getOffset()));
+            builderContext.addCondition(Cond.value(builderContext.getOffset()));
         }
-        builderContext.getConditionList().add(Cond.value(builderContext.getLimit()));
+        builderContext.addCondition(Cond.value(builderContext.getLimit()));
 
         StringBuilder preparedSqlBuilder = builderContext.getPreparedSql();
         if (builderContext.getForUpdatePosition() > 0) {
@@ -74,9 +77,9 @@ public abstract class Dialects {
     static void injectWithLimitOffsetKey(BuilderContext builderContext) {
         boolean offsetExists = builderContext.getOffset() > 0;
         StringBuilder offsetLimitBuilder = new StringBuilder(offsetExists ? " limit ? offset ?" : " limit ?");
-        builderContext.getConditionList().add(Cond.value(builderContext.getLimit()));
+        builderContext.addCondition(Cond.value(builderContext.getLimit()));
         if (offsetExists) {
-            builderContext.getConditionList().add(Cond.value(builderContext.getOffset()));
+            builderContext.addCondition(Cond.value(builderContext.getOffset()));
         }
         StringBuilder preparedSqlBuilder = builderContext.getPreparedSql();
         if (builderContext.getForUpdatePosition() > 0) {
