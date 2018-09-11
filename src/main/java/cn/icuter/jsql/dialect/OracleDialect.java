@@ -32,12 +32,12 @@ public class OracleDialect implements Dialect {
         if (offset > 0) {
             preparedSql.insert(0, "select * from ( select _source.*, rownum _rownum from ( ");
             preparedSql.append(" ) _source where rownum <= ?) where _rownum > ?");
-            builderCtx.getConditionList().add(Cond.value(limit));
-            builderCtx.getConditionList().add(Cond.value(offset));
+            builderCtx.addCondition(Cond.value(limit));
+            builderCtx.addCondition(Cond.value(offset));
         } else {
             preparedSql.insert(0, "select * from ( ");
             preparedSql.append(" ) where rownum <= ?");
-            builderCtx.getConditionList().add(Cond.value(limit));
+            builderCtx.addCondition(Cond.value(limit));
         }
         if (forUpdateSql != null && forUpdateSql.length() > 0) {
             preparedSql.append(forUpdateSql);

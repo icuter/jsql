@@ -37,10 +37,14 @@ public abstract class AbstractBuilder implements Builder {
     }
 
     public void init() {
-        builderContext = new BuilderContext();
+        builderContext = new BuilderContext() {
+            @Override
+            public void addCondition(Condition condition) {
+                AbstractBuilder.this.addCondition(condition);
+            }
+        };
         builderContext.preparedSql = preparedSql;
         builderContext.dialect = dialect;
-        builderContext.conditionList = conditionList;
         builderContext.offset = offset;
         builderContext.limit = limit;
     }
@@ -64,14 +68,14 @@ public abstract class AbstractBuilder implements Builder {
     @Override
     public Builder union(Builder builder) {
         preparedSql.append(" union ").append(builder.getSql());
-        conditionList.addAll(builder.getConditionList());
+        addCondition(builder.getConditionList());
         return this;
     }
 
     @Override
     public Builder unionAll(Builder builder) {
         preparedSql.append(" union all ").append(builder.getSql());
-        conditionList.addAll(builder.getConditionList());
+        addCondition(builder.getConditionList());
         return this;
     }
 
@@ -251,14 +255,14 @@ public abstract class AbstractBuilder implements Builder {
     @Override
     public Builder exists(Builder builder) {
         preparedSql.append(" exists (").append(builder.getSql()).append(")");
-        conditionList.addAll(builder.getConditionList());
+        addCondition(builder.getConditionList());
         return this;
     }
 
     @Override
     public Builder notExists(Builder builder) {
         preparedSql.append(" not exists (").append(builder.getSql()).append(")");
-        conditionList.addAll(builder.getConditionList());
+        addCondition(builder.getConditionList());
         return this;
     }
 
@@ -378,13 +382,19 @@ public abstract class AbstractBuilder implements Builder {
     @Override
     public Builder value(Object... values) {
         Objects.requireNonNull(values, "values must not be null");
-        conditionList.addAll(Arrays.stream(values).map(Cond::value).collect(Collectors.toList()));
+        addCondition(Arrays.stream(values).map(Cond::value).collect(Collectors.toList()));
         return this;
     }
 
     protected void addCondition(Condition... conditions) {
         if (conditions != null && conditions.length > 0) {
             conditionList.addAll(Arrays.asList(conditions));
+        }
+    }
+
+    protected void addCondition(Collection<Condition> conditions) {
+        if (conditions != null && !conditions.isEmpty()) {
+            conditionList.addAll(conditions);
         }
     }
 }

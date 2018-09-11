@@ -3,8 +3,6 @@ package cn.icuter.jsql.builder;
 import cn.icuter.jsql.condition.Condition;
 import cn.icuter.jsql.dialect.Dialect;
 
-import java.util.List;
-
 
 /**
  * @author edward
@@ -13,7 +11,6 @@ import java.util.List;
 public class BuilderContext {
 
     Dialect dialect;
-    List<Condition> conditionList;
     StringBuilder preparedSql;
     int offset;
     int limit;
@@ -24,8 +21,8 @@ public class BuilderContext {
     BuilderContext() {
     }
 
-    public List<Condition> getConditionList() {
-        return conditionList;
+    public void addCondition(Condition condition) {
+        throw new UnsupportedOperationException();
     }
 
     public Dialect getDialect() {

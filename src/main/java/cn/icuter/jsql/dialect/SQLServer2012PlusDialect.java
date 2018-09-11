@@ -32,12 +32,12 @@ public class SQLServer2012PlusDialect implements Dialect {
         prepareSqlBuilder.append(" offset");
         if (builderCtx.getOffset() > 0) {
             prepareSqlBuilder.append(" ?");
-            builderCtx.getConditionList().add(Cond.value(builderCtx.getOffset()));
+            builderCtx.addCondition(Cond.value(builderCtx.getOffset()));
         } else {
             prepareSqlBuilder.append(" 0");
         }
         prepareSqlBuilder.append(" rows fetch next ? rows only");
-        builderCtx.getConditionList().add(Cond.value(builderCtx.getLimit()));
+        builderCtx.addCondition(Cond.value(builderCtx.getLimit()));
     }
 
     @Override
