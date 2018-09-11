@@ -1,7 +1,7 @@
 {
   "name": "jsql",
   "version": "1.0.0",
-  "description": "JSQL ======",
+  "description": "Just SQL Framework",
   "main": "index.js",
   "dependencies": {},
   "devDependencies": {
@@ -12,14 +12,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/edwardjhl/jsql.git"
+    "url": "git+https://github.com/icuter/jsql.git"
   },
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/edwardjhl/jsql/issues"
+    "url": "https://github.com/icuter/jsql/issues"
   },
-  "homepage": "https://github.com/edwardjhl/jsql#readme",
+  "homepage": "https://github.com/icuter/jsql#readme",
   "config": {
     "commitizen": {
       "path": "./node_modules/cz-conventional-changelog"
