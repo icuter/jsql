@@ -36,8 +36,7 @@ public class UpdateBuilder extends AbstractBuilder implements DMLBuilder {
         addCondition(eqs);
         String sql = Arrays.stream(eqs)
                 .map(Condition::toSql)
-                .reduce((f, s) -> f + "," + s)
-                .orElse("");
+                .collect(Collectors.joining(","));
         preparedSql.append(" set").append(sql);
         return this;
     }
@@ -55,6 +54,8 @@ public class UpdateBuilder extends AbstractBuilder implements DMLBuilder {
         } else if (value instanceof Collection) {
             Collection<Eq> eqs = (Collection<Eq>) value;
             return set(eqs.toArray(new Eq[eqs.size()]));
+        } else if (value instanceof Eq) {
+            return set(new Eq[]{(Eq) value});
         } else {
             ORMapper mapper = new ORMapper(value);
             List<Eq> eqList = mapper.toMapIgnoreNullValue().entrySet().stream()

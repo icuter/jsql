@@ -31,8 +31,7 @@ public class InsertBuilder extends AbstractBuilder implements DMLBuilder {
     private String createPlaceHolder(int placeHolderCnt) {
         return Arrays.stream(new String[placeHolderCnt])
                 .map(nvl -> "?")
-                .reduce((f, s) -> f + "," + s)
-                .orElse("");
+                .collect(Collectors.joining(","));
     }
 
     @Override
@@ -41,7 +40,7 @@ public class InsertBuilder extends AbstractBuilder implements DMLBuilder {
             throw new IllegalArgumentException("values must not be null or empty! ");
         }
         preparedSql.append("(")
-                .append(Arrays.stream(values).map(Condition::getField).reduce((f, s) -> f + "," + s).orElse(""))
+                .append(Arrays.stream(values).map(Condition::getField).collect(Collectors.joining(",")))
                 .append(")")
                 .append(" values(").append(createPlaceHolder(values.length)).append(")");
         addCondition(values);
@@ -62,6 +61,8 @@ public class InsertBuilder extends AbstractBuilder implements DMLBuilder {
         } else if (values instanceof Collection) {
             Collection<Eq> eqs = (Collection<Eq>) values;
             return values(eqs.toArray(new Eq[eqs.size()]));
+        } else if (values instanceof Eq) {
+            return values(new Eq[]{(Eq) values});
         } else {
             ORMapper mapper = new ORMapper(values);
             List<Eq> eqList = mapper.toMapIgnoreNullValue().entrySet().stream()

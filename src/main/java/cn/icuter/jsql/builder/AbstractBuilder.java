@@ -53,7 +53,7 @@ public abstract class AbstractBuilder implements Builder {
     public Builder select(String... columns) {
         String columnStr = "*";
         if (columns != null && columns.length > 0) {
-            columnStr = Arrays.stream(columns).reduce((f, s) -> f + ", " + s).orElse("*");
+            columnStr = Arrays.stream(columns).collect(Collectors.joining(", "));
         }
         preparedSql.append("select %s").append(columnStr);
         return this;
@@ -61,7 +61,7 @@ public abstract class AbstractBuilder implements Builder {
 
     @Override
     public Builder from(String... tableName) {
-        preparedSql.append(" from ").append(Arrays.stream(tableName).reduce((f, s) -> f + ", " + s).orElse(""));
+        preparedSql.append(" from ").append(Arrays.stream(tableName).collect(Collectors.joining(",")));
         return this;
     }
 
@@ -124,7 +124,7 @@ public abstract class AbstractBuilder implements Builder {
         if (columns == null || columns.length <= 0) {
             throw new IllegalArgumentException("columns must not be null or empty! ");
         }
-        String columnStr = Arrays.stream(columns).reduce((f, s) -> f + "," + s).orElse("");
+        String columnStr = Arrays.stream(columns).collect(Collectors.joining(","));
         preparedSql.append(" group by ").append(columnStr);
         return this;
     }

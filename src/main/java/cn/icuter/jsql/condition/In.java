@@ -4,6 +4,7 @@ import cn.icuter.jsql.builder.Builder;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.stream.Collectors;
 
 /**
  * @author edward
@@ -49,8 +50,7 @@ public class In extends AbstractCondition {
         }
         String placeHolder = Arrays.stream(new String[placeHolderCnt])
                 .map(nvl -> "?")
-                .reduce((f, s) -> f + "," + s)
-                .orElse("");
+                .collect(Collectors.joining(","));
         return " " + field + " " + op.getSymbol() + " (" + placeHolder + ")";
     }
 

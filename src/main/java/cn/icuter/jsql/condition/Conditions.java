@@ -27,8 +27,7 @@ public class Conditions implements Condition {
     public String toSql() {
         return " (" + conditionList.stream()
                 .map(Condition::toSql)
-                .reduce((f, s) -> f + " " + combination.getSymbol() + s)
-                .orElse("") + ")";
+                .collect(Collectors.joining(" " + combination.getSymbol())) + ")";
     }
 
     @Override
