@@ -1,6 +1,7 @@
 package cn.icuter.jsql.dialect;
 
 import cn.icuter.jsql.builder.BuilderContext;
+import cn.icuter.jsql.builder.SQLStringBuilder;
 import cn.icuter.jsql.condition.Cond;
 
 import java.util.LinkedHashSet;
@@ -60,32 +61,32 @@ public abstract class Dialects {
 
     static void injectWithLimitKey(BuilderContext builderContext) {
         boolean offsetExists = builderContext.getOffset() > 0;
-        StringBuilder offsetLimitBuilder = new StringBuilder(offsetExists ? " limit ?,?" : " limit ?");
+        StringBuilder offsetLimitBuilder = new StringBuilder(offsetExists ? "limit ?,?" : "limit ?");
         if (offsetExists) {
             builderContext.addCondition(Cond.value(builderContext.getOffset()));
         }
         builderContext.addCondition(Cond.value(builderContext.getLimit()));
 
-        StringBuilder preparedSqlBuilder = builderContext.getPreparedSql();
+        SQLStringBuilder sqlStringBuilder = builderContext.getSqlStringBuilder();
         if (builderContext.getForUpdatePosition() > 0) {
-            preparedSqlBuilder.insert(builderContext.getForUpdatePosition(), offsetLimitBuilder);
+            sqlStringBuilder.insert(builderContext.getForUpdatePosition(), offsetLimitBuilder.toString());
         } else {
-            preparedSqlBuilder.append(offsetLimitBuilder);
+            sqlStringBuilder.append(offsetLimitBuilder.toString());
         }
     }
 
     static void injectWithLimitOffsetKey(BuilderContext builderContext) {
         boolean offsetExists = builderContext.getOffset() > 0;
-        StringBuilder offsetLimitBuilder = new StringBuilder(offsetExists ? " limit ? offset ?" : " limit ?");
+        StringBuilder offsetLimitBuilder = new StringBuilder(offsetExists ? "limit ? offset ?" : "limit ?");
         builderContext.addCondition(Cond.value(builderContext.getLimit()));
         if (offsetExists) {
             builderContext.addCondition(Cond.value(builderContext.getOffset()));
         }
-        StringBuilder preparedSqlBuilder = builderContext.getPreparedSql();
+        SQLStringBuilder sqlStringBuilder = builderContext.getSqlStringBuilder();
         if (builderContext.getForUpdatePosition() > 0) {
-            preparedSqlBuilder.insert(builderContext.getForUpdatePosition(), offsetLimitBuilder);
+            sqlStringBuilder.insert(builderContext.getForUpdatePosition(), offsetLimitBuilder.toString());
         } else {
-            preparedSqlBuilder.append(offsetLimitBuilder);
+            sqlStringBuilder.append(offsetLimitBuilder.toString());
         }
     }
 }

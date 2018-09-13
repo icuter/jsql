@@ -17,7 +17,7 @@ public class Var extends AbstractCondition {
 
     @Override
     public String toSql() {
-        return " " + field + op.getSymbol() + value;
+        return field + op.getSymbol() + value;
     }
 
     @Override

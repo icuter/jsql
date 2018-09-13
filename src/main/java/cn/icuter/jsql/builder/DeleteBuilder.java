@@ -17,7 +17,7 @@ public class DeleteBuilder extends AbstractBuilder implements DMLBuilder {
 
     @Override
     public Builder delete() {
-        preparedSql.append("delete");
+        sqlStringBuilder.append("delete");
         return this;
     }
 }

@@ -1,6 +1,7 @@
 package cn.icuter.jsql.dialect;
 
 import cn.icuter.jsql.builder.BuilderContext;
+import cn.icuter.jsql.builder.SQLStringBuilder;
 import cn.icuter.jsql.condition.Cond;
 
 /**
@@ -28,15 +29,16 @@ public class SQLServer2012PlusDialect implements Dialect {
         if (!builderCtx.isHasOrderBy()) {
             throw new IllegalArgumentException("Must define [order by] clause!");
         }
-        StringBuilder prepareSqlBuilder = builderCtx.getPreparedSql();
-        prepareSqlBuilder.append(" offset");
+        SQLStringBuilder sqlStringBuilder = builderCtx.getSqlStringBuilder();
+
+        sqlStringBuilder.append("offset");
         if (builderCtx.getOffset() > 0) {
-            prepareSqlBuilder.append(" ?");
+            sqlStringBuilder.append("?");
             builderCtx.addCondition(Cond.value(builderCtx.getOffset()));
         } else {
-            prepareSqlBuilder.append(" 0");
+            sqlStringBuilder.append("0");
         }
-        prepareSqlBuilder.append(" rows fetch next ? rows only");
+        sqlStringBuilder.append("rows fetch next ? rows only");
         builderCtx.addCondition(Cond.value(builderCtx.getLimit()));
     }
 

@@ -3,6 +3,8 @@ package cn.icuter.jsql.builder;
 import cn.icuter.jsql.condition.Condition;
 import cn.icuter.jsql.dialect.Dialect;
 
+import java.util.List;
+
 
 /**
  * @author edward
@@ -11,10 +13,11 @@ import cn.icuter.jsql.dialect.Dialect;
 public class BuilderContext {
 
     Dialect dialect;
-    StringBuilder preparedSql;
+//    StringBuilder preparedSql;
+    SQLStringBuilder sqlStringBuilder;
     int offset;
     int limit;
-    int forUpdatePosition;
+//    int forUpdatePosition;
     boolean built;
     boolean hasOrderBy;
 
@@ -29,8 +32,12 @@ public class BuilderContext {
         return dialect;
     }
 
-    public StringBuilder getPreparedSql() {
+    /*public StringBuilder getPreparedSql() {
         return preparedSql;
+    }*/
+
+    public SQLStringBuilder getSqlStringBuilder() {
+        return sqlStringBuilder;
     }
 
     public int getOffset() {
@@ -42,7 +49,11 @@ public class BuilderContext {
     }
 
     public int getForUpdatePosition() {
-        return forUpdatePosition;
+        List<SQLStringBuilder.SQLItem> itemList = sqlStringBuilder.findByType("for-update");
+        if (!itemList.isEmpty()) {
+            return itemList.get(0).sqlPosition;
+        }
+        return -1;
     }
 
     public boolean isBuilt() {

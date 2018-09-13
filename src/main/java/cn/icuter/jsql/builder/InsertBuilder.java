@@ -24,7 +24,7 @@ public class InsertBuilder extends AbstractBuilder implements DMLBuilder {
 
     @Override
     public Builder insertInto(String tableName) {
-        preparedSql.append("insert into ").append(tableName);
+        sqlStringBuilder.append("insert into").append(tableName);
         return this;
     }
 
@@ -39,10 +39,9 @@ public class InsertBuilder extends AbstractBuilder implements DMLBuilder {
         if (values == null || values.length <= 0) {
             throw new IllegalArgumentException("values must not be null or empty! ");
         }
-        preparedSql.append("(")
-                .append(Arrays.stream(values).map(Condition::getField).collect(Collectors.joining(",")))
-                .append(")")
-                .append(" values(").append(createPlaceHolder(values.length)).append(")");
+        sqlStringBuilder
+                .append("(" + Arrays.stream(values).map(Condition::getField).collect(Collectors.joining(",")) + ")")
+                .append("values(" + createPlaceHolder(values.length) + ")");
         addCondition(values);
         return this;
     }

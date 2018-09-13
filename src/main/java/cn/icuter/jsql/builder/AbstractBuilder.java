@@ -7,7 +7,11 @@ import cn.icuter.jsql.condition.Var;
 import cn.icuter.jsql.dialect.Dialect;
 import cn.icuter.jsql.dialect.Dialects;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -16,11 +20,10 @@ import java.util.stream.Collectors;
  */
 public abstract class AbstractBuilder implements Builder {
 
-    private boolean isDistinct;
     private String buildSql;
     protected BuilderContext builderContext;
 
-    StringBuilder preparedSql = new StringBuilder();
+    SQLStringBuilder sqlStringBuilder = new SQLStringBuilder();
     protected List<Condition> conditionList = new LinkedList<>();
     private List<Object> preparedValueList;
     private int offset;
@@ -43,7 +46,7 @@ public abstract class AbstractBuilder implements Builder {
                 AbstractBuilder.this.addCondition(condition);
             }
         };
-        builderContext.preparedSql = preparedSql;
+        builderContext.sqlStringBuilder = sqlStringBuilder;
         builderContext.dialect = dialect;
         builderContext.offset = offset;
         builderContext.limit = limit;
@@ -55,67 +58,70 @@ public abstract class AbstractBuilder implements Builder {
         if (columns != null && columns.length > 0) {
             columnStr = Arrays.stream(columns).collect(Collectors.joining(", "));
         }
-        preparedSql.append("select %s").append(columnStr);
+        sqlStringBuilder.append("select", "top-select").append(columnStr);
         return this;
     }
 
     @Override
     public Builder from(String... tableName) {
-        preparedSql.append(" from ").append(Arrays.stream(tableName).collect(Collectors.joining(",")));
+        sqlStringBuilder.append("from").append(Arrays.stream(tableName).collect(Collectors.joining(",")));
         return this;
     }
 
     @Override
     public Builder union(Builder builder) {
-        preparedSql.append(" union ").append(builder.getSql());
+        sqlStringBuilder.append("union").append(builder.getSql());
         addCondition(builder.getConditionList());
         return this;
     }
 
     @Override
     public Builder unionAll(Builder builder) {
-        preparedSql.append(" union all ").append(builder.getSql());
+        sqlStringBuilder.append("union all").append(builder.getSql());
         addCondition(builder.getConditionList());
         return this;
     }
 
     @Override
     public Builder distinct() {
-        isDistinct = true;
+        List<SQLStringBuilder.SQLItem> itemList = sqlStringBuilder.findByType("top-select");
+        for (SQLStringBuilder.SQLItem item : itemList) {
+            sqlStringBuilder.insert(item.sqlPosition + 1, "distinct");
+        }
         return this;
     }
 
     @Override
     public Builder and(Condition condition) {
         addCondition(condition);
-        preparedSql.append(" and").append(condition.toSql());
+        sqlStringBuilder.append("and").append(condition.toSql());
         return this;
     }
 
     @Override
     public Builder and(Condition... conditions) {
         addCondition(conditions);
-        preparedSql.append(Cond.and(conditions).toSql());
+        sqlStringBuilder.append(Cond.and(conditions).toSql());
         return this;
     }
 
     @Override
     public Builder or(Condition condition) {
         addCondition(condition);
-        preparedSql.append(" or").append(condition.toSql());
+        sqlStringBuilder.append("or").append(condition.toSql());
         return this;
     }
 
     @Override
     public Builder or(Condition... conditions) {
         addCondition(conditions);
-        preparedSql.append(Cond.or(conditions).toSql());
+        sqlStringBuilder.append(Cond.or(conditions).toSql());
         return this;
     }
 
     @Override
     public Builder where() {
-        preparedSql.append(" where");
+        sqlStringBuilder.append("where");
         return this;
     }
 
@@ -125,49 +131,49 @@ public abstract class AbstractBuilder implements Builder {
             throw new IllegalArgumentException("columns must not be null or empty! ");
         }
         String columnStr = Arrays.stream(columns).collect(Collectors.joining(","));
-        preparedSql.append(" group by ").append(columnStr);
+        sqlStringBuilder.append("group by").append(columnStr);
         return this;
     }
 
     @Override
     public Builder having(Condition... conditions) {
         addCondition(conditions);
-        preparedSql.append(" having").append(Cond.and(conditions).toSql());
+        sqlStringBuilder.append("having").append(Cond.and(conditions).toSql());
         return this;
     }
 
     @Override
     public Builder outerJoinOn(String tableName, Var var) {
         addCondition(var);
-        preparedSql.append(" outer join ").append(tableName).append(" on").append(var.toSql());
+        sqlStringBuilder.append("outer join").append(tableName).append("on").append(var.toSql());
         return this;
     }
 
     @Override
     public Builder joinOn(String tableName, Var var) {
         addCondition(var);
-        preparedSql.append(" join ").append(tableName).append(" on").append(var.toSql());
+        sqlStringBuilder.append("join").append(tableName).append("on").append(var.toSql());
         return this;
     }
 
     @Override
     public Builder leftJoinOn(String tableName, Var var) {
         addCondition(var);
-        preparedSql.append(" left join ").append(tableName).append(" on").append(var.toSql());
+        sqlStringBuilder.append("left join").append(tableName).append("on").append(var.toSql());
         return this;
     }
 
     @Override
     public Builder rightJoinOn(String tableName, Var var) {
         addCondition(var);
-        preparedSql.append(" right join ").append(tableName).append(" on").append(var.toSql());
+        sqlStringBuilder.append("right join").append(tableName).append("on").append(var.toSql());
         return this;
     }
 
     @Override
     public Builder fullJoinOn(String tableName, Var var) {
         addCondition(var);
-        preparedSql.append(" full join ").append(tableName).append(" on").append(var.toSql());
+        sqlStringBuilder.append("full join").append(tableName).append("on").append(var.toSql());
         return this;
     }
 
@@ -187,7 +193,7 @@ public abstract class AbstractBuilder implements Builder {
 
     @Override
     public Builder sql(String sql) {
-        preparedSql.append(preparedSql.length() > 0 ? " " : "").append(sql);
+        sqlStringBuilder.append(sql);
         return this;
     }
 
@@ -199,7 +205,7 @@ public abstract class AbstractBuilder implements Builder {
         if (dialect.supportOffsetLimit() && ((offset > 0 && limit > 0) || limit > 0)) {
             dialect.injectOffsetLimit(builderContext);
         }
-        buildSql = String.format(preparedSql.toString(), isDistinct ? "distinct " : "");
+        buildSql = sqlStringBuilder.serialize();
         preparedValueList = conditionList.stream()
                 .filter(condition -> condition.prepareType() == PrepareType.PLACEHOLDER.getType())
                 .map(Condition::getValue)
@@ -242,26 +248,26 @@ public abstract class AbstractBuilder implements Builder {
 
     @Override
     public Builder and() {
-        preparedSql.append(" and");
+        sqlStringBuilder.append("and");
         return this;
     }
 
     @Override
     public Builder or() {
-        preparedSql.append(" or");
+        sqlStringBuilder.append("or");
         return this;
     }
 
     @Override
     public Builder exists(Builder builder) {
-        preparedSql.append(" exists (").append(builder.getSql()).append(")");
+        sqlStringBuilder.append("exists").append("(" + builder.getSql() + ")", "exists");
         addCondition(builder.getConditionList());
         return this;
     }
 
     @Override
     public Builder notExists(Builder builder) {
-        preparedSql.append(" not exists (").append(builder.getSql()).append(")");
+        sqlStringBuilder.append("not exists").append("(" + builder.getSql() + ")", "not-exists");
         addCondition(builder.getConditionList());
         return this;
     }
@@ -270,7 +276,7 @@ public abstract class AbstractBuilder implements Builder {
     public Builder isNull(String field) {
         Condition condition = Cond.isNull(field);
         addCondition(condition);
-        preparedSql.append(condition.toSql());
+        sqlStringBuilder.append(condition.toSql());
         return this;
     }
 
@@ -278,7 +284,7 @@ public abstract class AbstractBuilder implements Builder {
     public Builder isNotNull(String field) {
         Condition condition = Cond.isNotNull(field);
         addCondition(condition);
-        preparedSql.append(condition.toSql());
+        sqlStringBuilder.append(condition.toSql());
         return this;
     }
 
@@ -286,7 +292,7 @@ public abstract class AbstractBuilder implements Builder {
     public Builder eq(String field, Object value) {
         Condition condition = Cond.eq(field, value);
         addCondition(condition);
-        preparedSql.append(condition.toSql());
+        sqlStringBuilder.append(condition.toSql());
         return this;
     }
 
@@ -294,7 +300,7 @@ public abstract class AbstractBuilder implements Builder {
     public Builder ne(String field, Object value) {
         Condition condition = Cond.ne(field, value);
         addCondition(condition);
-        preparedSql.append(condition.toSql());
+        sqlStringBuilder.append(condition.toSql());
         return this;
     }
 
@@ -302,7 +308,7 @@ public abstract class AbstractBuilder implements Builder {
     public Builder like(String field, Object value) {
         Condition condition = Cond.like(field, value);
         addCondition(condition);
-        preparedSql.append(condition.toSql());
+        sqlStringBuilder.append(condition.toSql());
         return this;
     }
 
@@ -310,7 +316,7 @@ public abstract class AbstractBuilder implements Builder {
     public Builder ge(String field, Object value) {
         Condition condition = Cond.ge(field, value);
         addCondition(condition);
-        preparedSql.append(condition.toSql());
+        sqlStringBuilder.append(condition.toSql());
         return this;
     }
 
@@ -318,7 +324,7 @@ public abstract class AbstractBuilder implements Builder {
     public Builder gt(String field, Object value) {
         Condition condition = Cond.gt(field, value);
         addCondition(condition);
-        preparedSql.append(condition.toSql());
+        sqlStringBuilder.append(condition.toSql());
         return this;
     }
 
@@ -326,7 +332,7 @@ public abstract class AbstractBuilder implements Builder {
     public Builder le(String field, Object value) {
         Condition condition = Cond.le(field, value);
         addCondition(condition);
-        preparedSql.append(condition.toSql());
+        sqlStringBuilder.append(condition.toSql());
         return this;
     }
 
@@ -334,16 +340,15 @@ public abstract class AbstractBuilder implements Builder {
     public Builder lt(String field, Object value) {
         Condition condition = Cond.lt(field, value);
         addCondition(condition);
-        preparedSql.append(condition.toSql());
+        sqlStringBuilder.append(condition.toSql());
         return this;
     }
 
     @Override
     public Builder between(String field, Object start, Object end) {
-        // [BETWEEN .. AND ..] clause unsupport DQLBuilder as value
         Condition condition = Cond.between(field, start, end);
         addCondition(condition);
-        preparedSql.append(condition.toSql());
+        sqlStringBuilder.append(condition.toSql());
         return this;
     }
 
@@ -351,7 +356,7 @@ public abstract class AbstractBuilder implements Builder {
     public Builder in(String field, Collection<Object> values) {
         Condition condition = Cond.in(field, values);
         addCondition(condition);
-        preparedSql.append(condition.toSql());
+        sqlStringBuilder.append(condition.toSql());
         return this;
     }
 
@@ -359,7 +364,7 @@ public abstract class AbstractBuilder implements Builder {
     public Builder in(String field, Object... values) {
         Condition condition = Cond.in(field, values);
         addCondition(condition);
-        preparedSql.append(condition.toSql());
+        sqlStringBuilder.append(condition.toSql());
         return this;
     }
 
@@ -367,7 +372,7 @@ public abstract class AbstractBuilder implements Builder {
     public Builder in(String field, Builder builder) {
         Condition condition = Cond.in(field, builder);
         addCondition(condition);
-        preparedSql.append(condition.toSql());
+        sqlStringBuilder.append(condition.toSql());
         return this;
     }
 
@@ -375,7 +380,7 @@ public abstract class AbstractBuilder implements Builder {
     public Builder var(String field, String field2) {
         Condition condition = Cond.var(field, field2);
         addCondition(condition);
-        preparedSql.append(condition.toSql());
+        sqlStringBuilder.append(condition.toSql());
         return this;
     }
 

@@ -4,7 +4,6 @@ import cn.icuter.jsql.condition.PrepareType;
 import cn.icuter.jsql.dialect.Dialect;
 
 import java.util.Arrays;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 /**
@@ -23,10 +22,9 @@ public class SelectBuilder extends AbstractBuilder implements DQLBuilder {
 
     @Override
     public Builder forUpdate(String... columns) {
-        builderContext.forUpdatePosition = preparedSql.length();
-        preparedSql.append(" for update");
+        sqlStringBuilder.append("for update", "for-update");
         if (columns != null && columns.length > 0) {
-            preparedSql.append(" of ").append(Arrays.stream(columns).collect(Collectors.joining(",")));
+            sqlStringBuilder.append("of").append(Arrays.stream(columns).collect(Collectors.joining(",")));
         }
         return this;
     }
@@ -36,7 +34,8 @@ public class SelectBuilder extends AbstractBuilder implements DQLBuilder {
         if (columns == null || columns.length <= 0) {
             throw new IllegalArgumentException("must define [order by] columns!");
         }
-        preparedSql.append(" order by ").append(Arrays.stream(columns).collect(Collectors.joining(",")));
+        sqlStringBuilder.append("order by", "order-by")
+                .append(Arrays.stream(columns).collect(Collectors.joining(",")));
         builderContext.hasOrderBy = true;
         return this;
     }

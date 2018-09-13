@@ -36,7 +36,7 @@ public abstract class AbstractCondition implements Condition {
 
     @Override
     public String toSql() {
-        return " " + field + " " + op.getSymbol() + (prepareType == PrepareType.PLACEHOLDER.getType() ? " ?" : "");
+        return field + " " + op.getSymbol() + (prepareType == PrepareType.PLACEHOLDER.getType() ? " ?" : "");
     }
 
     @Override

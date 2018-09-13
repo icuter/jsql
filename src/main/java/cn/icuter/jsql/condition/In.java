@@ -40,7 +40,7 @@ public class In extends AbstractCondition {
     public String toSql() {
         if (builderValue) {
             Builder builder = (Builder) value;
-            return " " + field + " " + op.getSymbol() + " (" + builder.getSql() + ")";
+            return field + " " + op.getSymbol() + " (" + builder.getSql() + ")";
         }
         int placeHolderCnt = 0;
         if (Collection.class.isAssignableFrom(value.getClass())) {
@@ -51,7 +51,7 @@ public class In extends AbstractCondition {
         String placeHolder = Arrays.stream(new String[placeHolderCnt])
                 .map(nvl -> "?")
                 .collect(Collectors.joining(","));
-        return " " + field + " " + op.getSymbol() + " (" + placeHolder + ")";
+        return field + " " + op.getSymbol() + " (" + placeHolder + ")";
     }
 
     @Override

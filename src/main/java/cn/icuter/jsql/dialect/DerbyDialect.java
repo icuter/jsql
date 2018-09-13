@@ -1,6 +1,9 @@
 package cn.icuter.jsql.dialect;
 
 import cn.icuter.jsql.builder.BuilderContext;
+import cn.icuter.jsql.builder.SQLStringBuilder;
+
+import java.util.List;
 
 /**
  * @author edward
@@ -34,18 +37,20 @@ public class DerbyDialect implements Dialect {
         StringBuilder offsetLimitBuilder = new StringBuilder();
         boolean offsetExists = builderCtx.getOffset() > 0;
         offsetLimitBuilder
-                .append(offsetExists ? " offset " + (builderCtx.getOffset() + " rows fetch next ") : " fetch first ")
+                .append(offsetExists ? "offset " + (builderCtx.getOffset() + " rows fetch next ") : "fetch first ")
                 .append(builderCtx.getLimit()).append(" rows only");
 
-        StringBuilder preparedSqlBuilder = builderCtx.getPreparedSql();
-        if (builderCtx.getForUpdatePosition() > 0) {
-            preparedSqlBuilder.insert(builderCtx.getForUpdatePosition(), offsetLimitBuilder);
+        SQLStringBuilder sqlStringBuilder = builderCtx.getSqlStringBuilder();
+        int forUpdatePosition = builderCtx.getForUpdatePosition();
+        if (forUpdatePosition > 0) {
+            sqlStringBuilder.insert(forUpdatePosition, offsetLimitBuilder.toString());
         } else {
-            int withIndex = preparedSqlBuilder.toString().toLowerCase().lastIndexOf(" with");
-            if (withIndex > 0) {
-                preparedSqlBuilder.insert(withIndex, offsetLimitBuilder);
+            List<SQLStringBuilder.SQLItem> sqlItemList = sqlStringBuilder.findByRegex("with");
+            if (!sqlItemList.isEmpty()) {
+                SQLStringBuilder.SQLItem item = sqlItemList.get(0);
+                sqlStringBuilder.insert(item.getSqlPosition(), offsetLimitBuilder.toString());
             } else {
-                preparedSqlBuilder.append(offsetLimitBuilder);
+                sqlStringBuilder.append(offsetLimitBuilder.toString());
             }
         }
     }

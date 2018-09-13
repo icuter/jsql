@@ -17,6 +17,6 @@ public class Between extends AbstractCondition {
 
     @Override
     public String toSql() {
-        return " " + field + " " + op.getSymbol() + " ? and ?";
+        return field + " " + op.getSymbol() + " ? and ?";
     }
 }

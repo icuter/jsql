@@ -1,6 +1,7 @@
 package cn.icuter.jsql.dialect;
 
 import cn.icuter.jsql.builder.BuilderContext;
+import cn.icuter.jsql.builder.SQLStringBuilder;
 
 /**
  * @author edward
@@ -33,13 +34,15 @@ public class DB2Dialect implements Dialect {
      */
     @Override
     public void injectOffsetLimit(BuilderContext builderCtx) {
-        StringBuilder preparedSqlBuilder = builderCtx.getPreparedSql();
+        SQLStringBuilder sqlStringBuilder = builderCtx.getSqlStringBuilder();
         if (builderCtx.getOffset() > 0) {
-            preparedSqlBuilder.insert(0, "select * from ( select sub2_.*, rownumber() over(order by order of sub2_) as _rownumber_ from ( ");
-            preparedSqlBuilder.append(" fetch first ").append(builderCtx.getLimit()).append(" rows only ) as sub2_ ) as inner1_ where _rownumber_ > ")
-                    .append(builderCtx.getOffset()).append(" order by _rownumber_");
+            sqlStringBuilder.prepend("select * from (select sub2_.*, rownumber() over(order by order of sub2_) as _rownumber_ from (",
+                            "db2-paging-prefix")
+                    .append("fetch first " + builderCtx.getLimit())
+                    .append("rows only) as sub2_) as inner1_ where _rownumber_ > " + builderCtx.getOffset()
+                            + " order by _rownumber_", "db2-paging-suffix");
         } else {
-            preparedSqlBuilder.append(" fetch first ").append(builderCtx.getLimit()).append(" rows only");
+            sqlStringBuilder.append("fetch first " + builderCtx.getLimit() + " rows only", "db2-paging-suffix");
         }
     }
 

@@ -24,7 +24,7 @@ public class UpdateBuilder extends AbstractBuilder implements DMLBuilder {
 
     @Override
     public Builder update(String tableName) {
-        preparedSql.append("update ").append(tableName);
+        sqlStringBuilder.append("update").append(tableName);
         return this;
     }
 
@@ -37,7 +37,7 @@ public class UpdateBuilder extends AbstractBuilder implements DMLBuilder {
         String sql = Arrays.stream(eqs)
                 .map(Condition::toSql)
                 .collect(Collectors.joining(","));
-        preparedSql.append(" set").append(sql);
+        sqlStringBuilder.append("set").append(sql);
         return this;
     }
 
