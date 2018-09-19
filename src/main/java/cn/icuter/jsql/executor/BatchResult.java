@@ -22,7 +22,7 @@ public class BatchResult {
         this.sql = sql;
         this.totalCount = result.length;
         for (int i = 0; i < result.length; i++) {
-            if (result[i] < 0 && result[i] != Statement.SUCCESS_NO_INFO) {
+            if (result[i] <= 0 && result[i] != Statement.SUCCESS_NO_INFO) {
                 failValues.add(values.get(i).getPreparedValues());
                 failCount++;
             } else {
@@ -53,5 +53,16 @@ public class BatchResult {
 
     public boolean isAllSuccessed() {
         return failCount == 0;
+    }
+
+    @Override
+    public String toString() {
+        return new StringBuilder("BatchResult{")
+                .append("totalCount=").append(totalCount)
+                .append(", successCount=").append(successCount)
+                .append(", failCount=").append(failCount)
+                .append(", sql='").append(sql).append('\'')
+                .append(", failValues=").append(failValues)
+                .append('}').toString();
     }
 }

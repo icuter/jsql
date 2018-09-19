@@ -22,11 +22,16 @@ import java.util.stream.Collectors;
  * @since 2018-08-20
  */
 public class DefaultJdbcExecutor implements JdbcExecutor {
-    private final Connection connection;
+    final Connection connection;
     private boolean columnLowerCase;
 
     public DefaultJdbcExecutor(Connection connection) {
         this.connection = connection;
+    }
+
+    public DefaultJdbcExecutor(Connection connection, boolean columnLowerCase) {
+        this.connection = connection;
+        this.columnLowerCase = columnLowerCase;
     }
 
     @Override
@@ -128,6 +133,8 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
                 ps.addBatch();
             }
             return ps.executeBatch();
+        } catch (SQLException e) {
+            throw new SQLException(sql, e);
         }
     }
 

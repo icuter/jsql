@@ -6,7 +6,6 @@ import cn.icuter.jsql.pool.PooledObjectManager;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.util.Objects;
 
 /**
  * @author edward
@@ -14,7 +13,6 @@ import java.util.Objects;
  */
 public class PooledConnectionManager implements PooledObjectManager<Connection> {
 
-    private final int loginTimeout;      // seconds, default 5s
     private final int checkValidTimeout; // seconds, default 5s
     private int invalidTimeout;          // milliseconds, default -1 set invalid immediately
     private final String url;
@@ -22,21 +20,24 @@ public class PooledConnectionManager implements PooledObjectManager<Connection> 
     private final String password;
     private final String driverClassName;
 
+    PooledConnectionManager(String url, String username, String password) {
+        this(url, username, password, null, -1, 5);
+    }
+
     PooledConnectionManager(String url, String username, String password, String driverClassName) {
-        this(url, username, password, driverClassName, 5, -1, 5);
+        this(url, username, password, driverClassName, -1);
     }
 
     PooledConnectionManager(String url, String username, String password, String driverClassName, int checkValidTimeout) {
-        this(url, username, password, driverClassName, 5, -1, checkValidTimeout);
+        this(url, username, password, driverClassName, -1, checkValidTimeout);
     }
 
     private PooledConnectionManager(String url, String username, String password, String driverClassName,
-                                    int loginTimeout, int invalidTimeout, int checkValidTimeout) {
+                                    int invalidTimeout, int checkValidTimeout) {
         this.url = url;
         this.username = username;
         this.password = password;
         this.driverClassName = driverClassName;
-        this.loginTimeout = loginTimeout;
         this.invalidTimeout = invalidTimeout;
         this.checkValidTimeout = checkValidTimeout;
 
@@ -44,8 +45,11 @@ public class PooledConnectionManager implements PooledObjectManager<Connection> 
     }
 
     private void registerDriverClassName() {
+        // maybe set outside
+        if (driverClassName == null) {
+            return;
+        }
         try {
-            Objects.requireNonNull(driverClassName, "Driver Class Name must not be null!");
             Class.forName(driverClassName);
         } catch (ClassNotFoundException e) {
             throw new IllegalArgumentException("Invalid driver name: " + driverClassName, e);
@@ -58,14 +62,8 @@ public class PooledConnectionManager implements PooledObjectManager<Connection> 
     }
 
     private Connection newConnection() throws SQLException {
-        int originLoginTimeout = DriverManager.getLoginTimeout();
-        if (loginTimeout > 0) {
-            DriverManager.setLoginTimeout(loginTimeout);
-        }
         Connection connection = DriverManager.getConnection(url, username, password);
-        if (loginTimeout > 0) {
-            DriverManager.setLoginTimeout(originLoginTimeout);
-        }
+        connection.setAutoCommit(true); // in case Driver's auto-commit is false
         return connection;
     }
 
