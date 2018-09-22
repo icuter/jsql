@@ -1,5 +1,9 @@
 package cn.icuter.jsql.datasource;
 
+import cn.icuter.jsql.exception.BorrowObjectException;
+import cn.icuter.jsql.exception.JSQLException;
+import cn.icuter.jsql.exception.PoolCloseException;
+import cn.icuter.jsql.exception.ReturnObjectException;
 import cn.icuter.jsql.pool.ObjectPool;
 
 import java.sql.Connection;
@@ -19,25 +23,24 @@ public class ConnectionPool {
     public Connection getConnection() {
         try {
             return pool.borrowObject();
-        } catch (Exception e) {
-            // TODO log
-            return null;
+        } catch (JSQLException e) {
+            throw new BorrowObjectException("getting Connection error", e);
         }
     }
 
     public void returnConnection(Connection conn) {
         try {
             pool.returnObject(conn);
-        } catch (Exception e) {
-            // TODO log
+        } catch (JSQLException e) {
+            throw new ReturnObjectException("returning Connection error", e);
         }
     }
 
     public void close() {
         try {
             pool.close();
-        } catch (Exception e) {
-            // TODO log
+        } catch (JSQLException e) {
+            throw new PoolCloseException("closing ConnectionPool error", e);
         }
     }
 }

@@ -1,6 +1,7 @@
 package cn.icuter.jsql.orm;
 
 import cn.icuter.jsql.ColumnName;
+import cn.icuter.jsql.exception.ORMException;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -24,9 +25,13 @@ public class ORMapper {
         this.object = object;
     }
 
+    public static ORMapper of(Object object) {
+        return new ORMapper(object);
+    }
+
     public List<String> getColumns() {
         List<String> colList = new LinkedList<>();
-        mapColumn(this.object.getClass(), (col, field) -> colList.add(col));
+        ORMapper.mapColumn(this.object.getClass(), (col, field) -> colList.add(col));
         return colList;
     }
 
@@ -40,7 +45,7 @@ public class ORMapper {
 
     private Map<String, Object> toMap(boolean ignoreNullValue) {
         Map<String, Object> resultMap = new LinkedHashMap<>();
-        mapColumn(this.object.getClass(), (col, field) -> {
+        ORMapper.mapColumn(this.object.getClass(), (col, field) -> {
             try {
                 field.setAccessible(true);
                 Object v = field.get(this.object);
@@ -48,13 +53,13 @@ public class ORMapper {
                     resultMap.put(col, v);
                 }
             } catch (IllegalAccessException e) {
-                // TODO log
+                throw new ORMException("mapping column and field error for col: " + col + " and filed: " + field.getName(), e);
             }
         });
         return resultMap;
     }
 
-    public void mapColumn(Class<?> clazz, DBColumnMapper dbColumnMapper) {
+    public static void mapColumn(Class<?> clazz, DBColumnMapper dbColumnMapper) {
         Field[] declaredFields = clazz.getDeclaredFields();
         for (Field field : declaredFields) {
             String fieldName = null;

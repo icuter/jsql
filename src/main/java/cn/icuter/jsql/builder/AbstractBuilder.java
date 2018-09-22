@@ -402,4 +402,9 @@ public abstract class AbstractBuilder implements Builder {
             conditionList.addAll(conditions);
         }
     }
+
+    @Override
+    public String toString() {
+        return builderContext.built ? ("sql: " + buildSql + ", values:" + preparedValueList) : "Builder not build yet";
+    }
 }

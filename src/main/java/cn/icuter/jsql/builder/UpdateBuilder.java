@@ -57,8 +57,7 @@ public class UpdateBuilder extends AbstractBuilder implements DMLBuilder {
         } else if (value instanceof Eq) {
             return set(new Eq[]{(Eq) value});
         } else {
-            ORMapper mapper = new ORMapper(value);
-            List<Eq> eqList = mapper.toMapIgnoreNullValue().entrySet().stream()
+            List<Eq> eqList = ORMapper.of(value).toMapIgnoreNullValue().entrySet().stream()
                     .map(e -> Cond.eq(e.getKey(), e.getValue()))
                     .collect(Collectors.toList());
             return set(eqList.toArray(new Eq[eqList.size()]));

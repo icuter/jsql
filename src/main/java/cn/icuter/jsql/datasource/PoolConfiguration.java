@@ -8,7 +8,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class PoolConfiguration {
 
-    private int maxPoolSize;    // default 12
+    private int maxPoolSize;    // default 26
     /**
      * idle timeout -1 means never timeout (default)
      * idle timeout 0 means always timeout
@@ -19,7 +19,7 @@ public class PoolConfiguration {
 
     public static PoolConfiguration defaultPoolCfg() {
         PoolConfiguration poolConfiguration = new PoolConfiguration();
-        poolConfiguration.setMaxPoolSize(12);
+        poolConfiguration.setMaxPoolSize(26);
         poolConfiguration.setPollTimeout(-1); // never timeout
         poolConfiguration.setIdleTimeout(-1); // never timeout
         poolConfiguration.setIdleCheckInterval(TimeUnit.MILLISECONDS.convert(15L, TimeUnit.MINUTES));

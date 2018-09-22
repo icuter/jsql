@@ -7,6 +7,8 @@ import cn.icuter.jsql.builder.UpdateBuilder;
 import cn.icuter.jsql.dialect.Dialect;
 import cn.icuter.jsql.dialect.Dialects;
 import cn.icuter.jsql.dialect.UnknownDialect;
+import cn.icuter.jsql.exception.DataSourceException;
+import cn.icuter.jsql.exception.JSQLException;
 import cn.icuter.jsql.executor.CloseableJdbcExecutor;
 import cn.icuter.jsql.executor.JdbcExecutor;
 import cn.icuter.jsql.executor.TransactionExecutor;
@@ -96,8 +98,7 @@ public class JSQLDataSource {
             Objects.requireNonNull(this.driverClassName, "Driver Class Name must not be null!");
             Class.forName(this.driverClassName);
         } catch (ClassNotFoundException e) {
-            // TODO log
-            e.printStackTrace();
+            throw new DataSourceException("initializing driver class error", e);
         }
         this.loginTimeout = loginTimeout;
         if (DriverManager.getLoginTimeout() <= 0 && this.loginTimeout > 0) {
@@ -110,15 +111,15 @@ public class JSQLDataSource {
         TransactionExecutor executor = new TransactionExecutor(connection) {
             @Override
             public void close() throws IOException {
+                if (!wasCommitted() && !wasRolledBack()) {
+                    rollback();
+                }
                 try {
-                    if (!wasCommitted() && !wasRolledBack()) {
-                        rollback();
-                    }
                     if (connection != null && !connection.isClosed()) {
                         connection.close();
                     }
                 } catch (SQLException e) {
-                    throw new IOException("Connection closing error", e);
+                    throw new IOException("closing Connection in transaction error", e);
                 }
             }
         };
@@ -128,8 +129,7 @@ public class JSQLDataSource {
                     connection.close();
                 }
             } catch (SQLException e) {
-                // TODO log
-                e.printStackTrace();
+                throw new DataSourceException("closing Connection in StateListener error", e);
             }
         });
         return executor;
@@ -149,9 +149,7 @@ public class JSQLDataSource {
             connection.setAutoCommit(autoCommit);
             return connection;
         } catch (SQLException e) {
-            // TODO log
-            e.printStackTrace();
-            return null;
+            throw new DataSourceException("creating Connection error for " + url, e);
         }
     }
 

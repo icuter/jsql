@@ -63,8 +63,7 @@ public class InsertBuilder extends AbstractBuilder implements DMLBuilder {
         } else if (values instanceof Eq) {
             return values(new Eq[]{(Eq) values});
         } else {
-            ORMapper mapper = new ORMapper(values);
-            List<Eq> eqList = mapper.toMapIgnoreNullValue().entrySet().stream()
+            List<Eq> eqList = ORMapper.of(values).toMapIgnoreNullValue().entrySet().stream()
                     .map(entry -> Cond.eq(entry.getKey(), entry.getValue()))
                     .collect(Collectors.toList());
             return values(eqList.toArray(new Eq[eqList.size()]));

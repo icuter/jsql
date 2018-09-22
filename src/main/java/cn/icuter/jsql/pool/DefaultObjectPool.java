@@ -1,6 +1,12 @@
 package cn.icuter.jsql.pool;
 
 import cn.icuter.jsql.datasource.PoolConfiguration;
+import cn.icuter.jsql.exception.JSQLException;
+import cn.icuter.jsql.exception.PoolException;
+import cn.icuter.jsql.exception.PoolMaintainerException;
+import cn.icuter.jsql.exception.PooledObjectCreationException;
+import cn.icuter.jsql.exception.PooledObjectPullTimeoutException;
+import cn.icuter.jsql.exception.PooledObjectReturnException;
 
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
@@ -14,7 +20,6 @@ import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -65,7 +70,7 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
     }
 
     @Override
-    public T borrowObject() throws Exception {
+    public T borrowObject() throws JSQLException {
         PooledObject<T> pc = getPooledObject();
         pc.markBorrowed();
         pc.updateLastBorrowedTime();
@@ -73,13 +78,13 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
         return pc.getObject();
     }
 
-    private PooledObject<T> getPooledObject() throws Exception {
+    private PooledObject<T> getPooledObject() throws JSQLException {
         PooledObject<T> pooledObject;
         do {
             try {
                 opLock.lock();
                 if (isPoolClosed()) {
-                    throw new IllegalStateException("get pool object fail, due to pool was already closed!");
+                    throw new PoolException("get pool object fail, due to pool was already closed!");
                 }
                 pooledObject = idlePooledObjects.pollFirst();
                 // queue is empty and pool not full, try to create one
@@ -89,7 +94,7 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
                         if (isPoolNotFull()) {
                             pooledObject = manager.create();
                             if (pooledObject == null) {
-                                throw new Exception("create pool object error"); // will never happen
+                                throw new PooledObjectCreationException("create pool object error"); // will never happen
                             }
                             pooledObject.setObjectPool(this);
                             allPooledObjects.put(System.identityHashCode(pooledObject.getObject()), pooledObject);
@@ -106,10 +111,11 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
                         try {
                             pooledObject = idlePooledObjects.pollFirst(poolConfiguration.getPollTimeout(), TimeUnit.MILLISECONDS);
                             if (pooledObject == null) {
-                                throw new TimeoutException("get pool object timeout, waited for " + poolConfiguration.getPollTimeout() + "ms");
+                                throw new PooledObjectPullTimeoutException("get pool object timeout, waited for "
+                                        + poolConfiguration.getPollTimeout() + "ms");
                             }
                         } catch (InterruptedException e) {
-                            throw new Exception("get pool object fail!", e);
+                            throw new PoolException("get pool object fail!", e);
                         }
                     } else {
                         pooledObject = idlePooledObjects.pollFirst();
@@ -150,7 +156,7 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
     }
 
     @Override
-    public void returnObject(T object) throws Exception {
+    public void returnObject(T object) throws JSQLException {
         if (object == null) {
             // ignore
             return;
@@ -160,7 +166,7 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
         Objects.requireNonNull(pooledObject, "No such object in pool!");
 
         if (!pooledObject.isBorrowed()) {
-            throw new IllegalAccessException("Object has been return !");
+            throw new PooledObjectReturnException("Object has been return !");
         }
         pooledObject.markReturned();
         pooledObject.updateLastReturnedTime();
@@ -184,7 +190,7 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
     }
 
     @Override
-    public void close() throws Exception {
+    public void close() throws JSQLException {
         if (isPoolClosed()) {
             return;
         }
@@ -307,8 +313,8 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
                     if (checkingTime - pooledObj.getLastReturnedTime() > idleTimeout) {
                         try {
                             manager.invalid(pooledObj);
-                        } catch (Exception e) {
-                            // TODO do log
+                        } catch (JSQLException e) {
+                            throw new PoolMaintainerException("invaliding pooled object error", e);
                         } finally {
                             removePooledObject(pooledObj);
                         }

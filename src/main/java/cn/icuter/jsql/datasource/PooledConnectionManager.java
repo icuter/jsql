@@ -1,5 +1,7 @@
 package cn.icuter.jsql.datasource;
 
+import cn.icuter.jsql.exception.JSQLException;
+import cn.icuter.jsql.exception.PoolException;
 import cn.icuter.jsql.pool.PooledObject;
 import cn.icuter.jsql.pool.PooledObjectManager;
 
@@ -57,8 +59,12 @@ public class PooledConnectionManager implements PooledObjectManager<Connection> 
     }
 
     @Override
-    public PooledObject<Connection> create() throws Exception {
-        return new PooledObject<>(newConnection());
+    public PooledObject<Connection> create() throws JSQLException {
+        try {
+            return new PooledObject<>(newConnection());
+        } catch (SQLException e) {
+            throw new PoolException("creating connection error", e);
+        }
     }
 
     private Connection newConnection() throws SQLException {
@@ -68,29 +74,33 @@ public class PooledConnectionManager implements PooledObjectManager<Connection> 
     }
 
     @Override
-    public void invalid(PooledObject<Connection> pooledObject) throws Exception {
-        while (pooledObject.isBorrowed() && !pooledObject.getObject().isClosed()) {
-            if (invalidTimeout > 0) {
-                long now = System.currentTimeMillis();
-                if (now - pooledObject.getLastBorrowedTime() > invalidTimeout) {
-                    break;
+    public void invalid(PooledObject<Connection> pooledObject) throws JSQLException {
+        try {
+            while (pooledObject.isBorrowed() && !pooledObject.getObject().isClosed()) {
+                if (invalidTimeout > 0) {
+                    long now = System.currentTimeMillis();
+                    if (now - pooledObject.getLastBorrowedTime() > invalidTimeout) {
+                        break;
+                    }
+                } else if (invalidTimeout < 0) {
+                    break; // set invalid immediately
                 }
-            } else if (invalidTimeout < 0) {
-                break; // set invalid immediately
             }
-        }
-        if (!pooledObject.getObject().isClosed()) {
-            pooledObject.getObject().close();
+            if (!pooledObject.getObject().isClosed()) {
+                pooledObject.getObject().close();
+            }
+        } catch (SQLException e) {
+            throw new PoolException("invaliding pooled object error, pooled detail: " + pooledObject.toString(), e);
         }
     }
 
     @Override
-    public boolean validate(PooledObject<Connection> pooledObject) throws Exception {
+    public boolean validate(PooledObject<Connection> pooledObject) throws JSQLException {
         try {
             return validateConnection(pooledObject);
         } catch (Exception e) {
+            // TODO warning log here
             // Catch exception and return false is for pooled object removal
-            // TODO do log here
             return false;
         }
     }

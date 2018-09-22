@@ -1,5 +1,9 @@
 package cn.icuter.jsql.datasource;
 
+import cn.icuter.jsql.exception.BorrowObjectException;
+import cn.icuter.jsql.exception.JSQLException;
+import cn.icuter.jsql.exception.PoolCloseException;
+import cn.icuter.jsql.exception.ReturnObjectException;
 import cn.icuter.jsql.executor.DefaultJdbcExecutor;
 import cn.icuter.jsql.executor.JdbcExecutor;
 import cn.icuter.jsql.executor.TransactionExecutor;
@@ -7,6 +11,7 @@ import cn.icuter.jsql.pool.ObjectPool;
 
 import java.io.IOException;
 import java.sql.Connection;
+import java.sql.SQLException;
 
 /**
  * @author edward
@@ -23,10 +28,8 @@ public class JdbcExecutorPool {
     public JdbcExecutor getExecutor() {
         try {
             return new ConnectionJdbcExecutor(pool.borrowObject());
-        } catch (Exception e) {
-            // TODO log
-            e.printStackTrace();
-            return null;
+        } catch (JSQLException e) {
+            throw new BorrowObjectException("getting JdbcExecutor error", e);
         }
     }
 
@@ -35,10 +38,8 @@ public class JdbcExecutorPool {
             Connection connection = pool.borrowObject();
             connection.setAutoCommit(false);
             return new ConnectionTransactionExecutor(connection);
-        } catch (Exception e) {
-            // TODO log
-            e.printStackTrace();
-            return null;
+        } catch (SQLException | JSQLException e) {
+            throw new BorrowObjectException("getting TransactionExecutor error", e);
         }
     }
 
@@ -59,18 +60,16 @@ public class JdbcExecutorPool {
                 pool.returnObject(connExecutor.getConnection());
                 connExecutor.unlinkConnection();
             }
-        } catch (Exception e) {
-            // TODO log
-            e.printStackTrace();
+        } catch (SQLException | JSQLException e) {
+            throw new ReturnObjectException("returning Executor error", e);
         }
     }
 
     public void close() {
         try {
             pool.close();
-        } catch (Exception e) {
-            // TODO log
-            e.printStackTrace();
+        } catch (JSQLException e) {
+            throw new PoolCloseException("closing ExecutorPool error", e);
         }
     }
 

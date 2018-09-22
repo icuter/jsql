@@ -2,6 +2,8 @@ package cn.icuter.jsql.executor;
 
 import cn.icuter.jsql.builder.Builder;
 import cn.icuter.jsql.builder.BuilderContext;
+import cn.icuter.jsql.exception.ExecutionException;
+import cn.icuter.jsql.exception.JSQLException;
 import cn.icuter.jsql.orm.ORMapper;
 
 import java.lang.reflect.Field;
@@ -35,18 +37,20 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
     }
 
     @Override
-    public int execUpdate(Builder builder) throws Exception {
+    public int execUpdate(Builder builder) throws JSQLException {
         try (PreparedStatement ps = connection.prepareStatement(builder.getSql())) {
             List<Object> preparedValues = builder.getPreparedValues();
             for (int i = 0, len = preparedValues.size(); i < len; i++) {
                 ps.setObject(i + 1, preparedValues.get(i));
             }
             return ps.executeUpdate();
+        } catch (SQLException e) {
+            throw new ExecutionException("executing update error builder detail: " + builder, e);
         }
     }
 
     @Override
-    public <T> List<T> execQuery(Builder builder, final Class<T> clazz) throws Exception {
+    public <T> List<T> execQuery(Builder builder, final Class<T> clazz) throws JSQLException {
         return doExecQuery(builder, (rs, meta) -> {
             Map<Integer, Field> colIndexFieldMap = mapColumnIndexAndField(clazz, meta);
             List<T> queriedResult = new LinkedList<>();
@@ -64,7 +68,7 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
     }
 
     @Override
-    public List<Map<String, Object>> execQuery(Builder builder) throws Exception {
+    public List<Map<String, Object>> execQuery(Builder builder) throws JSQLException {
         return doExecQuery(builder, (rs, meta) -> {
             List<Map<String, Object>> result = new LinkedList<>();
             while (rs.next()) {
@@ -79,7 +83,7 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
         });
     }
 
-    private <T> T doExecQuery(Builder builder, QueryExecutor<T> queryExecutor) throws Exception {
+    private <T> T doExecQuery(Builder builder, QueryExecutor<T> queryExecutor) throws JSQLException {
         try (PreparedStatement ps = connection.prepareStatement(builder.getSql())) {
             List<Object> preparedValues = builder.getPreparedValues();
             for (int i = 0, len = preparedValues.size(); i < len; i++) {
@@ -100,11 +104,13 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
                 }
             }
             return queryExecutor.doExec(rs, meta);
+        } catch (Exception e) {
+            throw new ExecutionException("executing query error, builder detail: " + builder, e);
         }
     }
 
     @Override
-    public void execBatch(List<Builder> builders, BatchCompletedAction completedAction) throws Exception {
+    public void execBatch(List<Builder> builders, BatchCompletedAction completedAction) throws JSQLException {
         boolean hasCompletedAction = completedAction != null;
         List<BatchResult> batchResultList = new LinkedList<>();
         Map<String, List<Builder>> builderGroup = builders.stream().collect(Collectors.groupingBy(Builder::getSql));
@@ -123,7 +129,7 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
         }
     }
 
-    private int[] execBatch(String sql, List<Builder> builderList) throws SQLException {
+    private int[] execBatch(String sql, List<Builder> builderList) throws JSQLException {
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             for (Builder builder : builderList) {
                 List<Object> preparedValues = builder.getPreparedValues();
@@ -134,7 +140,7 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
             }
             return ps.executeBatch();
         } catch (SQLException e) {
-            throw new SQLException(sql, e);
+            throw new ExecutionException("executing batch update error, batch builder list: \n" + builderList, e);
         }
     }
 
@@ -148,9 +154,8 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
         for (int i = 0; i < colLen; i++) {
             returnColumnList.add(meta.getColumnLabel(i + 1));
         }
-        ORMapper mapper = new ORMapper();
         Map<Integer, Field> colFieldMap = new LinkedHashMap<>(returnColumnList.size());
-        mapper.mapColumn(clazz, (col, field) -> {
+        ORMapper.mapColumn(clazz, (col, field) -> {
             for (int i = 0; i < returnColumnList.size(); i++) {
                 String retColName = returnColumnList.get(i);
                 int colIdx = -1;

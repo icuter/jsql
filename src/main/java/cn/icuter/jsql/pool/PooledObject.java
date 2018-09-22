@@ -65,4 +65,15 @@ public class PooledObject<T> {
     void markReturned() {
         borrowed = false;
     }
+
+    @Override
+    public String toString() {
+        return new StringBuilder("PooledObject{")
+        .append("createTime=").append(createTime)
+        .append(", lastBorrowedTime=").append(lastBorrowedTime)
+        .append(", lastReturnedTime=").append(lastReturnedTime)
+        .append(", borrowed=").append(borrowed)
+        .append(", objectType=").append(object == null ? null : object.getClass().getName())
+        .append('}').toString();
+    }
 }
