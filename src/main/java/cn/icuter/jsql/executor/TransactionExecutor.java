@@ -6,6 +6,7 @@ import cn.icuter.jsql.exception.TransactionCommitException;
 import cn.icuter.jsql.exception.TransactionRollbackExcetpion;
 import cn.icuter.jsql.transaction.DefaultTransaction;
 
+import java.io.IOException;
 import java.sql.Connection;
 import java.util.List;
 import java.util.Map;
@@ -16,7 +17,7 @@ import java.util.Map;
  */
 public class TransactionExecutor extends DefaultTransaction implements JdbcExecutor {
 
-    private final JdbcExecutor jdbcExecutor;
+    protected JdbcExecutor jdbcExecutor;
 
     public TransactionExecutor(Connection connection) {
         super(connection);
@@ -54,12 +55,26 @@ public class TransactionExecutor extends DefaultTransaction implements JdbcExecu
     }
 
     @Override
-    public void execBatch(List<Builder> builders, BatchCompletedAction completedAction) throws JSQLException {
+    public void execBatch(List<Builder> builders) throws JSQLException {
         try {
-            jdbcExecutor.execBatch(builders, completedAction);
+            jdbcExecutor.execBatch(builders);
         } catch (JSQLException e) {
             setState(State.ERROR);
             throw e;
+        }
+    }
+
+    @Override
+    public void close() throws IOException {
+        try {
+            end();
+        } catch (JSQLException e) {
+            try {
+                setState(State.ERROR);
+            } catch (JSQLException e1) {
+                throw new IOException(e1);
+            }
+            throw new IOException(e);
         }
     }
 

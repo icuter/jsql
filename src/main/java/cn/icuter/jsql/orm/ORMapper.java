@@ -62,6 +62,9 @@ public class ORMapper {
     public static void mapColumn(Class<?> clazz, DBColumnMapper dbColumnMapper) {
         Field[] declaredFields = clazz.getDeclaredFields();
         for (Field field : declaredFields) {
+            if (field.getName().startsWith("this$")) {
+                continue;
+            }
             String fieldName = null;
             if (field.isEnumConstant() || (field.getModifiers() & Modifier.TRANSIENT) != 0) {
                 continue;

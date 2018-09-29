@@ -13,10 +13,12 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 /**
@@ -110,22 +112,14 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
     }
 
     @Override
-    public void execBatch(List<Builder> builders, BatchCompletedAction completedAction) throws JSQLException {
-        boolean hasCompletedAction = completedAction != null;
-        List<BatchResult> batchResultList = new LinkedList<>();
+    public void execBatch(List<Builder> builders) throws JSQLException {
         Map<String, List<Builder>> builderGroup = builders.stream().collect(Collectors.groupingBy(Builder::getSql));
-        for (Map.Entry<String, List<Builder>> entry : builderGroup.entrySet()) {
-            String sql = entry.getKey();
-            List<Builder> valueList = entry.getValue();
-            int[] result = execBatch(entry.getKey(), valueList);
-            if (hasCompletedAction) {
-                batchResultList.add(new BatchResult(sql, result, valueList));
-            }
-        }
-        if (hasCompletedAction) {
-            BatchEvent batchEvent = new BatchEvent();
-            batchEvent.result = batchResultList;
-            completedAction.doAction(batchEvent);
+        List<String> sqlList = builders.stream().map(Builder::getSql).collect(Collectors.toList());
+        Map<String, List<Builder>> builderOrderGroup = new TreeMap<>(Comparator.comparingInt(sqlList::indexOf));
+        builderOrderGroup.putAll(builderGroup);
+
+        for (Map.Entry<String, List<Builder>> entry : builderOrderGroup.entrySet()) {
+            execBatch(entry.getKey(), entry.getValue());
         }
     }
 
@@ -140,7 +134,10 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
             }
             return ps.executeBatch();
         } catch (SQLException e) {
-            throw new ExecutionException("executing batch update error, batch builder list: \n" + builderList, e);
+            List<Object> values = builderList.stream().map(Builder::getPreparedValues)
+                    .collect(LinkedList::new, LinkedList::add, LinkedList::addAll);
+            throw new ExecutionException("executing batch update error, batch sql: " + sql
+                    + ", batch values list: \n" + values, e);
         }
     }
 

@@ -7,7 +7,7 @@ makes Java SQL development more easier.
 For Who ?
 
 If you are a Java developer searching for the jdbc framework satisfy functions as connection pool, super lightweight orm
-and want to write sql like programing java code.
+and want to write sql like java code programing, then I suggest you could try to use JSQL framework for jdbc operation.
 
 Why JSQL ?
 - No SQL string and make your code clean
@@ -20,16 +20,17 @@ Why JSQL ?
 - JDK8+
 
 ## Features
-1. Connection Pool
-2. SQL Builder
-3. Support common dialects
-4. Auto paging
-5. Jdbc Executor for query, update or batch update
-6. Super lightweight ORM
-7. Against SQL inject
+1. Connection/JdbcExecutor pool
+2. SQL syntax like builder
+3. Transaction
+4. Support common dialects
+5. Auto paging
+6. Jdbc executor for query, update or batch update
+7. Super lightweight ORM
+8. Against SQL inject
 
 ## Quick Start
-As following example, you can learn how to new a Connection from JSQLDataSource, Build SQL with Builder, and finally execute with JdbcExecutor.
+As following example, you can learn how to new a `Connection` from `JSQLDataSource`, Build SQL with Builder, and finally execute with JdbcExecutor.
 
 ```java
 JSQLDataSource dataSource = new JSQLDataSource("url", "username", "password");
@@ -38,18 +39,15 @@ try (Connection connection = dataSource.newConnection()) {
     Builder builder = new SelectBuilder() {{
         select().from("table").where().eq("name", "jsql").build();
     }};
-    List<Map<String, Object>> resultList = executor.execQuery(builder);
+    List<Map<String, Object>> list = executor.execQuery(builder);
 }
 ```
 
-maybe you just need `JdbcExecutor` rather than `Connection`, we could simplfy our example as follow
+maybe you just need `JdbcExecutor` rather than `Connection`, and `JSQLDataSource` can also create a Builder for less coding and convenience we could simplfy our example as follow
 ```java
 JSQLDataSource dataSource = new JSQLDataSource("url", "username", "password");
 try (JdbcExecutor executor = dataSource.createJdbcExecutor(connection)) {
-    Builder builder = new SelectBuilder() {{
-        select().from("table").where().eq("name", "jsql").build();
-    }};
-    List<Map<String, Object>> resultList = executor.execQuery(builder);
+    List<Map<String, Object>> list = dataSource.select().from("table").where().eq("name", "jsql").execQuery(executor);
 }
 ```
 
@@ -95,10 +93,7 @@ Let's refactor our quick start example by using `JdbcExecutorPool`
 JSQLDataSource dataSource = new JSQLDataSource("url", "username", "password");
 JdbcExecutorPool pool = dataSource.createExecutorPool();
 try (JdbcExecutor executor = pool.getExecutor()) {
-    Builder builder = new SelectBuilder() {{
-        select().from("table").where().eq("name", "jsql").build();
-    }};
-    List<Map<String, Object>> resultList = executor.execQuery(builder);
+    List<Map<String, Object>> list = dataSource.select().from("table").where().eq("name", "jsql").execQuery(executor);
 }
 ```
 
@@ -115,7 +110,7 @@ ObjectPool<Connection> pool = dataSource.createConnectionPool(poolConfiguration)
 
  name | comment | default value
 ---|---|---
-maxPoolSize | max object pool size | 12
+maxPoolSize | max object pool size | 26
 idleTimeout | The max valid time between object returned time and now with milliseconds, 0 will be timeout immedately when checked by pool maintainer, but -1 will never timeout | -1 
 idleCheckInterval | The interval time of milliseconds to trigger pool maintainer checking idle object | 15 minus
 pollTimeout | Setting time waiting for borrowing a object with milliseconds, -1 will never timeout | -1
@@ -128,18 +123,25 @@ Object Pool should be static final, borrow and return object globally
 Builder is responsible for SQL generation, like DQL and DML syntax, such as `select`/`insert`/`update`/`delete`. The best way to create a Builder instance is using `JSQLDataSource` which will set `Dialect` into Builder automatically. Let's refer as following examples to understand it's usage.
 ```java
 JSQLDataSource dataSource = new JSQLDataSource("jdbc:mysql://host:3306/database", "username", "password");
-SelectBuilder select = dataSource.selectBuilder(); // same to new SelectBuilder(Dialects.MYSQL);
-UpdateBuilder update = dataSource.updateBuilder(); // same to new UpdateBuilder(Dialects.MYSQL);
-InsertBuilder insert = dataSource.insertBuilder(); // same to new InsertBuilder(Dialects.MYSQL);
-DeleteBuilder delete = dataSource.deleteBuilder(); // same to new DeleteBuilder(Dialects.MYSQL);
+SelectBuilder select = dataSource.select(String... cols); // same to new SelectBuilder(Dialects.MYSQL).select(cols);
+UpdateBuilder update = dataSource.update(table);          // same to new UpdateBuilder(Dialects.MYSQL).update(table);
+InsertBuilder insert = dataSource.insert(table);          // same to new InsertBuilder(Dialects.MYSQL).insert(table);
+DeleteBuilder delete = dataSource.delete();               // same to new DeleteBuilder(Dialects.MYSQL).delete();
 ```
 
 ### SelectBuilder
+Created by keyword of `new`, normally, we could new a Builder for SQL construction.
 ```java
 Builder builder = new SelectBuilder() {{
     select().from("table").where().eq("name", "jsql").build();
 }};
 ```
+In less coding way, we could create a Builder by using `JSQLDataSource` as follow.
+```java
+JSQLDataSource dataSource = new JSQLDataSource(...);
+dataSource.select().from("table").where().eq("name", "jsql").build();
+```
+
 **SQL**: select * from table where name = ?
 
 **VALUE**: "jsql"
@@ -147,13 +149,17 @@ Builder builder = new SelectBuilder() {{
 ### InsertBuilder
 ```java
 Builder insert = new InsertBuilder() {{
-    insertInto("table")
-        .values(
-            Cond.eq("col1", "val1"),
-            Cond.eq("col2", 102),
-            Cond.eq("col3", "val3"))
+    insert("table")
+        .values(Cond.eq("col1", "val1"), Cond.eq("col2", 102),Cond.eq("col3", "val3"))
         .build();
 }};
+```
+Created by `JSQLDataSource` as follow.
+```java
+JSQLDataSource dataSource = new JSQLDataSource(...);
+dataSource.insert("table")
+        .values(Cond.eq("col1", "val1"), Cond.eq("col2", 102),Cond.eq("col3", "val3"))
+        .build();
 ```
 **SQL**: insert into t_table(col1,col2,col3) values(?,?,?)
 
@@ -163,14 +169,20 @@ Builder insert = new InsertBuilder() {{
 ```java
 Builder update = new UpdateBuilder() {{
     update("t_table")
-        .set(
-            Cond.eq("col1", "val1"),
-            Cond.eq("col2", 102),
-            Cond.eq("col3", "val3"))
+        .set(Cond.eq("col1", "val1"), Cond.eq("col2", 102), Cond.eq("col3", "val3"))
         .where()
         .like("id", "123%")
         .build();
 }};
+```
+Created by `JSQLDataSource` as follow.
+```java
+JSQLDataSource dataSource = new JSQLDataSource(...);
+dataSOurce.update("t_table")
+        .set(Cond.eq("col1", "val1"), Cond.eq("col2", 102), Cond.eq("col3", "val3"))
+        .where()
+        .like("id", "123%")
+        .build();
 ```
 **SQL**: update t_table set col1 = ?, col2 = ?, col3 = ? where id like ?
 
@@ -181,6 +193,11 @@ Builder update = new UpdateBuilder() {{
 Builder delete = new DeleteBuilder() {{
     delete().from("t_table").where().eq("id", 123456789).build();
 }};
+```
+Created by `JSQLDataSource` as follow.
+```java
+JSQLDataSource dataSource = new JSQLDataSource(...);
+dataSOurce.delete().from("t_table").where().eq("id", 123456789).build();
 ```
 **SQL**: delete from t_table where id = ?
 
@@ -381,7 +398,7 @@ Builder select = new SelectBuilder() {{
     select().from("table").where().in("name", selectIn).build();
 }};
 ```
-**SQL**: select * from table where name in (select name from table_0 where name like ?)
+**SQL**: select * from table where name in (select name from table where name like ?)
 
 **VALUE**: "%jsql%"
 
@@ -540,7 +557,7 @@ Builder builder = new SelectBuilder() {{
 }};
 JdbcExecutor jdbcExecutor = new DefaultJdbcExecutor(connection);
 List<Map<String, Object>> resultMap = jdbcExecutor.execQuery(builder);
-List<OrgUnit> resultORM = jdbcExecutor.execQuery(builder, Table.class);
+List<Table> resultORM = jdbcExecutor.execQuery(builder, Table.class);
 ```
 
 ### Insert Value
@@ -579,9 +596,8 @@ student.setName("Edward");
 student.setAge(20);
 student.setClass(null);
 
-ORMapper studentMapper = new ORMapper(student);
 Builder update = new UpdateBuilder() {{
-    update("t_student").set(studentMapper.toMap()).build();
+    update("t_student").set(ORMapper.of(student).toMap()).build();
 }};
 ```
 
@@ -592,10 +608,7 @@ When Builder has been built, we could use JdbcExecutor for execution. `dataSourc
 ```java
 JSQLDataSource dataSource = new JSQLDataSource("url", "username", "password");
 try (JdbcExecutor executor = dataSource.createJdbcExecutor()) {
-    Builder builder = new SelectBuilder() {{
-        select().from("table").where().eq("name", "jsql").build();
-    }};
-    List<Map<String, Object>> resultList = executor.execQuery(builder);
+    List<Map<String, Object>> list = dataSource.select().from("table").where().eq("name", "jsql").execQuery(executor);
 }
 ```
 
@@ -603,10 +616,7 @@ try (JdbcExecutor executor = dataSource.createJdbcExecutor()) {
 ```java
 JSQLDataSource dataSource = new JSQLDataSource("url", "username", "password");
 try (JdbcExecutor executor = dataSource.createJdbcExecutor()) {
-    Builder builder = new DeleteBuilder() {{
-        delete().from("table").where().eq("name", "jsql").build();
-    }};
-    int count = executor.execUpdate(builder);
+    int count = delete().from("table").where().eq("name", "jsql").execUpdate(executor);
 }
 ```
 
@@ -666,40 +676,69 @@ List<Map<String, Object>> resultList = executor.execQuery(builder);
 ```
 
 ## Transaction
-### TransactionExecutor From JSQLDataSource
-We could create a `TransactionExecutor` by `JSQLDataSource`, as following example, we could learn how to start with transaction.
+At this section, we could learn TransactionExecutor's usage and we would pay attention it's detail for commit/rollback/end and even Connection close.
+
+### TransactionExecutor
+Now, let'u create a `TransactionExecutor` with `Connection` parameter. At following example, while we commit/rollback, `Connection` will be closed as well.
+```java
+Connection connection = createConnection(false);
+TransactionExecutor executor = new TransactionExecutor(connection);
+executor.setStateListener((tx, state) -> {
+    if (tx.wasCommitted() || tx.wasRolledBack()) {
+        try {
+            if (connection != null && !connection.isClosed()) {
+                connection.close();
+            }
+        } catch (SQLException e) {
+            throw new ExecutionException("closing Connection error", e);
+        }
+    }
+});
+Builder delete = new DeleteBuilder() {{
+    delete().from("table_name").where().eq("id", "<UUID>").build();
+}};
+executor.execUpdate(delete);
+
+executor.end(); // auto commit and close Connection by using StateListener
+```
+
+### JSQLDataSource
+We could create a `TransactionExecutor` by `JSQLDataSource`, and let's simplfy the example above.
 ```java
 JSQLDataSource dataSource = new JSQLDataSource("url", "username", "password");
 TransactionExecutor executor = dataSource.createTransaction();
 try {
-    executor.execUpdate(new InsertBuilder() {{
-        insertInto("t_jsql_test").values(
-                Cond.eq("t_col_1", "transaction-val-1"),
-                Cond.eq("t_col_2", "transaction-val-1")
-        ).build();
-    }});
-    executor.execUpdate(new InsertBuilder() {{
-        insertInto("t_jsql_test").values(
-                Cond.eq("t_col_1", "transaction-val-2"),
-                Cond.eq("t_col_2", "transaction-val-2")
-        ).build();
-    }});
+    dataSource.delete().from("table_name").where().eq("id", "<UUID>").execUpdate(executor);
     executor.commit();
 } catch (Exception e) {
-    e.printStackTrace();
     executor.rollback();
 }
 ```
+
 **Note**
 > Please note that, Connection will be closed while calling commit or rollback, if don't commit or rollback, Conneciton in TransactionExecutor will be always alive and keep connecting to DB server.
 
-### TransactionExecutor From JdbcExecutorPool
-From JdbcExecutor Pool we could get `TransactionExecutor` for transaction operation, `try () {}` or `TransactionExecutor.close` will auto return `TransactionExecutor` back to the pool. If you forgot to commit, all DML to DB will be rolled back while returning to pool.
+### JdbcExecutorPool
+From JdbcExecutor Pool we could get `TransactionExecutor` and process jdbc SQL with it and do transaction manually.
 ```java
 JSQLDataSource dataSource = new JSQLDataSource("url", "username", "password");
 JdbcExecutorPool pool = dataSource.createExecutorPool();
-try (JdbcExecutor executor = pool.getTransactionExecutor()) {
-    // TODO do something with executor
-    executor.commit(); // you have to commit after opertion done, otherwise will be rolled back
+TransactionExecutor executor = pool.getTransactionExecutor()
+try {
+    ...
+    executor.commit();
+} catch (Exception e) {
+    executor.rollback();
+} finally {
+    pool.returnExecutor(executor);
+}
+```
+
+For convenience, we could simplfy our sample as follow, if you forget to commit transaction, all DML operation to DB will be auto commit before return to the jdbc executor pool. When call `executor.close`/`executor.end` will auto return to executor pool.
+```java
+JSQLDataSource dataSource = new JSQLDataSource("url", "username", "password");
+JdbcExecutorPool pool = dataSource.createExecutorPool();
+try (TransactionExecutor executor = pool.getTransactionExecutor()) {
+    ... auto commit when executor.close or end
 }
 ```

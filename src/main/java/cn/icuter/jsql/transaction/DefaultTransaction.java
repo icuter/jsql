@@ -52,6 +52,7 @@ public class DefaultTransaction implements Transaction {
 
     @Override
     public void commit() throws JSQLException {
+        checkTransactionAvailable();
         try {
             connection.commit();
             setState(State.COMMIT);
@@ -63,6 +64,7 @@ public class DefaultTransaction implements Transaction {
 
     @Override
     public void rollback() throws JSQLException {
+        checkTransactionAvailable();
         try {
             connection.rollback();
             setState(State.ROLLBACK);
@@ -73,7 +75,15 @@ public class DefaultTransaction implements Transaction {
     }
 
     @Override
+    public void end() throws JSQLException {
+        if (getState() == State.ROLLBACK_SAVEPOINT || (!wasCommitted() && !wasRolledBack())) {
+            commit();
+        }
+    }
+
+    @Override
     public void addSavepoint(String savepointName) throws JSQLException {
+        checkTransactionAvailable();
         try {
             // check name whether unique
             if (savepointMap.containsKey(savepointName)) {
@@ -88,9 +98,13 @@ public class DefaultTransaction implements Transaction {
 
     @Override
     public void rollback(String savepointName) throws JSQLException {
+        checkTransactionAvailable();
         try {
-            connection.rollback(savepointMap.get(savepointName));
-            setState(State.ROLLBACK_SAVEPOINT);
+            Savepoint savepoint = savepointMap.get(savepointName);
+            if (savepoint != null) {
+                connection.rollback(savepoint);
+                setState(State.ROLLBACK_SAVEPOINT);
+            }
         } catch (SQLException e) {
             setState(State.ROLLBACK_SAVEPOINT_ERROR);
             throw new TransactionException("rolling back savepoint error for name: " + savepointName, e);
@@ -99,6 +113,7 @@ public class DefaultTransaction implements Transaction {
 
     @Override
     public void releaseSavepoint(String savepointName) throws JSQLException {
+        checkTransactionAvailable();
         try {
             connection.releaseSavepoint(savepointMap.get(savepointName));
         } catch (SQLException e) {
@@ -115,5 +130,19 @@ public class DefaultTransaction implements Transaction {
     protected void setState(State state) throws JSQLException {
         this.state = state;
         stateListener.fireEvent(this, this.state);
+    }
+
+    @Override
+    public void releaseAllSavepoints() throws JSQLException {
+        checkTransactionAvailable();
+        for (Map.Entry<String, Savepoint> entry : savepointMap.entrySet()) {
+            releaseSavepoint(entry.getKey());
+        }
+    }
+
+    private void checkTransactionAvailable() throws JSQLException {
+        if (wasCommitted() || wasRolledBack()) {
+            throw new TransactionException("transaction was unavailable for state: " + state);
+        }
     }
 }

@@ -12,6 +12,7 @@ import java.util.List;
  */
 public class BatchResult {
 
+    private Exception exception;
     private int totalCount;
     private int successCount;
     private int failCount;
@@ -29,6 +30,14 @@ public class BatchResult {
                 successCount++;
             }
         }
+    }
+
+    public boolean hasException() {
+        return exception != null;
+    }
+
+    public void setException(Exception exception) {
+        this.exception = exception;
     }
 
     public int getTotalCount() {

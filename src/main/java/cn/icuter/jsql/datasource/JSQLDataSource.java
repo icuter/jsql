@@ -1,14 +1,16 @@
 package cn.icuter.jsql.datasource;
 
+import cn.icuter.jsql.builder.Builder;
 import cn.icuter.jsql.builder.DeleteBuilder;
 import cn.icuter.jsql.builder.InsertBuilder;
+import cn.icuter.jsql.builder.SQLBuilder;
 import cn.icuter.jsql.builder.SelectBuilder;
 import cn.icuter.jsql.builder.UpdateBuilder;
 import cn.icuter.jsql.dialect.Dialect;
 import cn.icuter.jsql.dialect.Dialects;
 import cn.icuter.jsql.dialect.UnknownDialect;
 import cn.icuter.jsql.exception.DataSourceException;
-import cn.icuter.jsql.exception.JSQLException;
+import cn.icuter.jsql.exception.ExecutionException;
 import cn.icuter.jsql.executor.CloseableJdbcExecutor;
 import cn.icuter.jsql.executor.JdbcExecutor;
 import cn.icuter.jsql.executor.TransactionExecutor;
@@ -16,7 +18,6 @@ import cn.icuter.jsql.pool.DefaultObjectPool;
 import cn.icuter.jsql.pool.ObjectPool;
 import cn.icuter.jsql.pool.PooledObjectManager;
 
-import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -108,28 +109,16 @@ public class JSQLDataSource {
 
     public TransactionExecutor createTransaction() {
         Connection connection = createConnection(false);
-        TransactionExecutor executor = new TransactionExecutor(connection) {
-            @Override
-            public void close() throws IOException {
-                if (!wasCommitted() && !wasRolledBack()) {
-                    rollback();
-                }
+        TransactionExecutor executor = new TransactionExecutor(connection);
+        executor.setStateListener((tx, state) -> {
+            if (tx.wasCommitted() || tx.wasRolledBack()) {
                 try {
                     if (connection != null && !connection.isClosed()) {
                         connection.close();
                     }
                 } catch (SQLException e) {
-                    throw new IOException("closing Connection in transaction error", e);
+                    throw new ExecutionException("closing Connection error", e);
                 }
-            }
-        };
-        executor.setStateListener((transaction, state) -> {
-            try {
-                if (transaction.wasCommitted() || transaction.wasRolledBack()) {
-                    connection.close();
-                }
-            } catch (SQLException e) {
-                throw new DataSourceException("closing Connection in StateListener error", e);
             }
         });
         return executor;
@@ -175,17 +164,21 @@ public class JSQLDataSource {
         return new JdbcExecutorPool(createConnectionObjectPool(poolConfiguration));
     }
 
-    public SelectBuilder selectBuilder() {
-        return new SelectBuilder(dialect);
+    public Builder select(String... cols) {
+        return new SelectBuilder(dialect).select(cols);
     }
-    public UpdateBuilder updateBuilder() {
-        return new UpdateBuilder(dialect);
+    public Builder update(String table) {
+        return new UpdateBuilder(dialect).update(table);
     }
-    public InsertBuilder insertBuilder() {
-        return new InsertBuilder(dialect);
+    public Builder insert(String table) {
+        return new InsertBuilder(dialect).insert(table);
     }
-    public DeleteBuilder deleteBuilder() {
-        return new DeleteBuilder(dialect);
+    public Builder delete() {
+        return new DeleteBuilder(dialect).delete();
+    }
+
+    public Builder sql(String sql, Object... values) {
+        return new SQLBuilder().sql(sql).value(values);
     }
 
     @Override

@@ -1,6 +1,8 @@
 package cn.icuter.jsql.datasource;
 
+import cn.icuter.jsql.builder.Builder;
 import cn.icuter.jsql.exception.BorrowObjectException;
+import cn.icuter.jsql.exception.ExecutionException;
 import cn.icuter.jsql.exception.JSQLException;
 import cn.icuter.jsql.exception.PoolCloseException;
 import cn.icuter.jsql.exception.ReturnObjectException;
@@ -12,6 +14,8 @@ import cn.icuter.jsql.pool.ObjectPool;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.List;
+import java.util.Map;
 
 /**
  * @author edward
@@ -47,18 +51,18 @@ public class JdbcExecutorPool {
         try {
             if (executor instanceof ConnectionExecutor) {
                 ConnectionExecutor connExecutor = (ConnectionExecutor) executor;
+                if (connExecutor.getConnection() == null) {
+                    throw new ReturnObjectException("executor has been returned");
+                }
+                if (connExecutor instanceof ConnectionTransactionExecutor) {
+                    ((ConnectionTransactionExecutor) connExecutor).superEnd();
+                }
                 if (connExecutor.isTransaction()) {
-                    if (connExecutor instanceof ConnectionTransactionExecutor) {
-                        ConnectionTransactionExecutor transExecutor = (ConnectionTransactionExecutor) connExecutor;
-                        if (!transExecutor.wasCommitted() && !transExecutor.wasRolledBack()) {
-                            transExecutor.rollback();
-                        }
-                    }
                     // if transaction did not commit, setAutoCommit(true) will commit automatically
                     connExecutor.getConnection().setAutoCommit(true);
                 }
                 pool.returnObject(connExecutor.getConnection());
-                connExecutor.unlinkConnection();
+                connExecutor.release(); // in case reused after transaction executor returned
             }
         } catch (SQLException | JSQLException e) {
             throw new ReturnObjectException("returning Executor error", e);
@@ -88,7 +92,7 @@ public class JdbcExecutorPool {
             return connection;
         }
         @Override
-        public void unlinkConnection() {
+        public void release() {
             connection = null;
         }
         @Override
@@ -103,6 +107,26 @@ public class JdbcExecutorPool {
         public void close() throws IOException {
             returnExecutor(this);
         }
+        @Override
+        public List<Map<String, Object>> execQuery(Builder builder) throws JSQLException {
+            checkExecutable();
+            return super.execQuery(builder);
+        }
+        @Override
+        public <T> List<T> execQuery(Builder builder, Class<T> clazz) throws JSQLException {
+            checkExecutable();
+            return super.execQuery(builder, clazz);
+        }
+        @Override
+        public int execUpdate(Builder builder) throws JSQLException {
+            checkExecutable();
+            return super.execUpdate(builder);
+        }
+        @Override
+        public void execBatch(List<Builder> builders) throws JSQLException {
+            checkExecutable();
+            super.execBatch(builders);
+        }
     }
 
     class ConnectionTransactionExecutor extends TransactionExecutor implements ConnectionExecutor {
@@ -110,18 +134,13 @@ public class JdbcExecutorPool {
         ConnectionTransactionExecutor(Connection connection) {
             super(connection);
             this.connection = connection;
-            setStateListener(((transaction, state) -> {
-                if (state == State.ERROR) {
-                    transaction.rollback();
-                }
-            }));
         }
         @Override
         public Connection getConnection() {
             return connection;
         }
         @Override
-        public void unlinkConnection() {
+        public void release() {
             connection = null;
         }
         @Override
@@ -136,12 +155,45 @@ public class JdbcExecutorPool {
         public void close() throws IOException {
             returnExecutor(this);
         }
+        @Override
+        public void end() throws JSQLException {
+            returnExecutor(this);
+        }
+        private void superEnd() throws JSQLException {
+            super.end();
+        }
+        @Override
+        public List<Map<String, Object>> execQuery(Builder builder) throws JSQLException {
+            checkExecutable();
+            return super.execQuery(builder);
+        }
+        @Override
+        public <T> List<T> execQuery(Builder builder, Class<T> clazz) throws JSQLException {
+            checkExecutable();
+            return super.execQuery(builder, clazz);
+        }
+        @Override
+        public int execUpdate(Builder builder) throws JSQLException {
+            checkExecutable();
+            return super.execUpdate(builder);
+        }
+        @Override
+        public void execBatch(List<Builder> builders) throws JSQLException {
+            checkExecutable();
+            super.execBatch(builders);
+        }
     }
 
     interface ConnectionExecutor {
         Connection getConnection();
-        void unlinkConnection();
+        void release();
         boolean isTransaction();
         JdbcExecutor getExecutor();
+
+        default void checkExecutable() throws JSQLException {
+            if (getConnection() == null) {
+                throw new ExecutionException("executing error, due to executor has been return to pool");
+            }
+        }
     }
 }

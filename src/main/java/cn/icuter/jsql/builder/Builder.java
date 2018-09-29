@@ -3,8 +3,11 @@ package cn.icuter.jsql.builder;
 import cn.icuter.jsql.condition.Condition;
 import cn.icuter.jsql.condition.Eq;
 import cn.icuter.jsql.condition.Var;
+import cn.icuter.jsql.exception.JSQLException;
+import cn.icuter.jsql.executor.JdbcExecutor;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author edward
@@ -50,6 +53,12 @@ public interface Builder extends ConditionBuilder {
 
     BuilderContext getBuilderContext();
 
+    <E> List<E> execQuery(JdbcExecutor executor, Class<E> clazz) throws JSQLException;
+
+    List<Map<String, Object>> execQuery(JdbcExecutor executor) throws JSQLException;
+
+    int execUpdate(JdbcExecutor executor) throws JSQLException;
+
     // Select Builder
     default Builder orderBy(String... columns) {
         throw new UnsupportedOperationException();
@@ -60,7 +69,7 @@ public interface Builder extends ConditionBuilder {
     }
 
     // Insert Builder
-    default Builder insertInto(String tableName) {
+    default Builder insert(String tableName) {
         throw new UnsupportedOperationException();
     }
     default Builder values(Eq... values) {

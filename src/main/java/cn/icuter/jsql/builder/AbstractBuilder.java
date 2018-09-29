@@ -6,11 +6,15 @@ import cn.icuter.jsql.condition.PrepareType;
 import cn.icuter.jsql.condition.Var;
 import cn.icuter.jsql.dialect.Dialect;
 import cn.icuter.jsql.dialect.Dialects;
+import cn.icuter.jsql.exception.ExecutionException;
+import cn.icuter.jsql.exception.JSQLException;
+import cn.icuter.jsql.executor.JdbcExecutor;
 
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -199,8 +203,8 @@ public abstract class AbstractBuilder implements Builder {
 
     @Override
     public Builder build() {
-        if (builderContext.built) {
-            throw new IllegalStateException("Builder has been built");
+        if (builderContext.isBuilt()) {
+            return this;
         }
         if (dialect.supportOffsetLimit() && ((offset > 0 && limit > 0) || limit > 0)) {
             dialect.injectOffsetLimit(builderContext);
@@ -389,6 +393,39 @@ public abstract class AbstractBuilder implements Builder {
         Objects.requireNonNull(values, "values must not be null");
         addCondition(Arrays.stream(values).map(Cond::value).collect(Collectors.toList()));
         return this;
+    }
+
+    @Override
+    public int execUpdate(JdbcExecutor executor) throws JSQLException {
+        if (!(this instanceof DMLBuilder) && !(this instanceof SQLBuilder)) {
+            throw new ExecutionException("execUpdate for insert/update/delete builder");
+        }
+        if (!builderContext.isBuilt()) {
+            build();
+        }
+        return executor.execUpdate(this);
+    }
+
+    @Override
+    public <E> List<E> execQuery(JdbcExecutor executor, Class<E> clazz) throws JSQLException {
+        if (!(this instanceof DQLBuilder) && !(this instanceof SQLBuilder)) {
+            throw new ExecutionException("execQuery for select builder");
+        }
+        if (!builderContext.isBuilt()) {
+            build();
+        }
+        return executor.execQuery(this, clazz);
+    }
+
+    @Override
+    public List<Map<String, Object>> execQuery(JdbcExecutor executor) throws JSQLException {
+        if (!(this instanceof DQLBuilder) && !(this instanceof SQLBuilder)) {
+            throw new ExecutionException("execQuery for select builder");
+        }
+        if (!builderContext.isBuilt()) {
+            build();
+        }
+        return executor.execQuery(this);
     }
 
     protected void addCondition(Condition... conditions) {

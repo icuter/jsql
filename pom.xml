@@ -6,9 +6,47 @@
 
     <groupId>cn.icuter</groupId>
     <artifactId>jsql</artifactId>
-    <version>0.1-beta</version>
+    <packaging>jar</packaging>
+    <version>1.0.0</version>
+
+    <distributionManagement>
+        <repository>
+            <id>my-mvn-repository</id>
+            <url>file:/Users/edward/my-mvn-repository</url>
+        </repository>
+    </distributionManagement>
 
     <dependencies>
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>6.0.6</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.xerial</groupId>
+            <artifactId>sqlite-jdbc</artifactId>
+            <version>3.23.1</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.hibernate</groupId>
+            <artifactId>hibernate-core</artifactId>
+            <version>5.3.5.Final</version>
+            <scope>test</scope>
+        </dependency>
+
+<!--
+        <dependency>
+            <groupId>com.oracle</groupId>
+            <artifactId>ojdbc14</artifactId>
+            <version>10.2.0.1.0</version>
+            <scope>test</scope>
+        </dependency>
+-->
+
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>

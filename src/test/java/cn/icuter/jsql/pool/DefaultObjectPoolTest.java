@@ -1,11 +1,11 @@
 package cn.icuter.jsql.pool;
 
 import cn.icuter.jsql.datasource.PoolConfiguration;
+import cn.icuter.jsql.exception.JSQLException;
+import cn.icuter.jsql.exception.PooledObjectPollTimeoutException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import java.util.concurrent.TimeoutException;
 
 import static org.junit.Assert.*;
 
@@ -21,15 +21,15 @@ public class DefaultObjectPoolTest {
     public static void setup() {
         manager = new PooledObjectManager<Object>() {
             @Override
-            public PooledObject<Object> create() throws Exception {
+            public PooledObject<Object> create() throws JSQLException {
                 return new PooledObject<>(new Object());
             }
             @Override
-            public void invalid(PooledObject<Object> pooledObject) throws Exception {
+            public void invalid(PooledObject<Object> pooledObject) throws JSQLException {
                 // noop
             }
             @Override
-            public boolean validate(PooledObject<Object> pooledObject) throws Exception {
+            public boolean validate(PooledObject<Object> pooledObject) throws JSQLException {
                 return pooledObject.getObject() != null;
             }
         };
@@ -147,7 +147,7 @@ public class DefaultObjectPoolTest {
         }
     }
 
-    @Test(expected = TimeoutException.class)
+    @Test(expected = PooledObjectPollTimeoutException.class)
     public void testBorrowObjectTimeout() throws Exception {
         PoolConfiguration cfg = PoolConfiguration.defaultPoolCfg();
         cfg.setPollTimeout(100L);

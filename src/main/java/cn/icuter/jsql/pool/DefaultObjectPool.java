@@ -5,7 +5,7 @@ import cn.icuter.jsql.exception.JSQLException;
 import cn.icuter.jsql.exception.PoolException;
 import cn.icuter.jsql.exception.PoolMaintainerException;
 import cn.icuter.jsql.exception.PooledObjectCreationException;
-import cn.icuter.jsql.exception.PooledObjectPullTimeoutException;
+import cn.icuter.jsql.exception.PooledObjectPollTimeoutException;
 import cn.icuter.jsql.exception.PooledObjectReturnException;
 
 import java.sql.Timestamp;
@@ -63,7 +63,7 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
         this.allPooledObjects = new ConcurrentHashMap<>(this.poolConfiguration.getMaxPoolSize());
 
         long idleCheckInterval = this.poolConfiguration.getIdleCheckInterval();
-        if (idleCheckInterval >= 0) {
+        if (idleCheckInterval > 0) {
             pooledObjectMaintainer = new Timer(true);
             pooledObjectMaintainer.schedule(new PooledObjectMaintainerTask(), idleCheckInterval, idleCheckInterval);
         }
@@ -111,7 +111,7 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
                         try {
                             pooledObject = idlePooledObjects.pollFirst(poolConfiguration.getPollTimeout(), TimeUnit.MILLISECONDS);
                             if (pooledObject == null) {
-                                throw new PooledObjectPullTimeoutException("get pool object timeout, waited for "
+                                throw new PooledObjectPollTimeoutException("get pool object timeout, waited for "
                                         + poolConfiguration.getPollTimeout() + "ms");
                             }
                         } catch (InterruptedException e) {

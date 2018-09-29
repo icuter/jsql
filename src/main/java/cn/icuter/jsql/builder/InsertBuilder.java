@@ -23,7 +23,7 @@ public class InsertBuilder extends AbstractBuilder implements DMLBuilder {
     }
 
     @Override
-    public Builder insertInto(String tableName) {
+    public Builder insert(String tableName) {
         sqlStringBuilder.append("insert into").append(tableName);
         return this;
     }
