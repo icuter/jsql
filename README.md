@@ -32,6 +32,24 @@ Why JSQL ?
 ## Quick Start
 As following example, you can learn how to new a `Connection` from `JSQLDataSource`, Build SQL with Builder, and finally execute with JdbcExecutor.
 
+Configure in maven pom.xml file
+```text
+<repositories>
+  ...
+  <repository>
+    <id>icuter</id>
+    <url>https://github.com/icuter/mvn-repository</url>
+  </repository>
+  ...
+</repositories>
+
+<dependency>
+  <groupId>cn.icuter</groupId>
+  <artifactId>jsql</artifactId>
+  <version>1.0.0</version>
+</dependency>
+```
+
 ```java
 JSQLDataSource dataSource = new JSQLDataSource("url", "username", "password");
 try (Connection connection = dataSource.newConnection()) {
@@ -43,7 +61,7 @@ try (Connection connection = dataSource.newConnection()) {
 }
 ```
 
-maybe you just need `JdbcExecutor` rather than `Connection`, and `JSQLDataSource` can also create a Builder for less coding and convenience we could simplfy our example as follow
+Maybe you just need `JdbcExecutor` rather than `Connection`, and `JSQLDataSource` can also create a Builder for less coding and convenience we could simplfy our example as follow
 ```java
 JSQLDataSource dataSource = new JSQLDataSource("url", "username", "password");
 try (JdbcExecutor executor = dataSource.createJdbcExecutor(connection)) {
