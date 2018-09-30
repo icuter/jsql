@@ -38,7 +38,7 @@ Configure in maven pom.xml file
   ...
   <repository>
     <id>icuter</id>
-    <url>https://github.com/icuter/mvn-repository</url>
+    <url>https://github.com/icuter/mvn-repository/tree/master</url>
   </repository>
   ...
 </repositories>
@@ -263,7 +263,7 @@ Builder builder = new SelectBuilder() {{
 
 ### isNull/isNotNull
 ```java
-builder = new SelectBuilder() {{
+Builder builder = new SelectBuilder() {{
     select("name", "age")
         .from("t_table")
         .where()
@@ -277,7 +277,7 @@ builder = new SelectBuilder() {{
 
 ### forUpdate
 ```java
-builder = new SelectBuilder() {{
+Builder builder = new SelectBuilder() {{
     select("name", "age")
         .from("t_table")
         .where()
@@ -329,7 +329,7 @@ Builder select = new SelectBuilder() {{
 ### and/or
 Sometimes we need to resolve multi conditions combination, so that `and(Condition... conditions)` and `or(Condition... conditions)` come out, as following example you can find out their usage.
 ```java
-builder = new SelectBuilder() {{
+Builder builder = new SelectBuilder() {{
     select("name", "age")
         .from("t_table")
         .where()
