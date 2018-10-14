@@ -27,7 +27,7 @@ public class In extends AbstractCondition {
     private void checkListOrArray(Object value) {
         Class<?> valClass = value.getClass();
         if (!Collection.class.isAssignableFrom(valClass) && !valClass.isArray()) {
-            throw new IllegalArgumentException("Value must be a collection or array! ");
+            throw new IllegalArgumentException("value must be a collection or array! ");
         }
     }
 

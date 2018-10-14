@@ -4,6 +4,8 @@ import cn.icuter.jsql.builder.Builder;
 import cn.icuter.jsql.builder.BuilderContext;
 import cn.icuter.jsql.exception.ExecutionException;
 import cn.icuter.jsql.exception.JSQLException;
+import cn.icuter.jsql.log.JSQLLogger;
+import cn.icuter.jsql.log.Logs;
 import cn.icuter.jsql.orm.ORMapper;
 
 import java.lang.reflect.Field;
@@ -26,6 +28,8 @@ import java.util.stream.Collectors;
  * @since 2018-08-20
  */
 public class DefaultJdbcExecutor implements JdbcExecutor {
+    private static final JSQLLogger LOGGER = Logs.getLogger(DefaultJdbcExecutor.class);
+
     final Connection connection;
     private boolean columnLowerCase;
 
@@ -40,6 +44,8 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
 
     @Override
     public int execUpdate(Builder builder) throws JSQLException {
+        LOGGER.info("executing sql: " + builder.getSql());
+        LOGGER.info("executing values: " + builder.getPreparedValues());
         try (PreparedStatement ps = connection.prepareStatement(builder.getSql())) {
             List<Object> preparedValues = builder.getPreparedValues();
             for (int i = 0, len = preparedValues.size(); i < len; i++) {
@@ -47,6 +53,7 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
             }
             return ps.executeUpdate();
         } catch (SQLException e) {
+            LOGGER.error("executing update error builder detail: " + builder, e);
             throw new ExecutionException("executing update error builder detail: " + builder, e);
         }
     }
@@ -86,6 +93,8 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
     }
 
     private <T> T doExecQuery(Builder builder, QueryExecutor<T> queryExecutor) throws JSQLException {
+        LOGGER.info("executing query sql: " + builder.getSql());
+        LOGGER.info("executing query values: " + builder.getPreparedValues());
         try (PreparedStatement ps = connection.prepareStatement(builder.getSql())) {
             List<Object> preparedValues = builder.getPreparedValues();
             for (int i = 0, len = preparedValues.size(); i < len; i++) {
@@ -107,6 +116,7 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
             }
             return queryExecutor.doExec(rs, meta);
         } catch (Exception e) {
+            LOGGER.error("executing query error, builder detail: " + builder, e);
             throw new ExecutionException("executing query error, builder detail: " + builder, e);
         }
     }
@@ -124,9 +134,13 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
     }
 
     private int[] execBatch(String sql, List<Builder> builderList) throws JSQLException {
+        LOGGER.info("executing batch sql: " + sql);
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             for (Builder builder : builderList) {
                 List<Object> preparedValues = builder.getPreparedValues();
+
+                LOGGER.debug("executing values: " + preparedValues);
+
                 for (int i = 0, len = preparedValues.size(); i < len; i++) {
                     ps.setObject(i + 1, preparedValues.get(i));
                 }
@@ -136,6 +150,8 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
         } catch (SQLException e) {
             List<Object> values = builderList.stream().map(Builder::getPreparedValues)
                     .collect(LinkedList::new, LinkedList::add, LinkedList::addAll);
+            LOGGER.error("executing batch update error, batch sql: " + sql
+                    + ", batch values list: \n" + values, e);
             throw new ExecutionException("executing batch update error, batch sql: " + sql
                     + ", batch values list: \n" + values, e);
         }

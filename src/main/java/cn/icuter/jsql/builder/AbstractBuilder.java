@@ -398,7 +398,7 @@ public abstract class AbstractBuilder implements Builder {
     @Override
     public int execUpdate(JdbcExecutor executor) throws JSQLException {
         if (!(this instanceof DMLBuilder) && !(this instanceof SQLBuilder)) {
-            throw new ExecutionException("execUpdate for insert/update/delete builder");
+            throw new ExecutionException("class of " + this.getClass().getName() + " do not allow execUpdate");
         }
         if (!builderContext.isBuilt()) {
             build();
@@ -409,7 +409,7 @@ public abstract class AbstractBuilder implements Builder {
     @Override
     public <E> List<E> execQuery(JdbcExecutor executor, Class<E> clazz) throws JSQLException {
         if (!(this instanceof DQLBuilder) && !(this instanceof SQLBuilder)) {
-            throw new ExecutionException("execQuery for select builder");
+            throw new ExecutionException("class of " + this.getClass().getName() + " do not allow execQuery");
         }
         if (!builderContext.isBuilt()) {
             build();
@@ -420,7 +420,7 @@ public abstract class AbstractBuilder implements Builder {
     @Override
     public List<Map<String, Object>> execQuery(JdbcExecutor executor) throws JSQLException {
         if (!(this instanceof DQLBuilder) && !(this instanceof SQLBuilder)) {
-            throw new ExecutionException("execQuery for select builder");
+            throw new ExecutionException("class of " + this.getClass().getName() + " do not allow execQuery");
         }
         if (!builderContext.isBuilt()) {
             build();

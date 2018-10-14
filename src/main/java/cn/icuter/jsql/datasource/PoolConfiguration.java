@@ -8,21 +8,32 @@ import java.util.concurrent.TimeUnit;
  */
 public class PoolConfiguration {
 
-    private int maxPoolSize;    // default 26
     /**
-     * idle timeout -1 means never timeout (default)
-     * idle timeout 0 means always timeout
+     * Setting of max objects size in pool, and default is 20
      */
-    private long idleTimeout;       // milliseconds, default -1
-    private long idleCheckInterval; // milliseconds, default 15 minus
-    private long pollTimeout;       // milliseconds, default -1
+    private int maxPoolSize;
+
+    /**
+     * <pre>
+     * Setting of idle timeout with milliseconds, default is 1h
+     *   -1 means never timeout
+     *   0 means always timeout
+     * </pre>
+     */
+    private long idleTimeout;       // milliseconds, default 1 hour
+
+    /**
+     * Setting idle object checking with pool object maintainer, default is half of {@link #idleTimeout}
+     */
+    private long idleCheckInterval; // milliseconds, default half of idleTimeout
+    private long pollTimeout;       // milliseconds, default 5 seconds
 
     public static PoolConfiguration defaultPoolCfg() {
         PoolConfiguration poolConfiguration = new PoolConfiguration();
-        poolConfiguration.setMaxPoolSize(26);
-        poolConfiguration.setPollTimeout(-1); // never timeout
-        poolConfiguration.setIdleTimeout(-1); // never timeout
-        poolConfiguration.setIdleCheckInterval(TimeUnit.MILLISECONDS.convert(15L, TimeUnit.MINUTES));
+        poolConfiguration.setMaxPoolSize(20);
+        poolConfiguration.setPollTimeout(5000);
+        poolConfiguration.setIdleTimeout(TimeUnit.MILLISECONDS.convert(1, TimeUnit.HOURS));
+        poolConfiguration.setIdleCheckInterval(poolConfiguration.getIdleTimeout() / 2);
         return poolConfiguration;
     }
 
@@ -62,8 +73,9 @@ public class PoolConfiguration {
     public String toString() {
         return "PoolConfiguration{"
                 + "maxPoolSize=" + maxPoolSize
-                + ", idleTimeout=" + idleTimeout
-                + ", idleCheckInterval=" + idleCheckInterval
-                + ", pollTimeout=" + pollTimeout + '}';
+                + ", idleTimeout=" + idleTimeout + "ms"
+                + ", idleCheckInterval=" + idleCheckInterval + "ms"
+                + ", pollTimeout=" + pollTimeout + "ms"
+                + "}";
     }
 }

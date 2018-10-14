@@ -27,7 +27,7 @@ public class SQLServer2012PlusDialect implements Dialect {
     @Override
     public void injectOffsetLimit(BuilderContext builderCtx) {
         if (!builderCtx.isHasOrderBy()) {
-            throw new IllegalArgumentException("Must define [order by] clause!");
+            throw new IllegalArgumentException("must define [order by] clause!");
         }
         SQLStringBuilder sqlStringBuilder = builderCtx.getSqlStringBuilder();
 

@@ -14,6 +14,8 @@ import cn.icuter.jsql.exception.ExecutionException;
 import cn.icuter.jsql.executor.CloseableJdbcExecutor;
 import cn.icuter.jsql.executor.JdbcExecutor;
 import cn.icuter.jsql.executor.TransactionExecutor;
+import cn.icuter.jsql.log.JSQLLogger;
+import cn.icuter.jsql.log.Logs;
 import cn.icuter.jsql.pool.DefaultObjectPool;
 import cn.icuter.jsql.pool.ObjectPool;
 import cn.icuter.jsql.pool.PooledObjectManager;
@@ -29,6 +31,8 @@ import java.util.Properties;
  * @since 2018-08-10
  */
 public class JSQLDataSource {
+
+    private static final JSQLLogger LOGGER = Logs.getLogger(JSQLDataSource.class);
 
     private String url;
     private String username;
@@ -59,7 +63,7 @@ public class JSQLDataSource {
                     // try to create an custom dialect class
                     dialect = (Dialect) Class.forName(dialectInProp).newInstance();
                 } catch (InstantiationException | IllegalAccessException | ClassNotFoundException e) {
-                    throw new IllegalArgumentException("Unsupport dialect for [" + dialectInProp + ']', e);
+                    throw new IllegalArgumentException("unsupport dialect for [" + dialectInProp + ']', e);
                 }
             }
         } else {
@@ -103,8 +107,11 @@ public class JSQLDataSource {
         }
         this.loginTimeout = loginTimeout;
         if (DriverManager.getLoginTimeout() <= 0 && this.loginTimeout > 0) {
+            LOGGER.debug("Connection login timeout has set globally with " + this.loginTimeout + "s");
+
             DriverManager.setLoginTimeout(this.loginTimeout);
         }
+        LOGGER.debug("set up " + toString());
     }
 
     public TransactionExecutor createTransaction() {
@@ -138,6 +145,7 @@ public class JSQLDataSource {
             connection.setAutoCommit(autoCommit);
             return connection;
         } catch (SQLException e) {
+            LOGGER.error("creating Connection error for " + url, e);
             throw new DataSourceException("creating Connection error for " + url, e);
         }
     }
@@ -186,9 +194,10 @@ public class JSQLDataSource {
         return new StringBuilder("JSQLDataSource{")
                 .append("url='").append(url).append('\'')
                 .append(", username='").append(username).append('\'')
-                .append(", password='").append(password).append('\'')
+                .append(", password='***'")
                 .append(", driverClassName='").append(driverClassName).append('\'')
-                .append(", dialect=").append(dialect).append(", loginTimeout=").append(loginTimeout)
+                .append(", dialect=").append(dialect.getDialectName())
+                .append(", loginTimeout=").append(loginTimeout).append("s")
                 .append('}').toString();
     }
 }

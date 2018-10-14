@@ -7,7 +7,7 @@ package cn.icuter.jsql.dialect;
 public class UnknownDialect implements Dialect {
     @Override
     public String getDriverClassName() {
-        throw new UnsupportedOperationException("No driver for unknown dialect!");
+        throw new UnsupportedOperationException("no driver for unknown dialect!");
     }
 
     @Override

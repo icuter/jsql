@@ -2,6 +2,8 @@ package cn.icuter.jsql.datasource;
 
 import cn.icuter.jsql.exception.JSQLException;
 import cn.icuter.jsql.exception.PoolException;
+import cn.icuter.jsql.log.JSQLLogger;
+import cn.icuter.jsql.log.Logs;
 import cn.icuter.jsql.pool.PooledObject;
 import cn.icuter.jsql.pool.PooledObjectManager;
 
@@ -14,6 +16,8 @@ import java.sql.SQLException;
  * @since 2018-08-19
  */
 public class PooledConnectionManager implements PooledObjectManager<Connection> {
+
+    private static final JSQLLogger LOGGER = Logs.getLogger(PooledConnectionManager.class);
 
     private final int checkValidTimeout; // seconds, default 5s
     private int invalidTimeout;          // milliseconds, default -1 set invalid immediately
@@ -43,6 +47,9 @@ public class PooledConnectionManager implements PooledObjectManager<Connection> 
         this.invalidTimeout = invalidTimeout;
         this.checkValidTimeout = checkValidTimeout;
 
+        LOGGER.debug(String.format("pooled connection detail, username: %s,"
+                        + " password: %s, invalidTimeout: %d, checkValidTimeout: %d, driverClassName: %s",
+                username, "***", invalidTimeout, checkValidTimeout, driverClassName));
         registerDriverClassName();
     }
 
@@ -61,7 +68,12 @@ public class PooledConnectionManager implements PooledObjectManager<Connection> 
     @Override
     public PooledObject<Connection> create() throws JSQLException {
         try {
-            return new PooledObject<>(newConnection());
+            PooledObject<Connection> pooledObject = new PooledObject<>(newConnection());
+
+            LOGGER.trace("pooled object was created");
+            LOGGER.trace("created pooled object detail: " + pooledObject);
+
+            return pooledObject;
         } catch (SQLException e) {
             throw new PoolException("creating connection error", e);
         }
@@ -75,20 +87,25 @@ public class PooledConnectionManager implements PooledObjectManager<Connection> 
 
     @Override
     public void invalid(PooledObject<Connection> pooledObject) throws JSQLException {
+        LOGGER.trace("invalidating pooled object");
         try {
             while (pooledObject.isBorrowed() && !pooledObject.getObject().isClosed()) {
                 if (invalidTimeout > 0) {
                     long now = System.currentTimeMillis();
                     if (now - pooledObject.getLastBorrowedTime() > invalidTimeout) {
+                        LOGGER.debug("pooled object was invalidated waited " + invalidTimeout + "ms");
                         break;
                     }
                 } else if (invalidTimeout < 0) {
-                    break; // set invalid immediately
+                    // set invalid immediately
+                    LOGGER.debug("pooled object was invalidated immediately");
+                    break;
                 }
             }
             if (!pooledObject.getObject().isClosed()) {
                 pooledObject.getObject().close();
             }
+            LOGGER.debug("invalidated pooled object detail: " + pooledObject);
         } catch (SQLException e) {
             throw new PoolException("invaliding pooled object error, pooled detail: " + pooledObject.toString(), e);
         }
@@ -97,10 +114,14 @@ public class PooledConnectionManager implements PooledObjectManager<Connection> 
     @Override
     public boolean validate(PooledObject<Connection> pooledObject) throws JSQLException {
         try {
-            return validateConnection(pooledObject);
+            boolean validation = validateConnection(pooledObject);
+
+            LOGGER.debug("validation pooled object detail: " + pooledObject);
+
+            return validation;
         } catch (Exception e) {
-            // TODO warning log here
             // Catch exception and return false is for pooled object removal
+            LOGGER.error("Connection is invalid and return false for pooled object removal", e);
             return false;
         }
     }

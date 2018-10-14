@@ -28,6 +28,7 @@ Why JSQL ?
 6. Jdbc executor for query, update or batch update
 7. Super lightweight ORM
 8. Against SQL inject
+9. Logging ability
 
 ## Quick Start
 As following example, you can learn how to new a `Connection` from `JSQLDataSource`, Build SQL with Builder, and finally execute with JdbcExecutor.
@@ -46,7 +47,7 @@ Configure in maven pom.xml file
 <dependency>
   <groupId>cn.icuter</groupId>
   <artifactId>jsql</artifactId>
-  <version>1.0.0</version>
+  <version>1.0.1</version>
 </dependency>
 ```
 
@@ -758,5 +759,50 @@ JSQLDataSource dataSource = new JSQLDataSource("url", "username", "password");
 JdbcExecutorPool pool = dataSource.createExecutorPool();
 try (TransactionExecutor executor = pool.getTransactionExecutor()) {
     ... auto commit when executor.close or end
+}
+```
+
+## Logging
+While using JSQL, we must concern SQL and it's value log. For this, we design a interface name `cn.icuter.jsql.log.JSQLLogger`, if you want to use your own Logger which your system is in use. We have implemented SLF4j/Log4j2/Log4j2/JUL, so that logging into your log automatically.
+
+Note
+> JUL is the short name of `java.util.logging.Logger`, logback not in implemented list is due to it's using SLF4j api as well.
+
+### Configuration
+#### Log4j2
+log4j2.xml
+```
+<Loggers>
+    <Logger name="cn.icuter.jsql" level="info" additivity="false">
+        <AppenderRef ref="Console"/>
+    </Logger>
+    ...
+</Loggers>
+```
+#### Log4j
+log4j.properties
+```
+log4j.logger.cn.icuter.jsql=INFO
+```
+#### logging.properties
+```
+cn.icuter.jsql.level=INFO
+```
+
+### Custom Logger
+Define a CustomLogger class which extends JDKLogger, maybe Log4jLogger, Log4j2Logger or SLF4jLogger.
+```
+public class CustomLogger extends JDKLogger {
+
+    @Override
+    public void init(Class<?> aClass) {
+        logger = (Logger) Main.LOGGER;
+    }
+}
+```
+Configure your custom Logger
+```
+static {
+    Logs.setLogger(CustomLogger.class);
 }
 ```

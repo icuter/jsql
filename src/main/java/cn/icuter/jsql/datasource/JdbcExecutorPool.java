@@ -9,6 +9,8 @@ import cn.icuter.jsql.exception.ReturnObjectException;
 import cn.icuter.jsql.executor.DefaultJdbcExecutor;
 import cn.icuter.jsql.executor.JdbcExecutor;
 import cn.icuter.jsql.executor.TransactionExecutor;
+import cn.icuter.jsql.log.JSQLLogger;
+import cn.icuter.jsql.log.Logs;
 import cn.icuter.jsql.pool.ObjectPool;
 
 import java.io.IOException;
@@ -22,7 +24,7 @@ import java.util.Map;
  * @since 2018-09-13
  */
 public class JdbcExecutorPool {
-
+    private static final JSQLLogger LOGGER = Logs.getLogger(JdbcExecutorPool.class);
     final ObjectPool<Connection> pool;
 
     JdbcExecutorPool(ObjectPool<Connection> pool) {
@@ -43,6 +45,7 @@ public class JdbcExecutorPool {
             connection.setAutoCommit(false);
             return new ConnectionTransactionExecutor(connection);
         } catch (SQLException | JSQLException e) {
+            LOGGER.error("getting TransactionExecutor error", e);
             throw new BorrowObjectException("getting TransactionExecutor error", e);
         }
     }
@@ -65,6 +68,7 @@ public class JdbcExecutorPool {
                 connExecutor.release(); // in case reused after transaction executor returned
             }
         } catch (SQLException | JSQLException e) {
+            LOGGER.error("returning Executor error", e);
             throw new ReturnObjectException("returning Executor error", e);
         }
     }
@@ -73,6 +77,7 @@ public class JdbcExecutorPool {
         try {
             pool.close();
         } catch (JSQLException e) {
+            LOGGER.error("closing ExecutorPool error", e);
             throw new PoolCloseException("closing ExecutorPool error", e);
         }
     }

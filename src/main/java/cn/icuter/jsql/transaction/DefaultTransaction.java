@@ -2,6 +2,8 @@ package cn.icuter.jsql.transaction;
 
 import cn.icuter.jsql.exception.JSQLException;
 import cn.icuter.jsql.exception.TransactionException;
+import cn.icuter.jsql.log.JSQLLogger;
+import cn.icuter.jsql.log.Logs;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -14,6 +16,7 @@ import java.util.Map;
  * @since 2018-09-16
  */
 public class DefaultTransaction implements Transaction {
+    private static final JSQLLogger LOGGER = Logs.getLogger(DefaultTransaction.class);
     private final Map<String, Savepoint> savepointMap;
     private final Connection connection;
     private StateListener stateListener = (transaction, state) -> { };
@@ -28,7 +31,7 @@ public class DefaultTransaction implements Transaction {
     private void checkConnection(Connection connection) {
         try {
             if (connection.getAutoCommit()) {
-                throw new IllegalStateException("Illegal for auto commit Connection!");
+                throw new IllegalStateException("invalid state for auto commit Connection!");
             }
         } catch (SQLException e) {
             throw new IllegalArgumentException("unavailable Connection", e);
@@ -58,6 +61,7 @@ public class DefaultTransaction implements Transaction {
             setState(State.COMMIT);
         } catch (SQLException e) {
             setState(State.COMMIT_ERROR);
+            LOGGER.error("commit transaction error", e);
             throw new TransactionException("commit transaction error", e);
         }
     }
@@ -70,6 +74,7 @@ public class DefaultTransaction implements Transaction {
             setState(State.ROLLBACK);
         } catch (SQLException e) {
             setState(State.ROLLBACK_ERROR);
+            LOGGER.error("rolling back transaction error", e);
             throw new TransactionException("rolling back transaction error", e);
         }
     }
@@ -92,6 +97,7 @@ public class DefaultTransaction implements Transaction {
             savepointMap.put(savepointName, connection.setSavepoint(savepointName));
         } catch (SQLException e) {
             setState(State.ADD_SAVEPOINT_ERROR);
+            LOGGER.error("adding savepoint error for name: " + savepointName, e);
             throw new TransactionException("adding savepoint error for name: " + savepointName, e);
         }
     }
@@ -107,6 +113,7 @@ public class DefaultTransaction implements Transaction {
             }
         } catch (SQLException e) {
             setState(State.ROLLBACK_SAVEPOINT_ERROR);
+            LOGGER.error("rolling back savepoint error for name: " + savepointName, e);
             throw new TransactionException("rolling back savepoint error for name: " + savepointName, e);
         }
     }
@@ -118,6 +125,7 @@ public class DefaultTransaction implements Transaction {
             connection.releaseSavepoint(savepointMap.get(savepointName));
         } catch (SQLException e) {
             setState(State.RELEASE_SAVEPOINT_ERROR);
+            LOGGER.error("releasing savepoint error for name: " + savepointName, e);
             throw new TransactionException("releasing savepoint error for name: " + savepointName, e);
         }
     }
@@ -142,6 +150,7 @@ public class DefaultTransaction implements Transaction {
 
     private void checkTransactionAvailable() throws JSQLException {
         if (wasCommitted() || wasRolledBack()) {
+            LOGGER.warn("transaction was unavailable for state: " + state);
             throw new TransactionException("transaction was unavailable for state: " + state);
         }
     }

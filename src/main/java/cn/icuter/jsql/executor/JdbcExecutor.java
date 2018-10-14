@@ -26,9 +26,4 @@ public interface JdbcExecutor extends Closeable {
     default void close() throws IOException {
         throw new UnsupportedOperationException();
     }
-
-    @FunctionalInterface
-    interface BatchCompletedAction {
-        void doAction(BatchEvent event) throws JSQLException;
-    }
 }
