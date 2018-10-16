@@ -129,10 +129,10 @@ ObjectPool<Connection> pool = dataSource.createConnectionPool(poolConfiguration)
 
  name | comment | default value
 ---|---|---
-maxPoolSize | max object pool size | 26
-idleTimeout | The max valid time between object returned time and now with milliseconds, 0 will be timeout immedately when checked by pool maintainer, but -1 will never timeout | -1 
-idleCheckInterval | The interval time of milliseconds to trigger pool maintainer checking idle object | 15 minus
-pollTimeout | Setting time waiting for borrowing a object with milliseconds, -1 will never timeout | -1
+maxPoolSize | Max object pool size | 20
+idleTimeout | The max valid time between object returned time and now with milliseconds, 0 will be timeout immedately when checked by pool maintainer, but -1 will never timeout | 1 hour
+idleCheckInterval | The interval time of milliseconds to trigger pool maintainer checking idle object | idleTimeout/2
+pollTimeout | Setting time waiting for borrowing a object with milliseconds, -1 will never timeout | 5 seconds
 
 `PoolConfiguration.defaultPoolCfg()` could get the default Pool Configuration.
 
