@@ -37,7 +37,7 @@ public class BuilderTest {
                     .forUpdate()
                     .build();
         }};
-        assertEquals(select.getSql(), "select distinct * from t_table1 left join t_table2 on t_table1.id=t_table2.id " +
+        assertEquals(select.getSql(), "select distinct * from t_table1 left join t_table2 on (t_table1.id=t_table2.id) " +
                 "where (name = ? or age = ? or tall = ?) and (id = ? and name like ?) and birth = ? or post = ? " +
                 "and user in (?,?,?) for update");
         assertArrayEquals(select.getPreparedValues().toArray(), new Object[]{"Edward", 30, 170, "123", "%Lee",
@@ -119,11 +119,12 @@ public class BuilderTest {
     public void testBuilderJoin() throws Exception {
         Builder builder = new SelectBuilder() {{
             select().from("table t")
-                    .joinOn("table1 t1", Cond.var("t.id", "t1.id"))
+                    .joinOn("table1 t1", Cond.var("t.id", "t1.id"), Cond.eq("t.framework", "jsql"))
                     .joinOn("table2 t2", Cond.var("t1.id", "t2.id"))
                     .build();
         }};
-        assertEquals(builder.getSql(), "select * from table t join table1 t1 on t.id=t1.id join table2 t2 on t1.id=t2.id");
+        assertEquals(builder.getSql(), "select * from table t join table1 t1 on (t.id=t1.id and t.framework = ?) join table2 t2 on (t1.id=t2.id)");
+        assertArrayEquals(builder.getPreparedValues().toArray(), new Object[]{"jsql"});
 
         builder = new SelectBuilder() {{
             select().from("table t")
@@ -131,7 +132,7 @@ public class BuilderTest {
                     .leftJoinOn("table2 t2", Cond.var("t1.id", "t2.id"))
                     .build();
         }};
-        assertEquals(builder.getSql(), "select * from table t left join table1 t1 on t.id=t1.id left join table2 t2 on t1.id=t2.id");
+        assertEquals(builder.getSql(), "select * from table t left join table1 t1 on (t.id=t1.id) left join table2 t2 on (t1.id=t2.id)");
 
         builder = new SelectBuilder() {{
             select().from("table t")
@@ -139,7 +140,7 @@ public class BuilderTest {
                     .rightJoinOn("table2 t2", Cond.var("t1.id", "t2.id"))
                     .build();
         }};
-        assertEquals(builder.getSql(), "select * from table t right join table1 t1 on t.id=t1.id right join table2 t2 on t1.id=t2.id");
+        assertEquals(builder.getSql(), "select * from table t right join table1 t1 on (t.id=t1.id) right join table2 t2 on (t1.id=t2.id)");
 
         builder = new SelectBuilder() {{
             select().from("table t")
@@ -147,7 +148,7 @@ public class BuilderTest {
                     .outerJoinOn("table2 t2", Cond.var("t1.id", "t2.id"))
                     .build();
         }};
-        assertEquals(builder.getSql(), "select * from table t outer join table1 t1 on t.id=t1.id outer join table2 t2 on t1.id=t2.id");
+        assertEquals(builder.getSql(), "select * from table t outer join table1 t1 on (t.id=t1.id) outer join table2 t2 on (t1.id=t2.id)");
 
         builder = new SelectBuilder() {{
             select().from("table t")
@@ -155,7 +156,16 @@ public class BuilderTest {
                     .fullJoinOn("table2 t2", Cond.var("t1.id", "t2.id"))
                     .build();
         }};
-        assertEquals(builder.getSql(), "select * from table t full join table1 t1 on t.id=t1.id full join table2 t2 on t1.id=t2.id");
+        assertEquals(builder.getSql(), "select * from table t full join table1 t1 on (t.id=t1.id) full join table2 t2 on (t1.id=t2.id)");
+
+        builder = new SelectBuilder() {{
+            select().from("table t")
+                    .fullJoinOn("table1 t1", Cond.var("t.id", "t1.id"), Cond.and(Cond.eq("t.group", "java"), Cond.eq("t.framework", "jsql")))
+                    .fullJoinOn("table2 t2", Cond.var("t1.id", "t2.id"))
+                    .build();
+        }};
+        assertEquals(builder.getSql(), "select * from table t full join table1 t1 on (t.id=t1.id and (t.group = ? and t.framework = ?)) full join table2 t2 on (t1.id=t2.id)");
+        assertArrayEquals(builder.getPreparedValues().toArray(), new Object[]{"java", "jsql"});
     }
 
     @Test

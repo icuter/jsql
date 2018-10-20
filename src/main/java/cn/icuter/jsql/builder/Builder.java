@@ -2,7 +2,6 @@ package cn.icuter.jsql.builder;
 
 import cn.icuter.jsql.condition.Condition;
 import cn.icuter.jsql.condition.Eq;
-import cn.icuter.jsql.condition.Var;
 import cn.icuter.jsql.exception.JSQLException;
 import cn.icuter.jsql.executor.JdbcExecutor;
 
@@ -27,15 +26,15 @@ public interface Builder extends ConditionBuilder {
 
     Builder groupBy(String... columns);
 
-    Builder outerJoinOn(String tableName, Var var);
+    Builder outerJoinOn(String tableName, Condition... conditions);
 
-    Builder joinOn(String tableName, Var var);
+    Builder joinOn(String tableName, Condition... conditions);
 
-    Builder leftJoinOn(String tableName, Var var);
+    Builder leftJoinOn(String tableName, Condition... conditions);
 
-    Builder rightJoinOn(String tableName, Var var);
+    Builder rightJoinOn(String tableName, Condition... conditions);
 
-    Builder fullJoinOn(String tableName, Var var);
+    Builder fullJoinOn(String tableName, Condition... conditions);
 
     Builder offset(int offset);
 

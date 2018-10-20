@@ -3,7 +3,6 @@ package cn.icuter.jsql.builder;
 import cn.icuter.jsql.condition.Cond;
 import cn.icuter.jsql.condition.Condition;
 import cn.icuter.jsql.condition.PrepareType;
-import cn.icuter.jsql.condition.Var;
 import cn.icuter.jsql.dialect.Dialect;
 import cn.icuter.jsql.dialect.Dialects;
 import cn.icuter.jsql.exception.ExecutionException;
@@ -104,8 +103,9 @@ public abstract class AbstractBuilder implements Builder {
 
     @Override
     public Builder and(Condition... conditions) {
-        addCondition(conditions);
-        sqlStringBuilder.append(Cond.and(conditions).toSql());
+        Condition andConditions = Cond.and(conditions);
+        addCondition(andConditions);
+        sqlStringBuilder.append(andConditions.toSql());
         return this;
     }
 
@@ -118,8 +118,9 @@ public abstract class AbstractBuilder implements Builder {
 
     @Override
     public Builder or(Condition... conditions) {
-        addCondition(conditions);
-        sqlStringBuilder.append(Cond.or(conditions).toSql());
+        Condition orConditions = Cond.or(conditions);
+        addCondition(orConditions);
+        sqlStringBuilder.append(orConditions.toSql());
         return this;
     }
 
@@ -147,38 +148,39 @@ public abstract class AbstractBuilder implements Builder {
     }
 
     @Override
-    public Builder outerJoinOn(String tableName, Var var) {
-        addCondition(var);
-        sqlStringBuilder.append("outer join").append(tableName).append("on").append(var.toSql());
+    public Builder outerJoinOn(String tableName, Condition... conditions) {
+        join("outer join", tableName, conditions);
         return this;
     }
 
     @Override
-    public Builder joinOn(String tableName, Var var) {
-        addCondition(var);
-        sqlStringBuilder.append("join").append(tableName).append("on").append(var.toSql());
+    public Builder joinOn(String tableName, Condition... conditions) {
+        join("join", tableName, conditions);
         return this;
     }
 
     @Override
-    public Builder leftJoinOn(String tableName, Var var) {
-        addCondition(var);
-        sqlStringBuilder.append("left join").append(tableName).append("on").append(var.toSql());
+    public Builder leftJoinOn(String tableName, Condition... conditions) {
+        join("left join", tableName, conditions);
         return this;
     }
 
     @Override
-    public Builder rightJoinOn(String tableName, Var var) {
-        addCondition(var);
-        sqlStringBuilder.append("right join").append(tableName).append("on").append(var.toSql());
+    public Builder rightJoinOn(String tableName, Condition... conditions) {
+        join("right join", tableName, conditions);
         return this;
     }
 
     @Override
-    public Builder fullJoinOn(String tableName, Var var) {
-        addCondition(var);
-        sqlStringBuilder.append("full join").append(tableName).append("on").append(var.toSql());
+    public Builder fullJoinOn(String tableName, Condition... conditions) {
+        join("full join", tableName, conditions);
         return this;
+    }
+
+    private void join(String keyword, String tableName, Condition... conditions) {
+        Condition condition = Cond.and(conditions);
+        addCondition(condition);
+        sqlStringBuilder.append(keyword).append(tableName).append("on").append(condition.toSql());
     }
 
     @Override
@@ -213,21 +215,25 @@ public abstract class AbstractBuilder implements Builder {
         preparedValueList = conditionList.stream()
                 .filter(condition -> condition.prepareType() == PrepareType.PLACEHOLDER.getType())
                 .map(Condition::getValue)
-                .collect(LinkedList::new,
-                        (list, condValue) -> {
-                            if (condValue == null) {
-                                list.add(null);
-                            } else if (condValue.getClass().isArray()) {
-                                Object[] values = (Object[]) condValue;
-                                list.addAll(Arrays.asList(values));
-                            } else if (condValue instanceof Collection) {
-                                list.addAll((Collection) condValue);
-                            } else {
-                                list.add(condValue);
-                            }
-                        }, LinkedList::addAll);
+                .collect(LinkedList::new, this::addPreparedValue, LinkedList::addAll);
         builderContext.built = true;
         return this;
+    }
+
+    private void addPreparedValue(List<Object> list, Object condValue) {
+        if (condValue == null) {
+            list.add(null);
+        } else if (condValue.getClass().isArray()) {
+            for (Object v : (Object[]) condValue) {
+                addPreparedValue(list, v);
+            }
+        } else if (condValue instanceof Collection) {
+            for (Object v : (Collection) condValue) {
+                addPreparedValue(list, v);
+            }
+        } else {
+            list.add(condValue);
+        }
     }
 
     @Override

@@ -139,7 +139,7 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
             for (Builder builder : builderList) {
                 List<Object> preparedValues = builder.getPreparedValues();
 
-                LOGGER.debug("executing values: " + preparedValues);
+                LOGGER.debug("executing batch values: " + preparedValues);
 
                 for (int i = 0, len = preparedValues.size(); i < len; i++) {
                     ps.setObject(i + 1, preparedValues.get(i));

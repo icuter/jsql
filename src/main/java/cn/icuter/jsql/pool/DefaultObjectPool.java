@@ -205,13 +205,13 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
     public void close() throws JSQLException {
         LOGGER.trace("closing object pool");
         if (isPoolClosed()) {
-            LOGGER.warn("object pool has been closed, nothing to do");
+            LOGGER.warn("object pool has been closed, would not close again");
             return;
         }
         try {
             closeLock.lock();
             if (isPoolClosed()) {
-                LOGGER.warn("object pool has been closed, nothing to do");
+                LOGGER.warn("object pool has been closed, would not close again");
                 return;
             }
             closed = true;
@@ -225,8 +225,8 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
         } finally {
             closeLock.unlock();
         }
-        LOGGER.debug("object pool was closed");
-        LOGGER.debug("closed " + debugInfo());
+        LOGGER.debug("pool was closed");
+        LOGGER.debug("the closed " + debugInfo());
     }
 
     @Override
@@ -252,7 +252,7 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
 
     @Override
     public String debugInfo() {
-        return "Object Pool State: " + (closed ? "closed" : "running") + ", " + poolStats + "; " + poolConfiguration
+        return "pool state: " + (closed ? "closed" : "running") + ", " + poolStats + "; " + poolConfiguration
                 + "; idle object size: " + idlePooledObjects.size();
     }
 

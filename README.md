@@ -328,7 +328,7 @@ Builder select = new SelectBuilder() {{
 **VALUE**: "Canton", "China"
 
 ### and/or
-Sometimes we need to resolve multi conditions combination, so that `and(Condition... conditions)` and `or(Condition... conditions)` come out, as following example you can find out their usage.
+Sometimes we need to resolve multi conditions combination, then `and(Condition... conditions)` and `or(Condition... conditions)` could be used, as following example you can find out their usage.
 ```java
 Builder builder = new SelectBuilder() {{
     select("name", "age")
@@ -426,11 +426,13 @@ Builder select = new SelectBuilder() {{
 ```java
 Builder builder = new SelectBuilder() {{
     select()
-    .from("table_1").joinOn("table_2", Cond.var("table1.id", "table2.id"))
+    .from("table_1").joinOn("table_2", Cond.var("table1.id", "table2.id"), Cond.eq("t.framework", "jsql"))
     .build();
 }};
 ```
-**SQL**: select * from table_1 join table_2 on `table1.id=table2.id`
+**SQL**: select * from table_1 join table_2 on (table1.id=table2.id and t.framework = ?)
+
+**VALUE**: "jsql"
 
 #### left Join
 ```java
@@ -440,7 +442,9 @@ Builder builder = new SelectBuilder() {{
     .build();
 }};
 ```
-**SQL**: select * from table_1 left join table_2 on `table1.id=table2.id`
+**SQL**: select * from table_1 left join table_2 on (table1.id=table2.id and t.framework = ?)
+
+**VALUE**: "jsql"
 
 #### right Join
 ```java
@@ -450,7 +454,9 @@ Builder builder = new SelectBuilder() {{
     .build();
 }};
 ```
-**SQL**: select * from table_1 right join table_2 on `table1.id=table2.id`
+**SQL**: select * from table_1 right join table_2 on (table1.id=table2.id and t.framework = ?)
+
+**VALUE**: "jsql"
 
 #### outer Join
 ```java
@@ -460,7 +466,9 @@ Builder builder = new SelectBuilder() {{
     .build();
 }};
 ```
-**SQL**: select * from table_1 outer join table_2 on `table1.id=table2.id`
+**SQL**: select * from table_1 outer join table_2 on (table1.id=table2.id and t.framework = ?)
+
+**VALUE**: "jsql"
 
 #### full join
 ```java
@@ -470,7 +478,9 @@ Builder builder = new SelectBuilder() {{
     .build();
 }};
 ```
-**SQL**: select * from table_1 full join table_2 on `table1.id=table2.id`
+**SQL**: select * from table_1 full join table_2 on (table1.id=table2.id and t.framework = ?)
+
+**VALUE**: "jsql"
 
 ### offset/limit
 Offset and limit will make different paging SQL by different Dialect, as following example will show you MySQL and Oracle Dialect offset and limit setting. Only set offset without limit is forbidden, but only set limit is allow, e.g. `Builder.offset(6).build()` will occur error.

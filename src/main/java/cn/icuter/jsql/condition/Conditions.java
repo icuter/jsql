@@ -37,12 +37,13 @@ public class Conditions implements Condition {
 
     @Override
     public Object getValue() {
-        return conditionList.stream().map(Condition::getValue).collect(Collectors.toList());
+        return conditionList.stream().filter(condition -> condition.prepareType() == PrepareType.PLACEHOLDER.getType())
+                .map(Condition::getValue).collect(Collectors.toList());
     }
 
     @Override
     public int prepareType() {
-        return PrepareType.PLAIN.getType();
+        return PrepareType.PLACEHOLDER.getType();
     }
 
 }
