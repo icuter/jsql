@@ -44,6 +44,7 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
 
     @Override
     public int execUpdate(Builder builder) throws JSQLException {
+        checkAndBuild(builder);
         LOGGER.info("executing sql: " + builder.getSql());
         LOGGER.info("executing values: " + builder.getPreparedValues());
         try (PreparedStatement ps = connection.prepareStatement(builder.getSql())) {
@@ -93,6 +94,7 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
     }
 
     private <T> T doExecQuery(Builder builder, QueryExecutor<T> queryExecutor) throws JSQLException {
+        checkAndBuild(builder);
         LOGGER.info("executing query sql: " + builder.getSql());
         LOGGER.info("executing query values: " + builder.getPreparedValues());
         try (PreparedStatement ps = connection.prepareStatement(builder.getSql())) {
@@ -137,6 +139,7 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
         LOGGER.info("executing batch sql: " + sql);
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             for (Builder builder : builderList) {
+                checkAndBuild(builder);
                 List<Object> preparedValues = builder.getPreparedValues();
 
                 LOGGER.debug("executing batch values: " + preparedValues);
@@ -165,7 +168,10 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
         int colLen = meta.getColumnCount();
         List<String> returnColumnList = new ArrayList<>(colLen);
         for (int i = 0; i < colLen; i++) {
-            returnColumnList.add(meta.getColumnLabel(i + 1));
+            String colLabel = meta.getColumnLabel(i + 1);
+            if (!colLabel.toLowerCase().startsWith("rownumber_")) {
+                returnColumnList.add(colLabel);
+            }
         }
         Map<Integer, Field> colFieldMap = new LinkedHashMap<>(returnColumnList.size());
         ORMapper.mapColumn(clazz, (col, field) -> {
@@ -181,6 +187,12 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
             }
         });
         return colFieldMap;
+    }
+
+    private void checkAndBuild(Builder builder) {
+        if (!builder.getBuilderContext().isBuilt()) {
+            builder.build();
+        }
     }
 
     @FunctionalInterface

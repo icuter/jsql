@@ -2,17 +2,13 @@ package cn.icuter.jsql.condition;
 
 import cn.icuter.jsql.builder.Builder;
 
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.stream.Collectors;
 
 /**
  * @author edward
  * @since 2018-08-06
  */
 public class In extends AbstractCondition {
-
-    private boolean builderValue;
 
     In(String field, Object value) {
         super(field, value);
@@ -21,7 +17,7 @@ public class In extends AbstractCondition {
 
     In(String field, Builder value) {
         super(field, value);
-        builderValue = true;
+        checkIsBuilderValue(value);
     }
 
     private void checkListOrArray(Object value) {
@@ -31,34 +27,12 @@ public class In extends AbstractCondition {
         }
     }
 
+    private boolean checkIsBuilderValue(Object value) {
+        return Builder.class.isAssignableFrom(value.getClass());
+    }
+
     @Override
     protected Operation assignOp() {
         return Operation.IN;
-    }
-
-    @Override
-    public String toSql() {
-        if (builderValue) {
-            Builder builder = (Builder) value;
-            return field + " " + op.getSymbol() + " (" + builder.getSql() + ")";
-        }
-        int placeHolderCnt = 0;
-        if (Collection.class.isAssignableFrom(value.getClass())) {
-            placeHolderCnt = ((Collection) value).size();
-        } else if (value.getClass().isArray()) {
-            placeHolderCnt = ((Object[]) value).length;
-        }
-        String placeHolder = Arrays.stream(new String[placeHolderCnt])
-                .map(nvl -> "?")
-                .collect(Collectors.joining(","));
-        return field + " " + op.getSymbol() + " (" + placeHolder + ")";
-    }
-
-    @Override
-    public Object getValue() {
-        if (builderValue) {
-            return ((Builder) value).getPreparedValues();
-        }
-        return super.getValue();
     }
 }

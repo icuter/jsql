@@ -8,7 +8,8 @@ public enum PrepareType {
 
     IGNORE(100),
     PLAIN(101),
-    PLACEHOLDER(102);
+    PLACEHOLDER(102),
+    BUILDER(103);
 
     private int type;
     PrepareType(int type) {

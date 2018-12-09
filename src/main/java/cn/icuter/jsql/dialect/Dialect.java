@@ -19,4 +19,11 @@ public interface Dialect {
     default boolean supportOffsetLimit() {
         return false;
     }
+
+    default String wrapOffsetLimit(BuilderContext builderContext, String sql) {
+        return sql;
+    }
+    default String wrapLimit(BuilderContext builderContext, String sql) {
+        return sql;
+    }
 }

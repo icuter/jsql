@@ -23,14 +23,15 @@ public class OracleDialect implements Dialect {
     public void injectOffsetLimit(BuilderContext builderCtx) {
         int offset = builderCtx.getOffset();
         int limit = builderCtx.getLimit();
+        String rowNumberAlias = Dialects.getRowNumberAlias(builderCtx);
         SQLStringBuilder sqlStringBuilder = builderCtx.getSqlStringBuilder();
         if (offset > 0) {
-            sqlStringBuilder.prepend("select * from (select _source.*, rownum _rownum from (");
+            sqlStringBuilder.prepend("select * from (select source_.*, rownum " + rowNumberAlias + " from (");
             int forUpdateIndex = builderCtx.getForUpdatePosition(); // can't pre get forUpdate position
             if (forUpdateIndex > 0) {
-                sqlStringBuilder.insert(forUpdateIndex, ") _source where rownum <= ?) where _rownum > ?");
+                sqlStringBuilder.insert(forUpdateIndex, ") source_ where rownum <= ?) where " + rowNumberAlias + " > ?");
             } else {
-                sqlStringBuilder.append(") _source where rownum <= ?) where _rownum > ?");
+                sqlStringBuilder.append(") source_ where rownum <= ?) where " + rowNumberAlias + " > ?");
             }
             builderCtx.addCondition(Cond.value(limit));
             builderCtx.addCondition(Cond.value(offset));
@@ -44,6 +45,12 @@ public class OracleDialect implements Dialect {
             }
             builderCtx.addCondition(Cond.value(limit));
         }
+    }
+
+    @Override
+    public String wrapOffsetLimit(BuilderContext builderContext, String sql) {
+        String rowNumberAlias = Dialects.getRowNumberAlias(builderContext);
+        return "select oracle_alias_.*, rownum as " + rowNumberAlias + " from (" + sql + ") oracle_alias_";
     }
 
     @Override

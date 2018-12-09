@@ -18,10 +18,6 @@ public interface Builder extends ConditionBuilder {
 
     Builder from(String... tableName);
 
-    Builder union(Builder builder);
-
-    Builder unionAll(Builder builder);
-
     Builder distinct();
 
     Builder groupBy(String... columns);
@@ -62,11 +58,9 @@ public interface Builder extends ConditionBuilder {
     default Builder orderBy(String... columns) {
         throw new UnsupportedOperationException();
     }
-
     default Builder forUpdate(String... columns) {
         throw new UnsupportedOperationException();
     }
-
     // Insert Builder
     default Builder insert(String tableName) {
         throw new UnsupportedOperationException();
@@ -89,6 +83,13 @@ public interface Builder extends ConditionBuilder {
     }
     // Delete Builder
     default Builder delete() {
+        throw new UnsupportedOperationException();
+    }
+    // Union Select Builder
+    default Builder union(Builder builder) {
+        throw new UnsupportedOperationException();
+    }
+    default Builder unionAll(Builder builder) {
         throw new UnsupportedOperationException();
     }
 }

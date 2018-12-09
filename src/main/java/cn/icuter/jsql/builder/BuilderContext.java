@@ -13,13 +13,13 @@ import java.util.List;
 public class BuilderContext {
 
     Dialect dialect;
-//    StringBuilder preparedSql;
     SQLStringBuilder sqlStringBuilder;
     int offset;
     int limit;
-//    int forUpdatePosition;
     boolean built;
     boolean hasOrderBy;
+    int sqlLevel;
+    Builder builder;
 
     BuilderContext() {
     }
@@ -31,10 +31,6 @@ public class BuilderContext {
     public Dialect getDialect() {
         return dialect;
     }
-
-    /*public StringBuilder getPreparedSql() {
-        return preparedSql;
-    }*/
 
     public SQLStringBuilder getSqlStringBuilder() {
         return sqlStringBuilder;
@@ -62,5 +58,13 @@ public class BuilderContext {
 
     public boolean isHasOrderBy() {
         return hasOrderBy;
+    }
+
+    public int getSqlLevel() {
+        return sqlLevel;
+    }
+
+    public Builder getBuilder() {
+        return builder;
     }
 }

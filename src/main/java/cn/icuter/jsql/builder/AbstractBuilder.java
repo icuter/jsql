@@ -53,6 +53,7 @@ public abstract class AbstractBuilder implements Builder {
         builderContext.dialect = dialect;
         builderContext.offset = offset;
         builderContext.limit = limit;
+        builderContext.builder = this;
     }
 
     @Override
@@ -68,20 +69,6 @@ public abstract class AbstractBuilder implements Builder {
     @Override
     public Builder from(String... tableName) {
         sqlStringBuilder.append("from").append(Arrays.stream(tableName).collect(Collectors.joining(",")));
-        return this;
-    }
-
-    @Override
-    public Builder union(Builder builder) {
-        sqlStringBuilder.append("union").append(builder.getSql());
-        addCondition(builder.getConditionList());
-        return this;
-    }
-
-    @Override
-    public Builder unionAll(Builder builder) {
-        sqlStringBuilder.append("union all").append(builder.getSql());
-        addCondition(builder.getConditionList());
         return this;
     }
 

@@ -178,7 +178,7 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
         Objects.requireNonNull(pooledObject, "no such object in pool!");
 
         if (!pooledObject.isBorrowed()) {
-            throw new PooledObjectReturnException("Object has been return!");
+            throw new PooledObjectReturnException("Object has been returned!");
         }
         pooledObject.markReturned();
         pooledObject.updateLastReturnedTime();

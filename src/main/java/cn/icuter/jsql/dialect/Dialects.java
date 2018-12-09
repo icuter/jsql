@@ -89,4 +89,7 @@ public abstract class Dialects {
             sqlStringBuilder.append(offsetLimitBuilder.toString());
         }
     }
+    static String getRowNumberAlias(BuilderContext builderContext) {
+        return "rownumber_" + builderContext.getSqlLevel() + "_";
+    }
 }

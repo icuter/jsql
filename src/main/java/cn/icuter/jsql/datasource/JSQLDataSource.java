@@ -5,6 +5,7 @@ import cn.icuter.jsql.builder.DeleteBuilder;
 import cn.icuter.jsql.builder.InsertBuilder;
 import cn.icuter.jsql.builder.SQLBuilder;
 import cn.icuter.jsql.builder.SelectBuilder;
+import cn.icuter.jsql.builder.UnionSelectBuilder;
 import cn.icuter.jsql.builder.UpdateBuilder;
 import cn.icuter.jsql.dialect.Dialect;
 import cn.icuter.jsql.dialect.Dialects;
@@ -23,6 +24,7 @@ import cn.icuter.jsql.pool.PooledObjectManager;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.Collection;
 import java.util.Objects;
 import java.util.Properties;
 
@@ -189,6 +191,18 @@ public class JSQLDataSource {
         return new SQLBuilder().sql(sql).value(values);
     }
 
+    public Builder union(Builder... builders) {
+        return UnionSelectBuilder.union(dialect, builders);
+    }
+    public Builder unionAll(Builder... builders) {
+        return UnionSelectBuilder.unionAll(dialect, builders);
+    }
+    public Builder union(Collection<Builder> builders) {
+        return UnionSelectBuilder.union(dialect, builders);
+    }
+    public Builder unionAll(Collection<Builder> builders) {
+        return UnionSelectBuilder.unionAll(dialect, builders);
+    }
     @Override
     public String toString() {
         return new StringBuilder("JSQLDataSource{")

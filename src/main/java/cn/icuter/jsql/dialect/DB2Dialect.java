@@ -35,15 +35,23 @@ public class DB2Dialect implements Dialect {
     @Override
     public void injectOffsetLimit(BuilderContext builderCtx) {
         SQLStringBuilder sqlStringBuilder = builderCtx.getSqlStringBuilder();
+        String rowNumberAlias = Dialects.getRowNumberAlias(builderCtx);
         if (builderCtx.getOffset() > 0) {
-            sqlStringBuilder.prepend("select * from (select sub2_.*, rownumber() over(order by order of sub2_) as _rownumber_ from (",
+            sqlStringBuilder
+                    .prepend("select * from (select sub2_.*, rownumber() over(order by order of sub2_) as " + rowNumberAlias + " from (",
                             "db2-paging-prefix")
                     .append("fetch first " + builderCtx.getLimit())
-                    .append("rows only) as sub2_) as inner1_ where _rownumber_ > " + builderCtx.getOffset()
-                            + " order by _rownumber_", "db2-paging-suffix");
+                    .append("rows only) as sub2_) as db2_inner1_ where " + rowNumberAlias + " > "
+                            + builderCtx.getOffset() + " order by " + rowNumberAlias, "db2-paging-suffix");
         } else {
             sqlStringBuilder.append("fetch first " + builderCtx.getLimit() + " rows only", "db2-paging-suffix");
         }
+    }
+
+    @Override
+    public String wrapOffsetLimit(BuilderContext builderContext, String sql) {
+        String rowNumberAlias = Dialects.getRowNumberAlias(builderContext);
+        return "select db2_alias_.*, '' as " + rowNumberAlias + " from (" + sql + ") as db2_alias_";
     }
 
     @Override
