@@ -22,7 +22,8 @@ public class ORMOracleTest extends ORMBaseTest {
         poolConfiguration.setMaxPoolSize(3);
         dataSource = TestUtils.getDataSource("oracle");
         pool = dataSource.createExecutorPool(poolConfiguration);
-        try (JdbcExecutor executor = pool.getExecutor()) {
+        JdbcExecutor executor = pool.getExecutor();
+        try {
             dataSource.sql("CREATE TABLE " + TABLE_NAME + "\n" +
                     "(\n" +
                     "  orm_id VARCHAR(60) NOT NULL,\n" +
@@ -36,6 +37,8 @@ public class ORMOracleTest extends ORMBaseTest {
                     "  PRIMARY KEY (orm_id))").execUpdate(executor);
         } catch (JSQLException e) {
             throw new IOException(e);
+        } finally {
+            executor.close();
         }
     }
 }

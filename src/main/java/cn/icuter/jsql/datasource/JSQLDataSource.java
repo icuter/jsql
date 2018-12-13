@@ -22,6 +22,7 @@ import cn.icuter.jsql.log.Logs;
 import cn.icuter.jsql.pool.DefaultObjectPool;
 import cn.icuter.jsql.pool.ObjectPool;
 import cn.icuter.jsql.pool.PooledObjectManager;
+import cn.icuter.jsql.util.ObjectUtil;
 
 import java.sql.Blob;
 import java.sql.Clob;
@@ -30,7 +31,6 @@ import java.sql.DriverManager;
 import java.sql.NClob;
 import java.sql.SQLException;
 import java.util.Collection;
-import java.util.Objects;
 import java.util.Properties;
 
 /**
@@ -69,7 +69,7 @@ public class JSQLDataSource {
                 try {
                     // try to create an custom dialect class
                     dialect = (Dialect) Class.forName(dialectInProp).newInstance();
-                } catch (InstantiationException | IllegalAccessException | ClassNotFoundException e) {
+                } catch (Exception e) {
                     throw new IllegalArgumentException("unsupport dialect for [" + dialectInProp + ']', e);
                 }
             }
@@ -107,7 +107,7 @@ public class JSQLDataSource {
             this.driverClassName = this.dialect.getDriverClassName();
         }
         try {
-            Objects.requireNonNull(this.driverClassName, "Driver Class Name must not be null!");
+            ObjectUtil.requireNonNull(this.driverClassName, "Driver Class Name must not be null!");
             Class.forName(this.driverClassName);
         } catch (ClassNotFoundException e) {
             throw new DataSourceException("initializing driver class error", e);
@@ -154,8 +154,8 @@ public class JSQLDataSource {
 
     private ObjectPool<Connection> createConnectionObjectPool(PoolConfiguration poolConfiguration) {
         PooledObjectManager<Connection> manager = new PooledConnectionManager(url, username, password);
-        return poolConfiguration == null ? new DefaultObjectPool<>(manager)
-                : new DefaultObjectPool<>(manager, poolConfiguration);
+        return poolConfiguration == null ? new DefaultObjectPool<Connection>(manager)
+                : new DefaultObjectPool<Connection>(manager, poolConfiguration);
     }
 
     public JdbcExecutorPool createExecutorPool() {

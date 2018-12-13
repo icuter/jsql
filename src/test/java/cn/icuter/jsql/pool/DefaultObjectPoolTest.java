@@ -22,7 +22,7 @@ public class DefaultObjectPoolTest {
         manager = new PooledObjectManager<Object>() {
             @Override
             public PooledObject<Object> create() throws JSQLException {
-                return new PooledObject<>(new Object());
+                return new PooledObject<Object>(new Object());
             }
             @Override
             public void invalid(PooledObject<Object> pooledObject) throws JSQLException {
@@ -39,7 +39,7 @@ public class DefaultObjectPoolTest {
     public void testPoolStat() throws Exception {
         PoolConfiguration cfg = PoolConfiguration.defaultPoolCfg();
         cfg.setIdleCheckInterval(Integer.MAX_VALUE); // assume never check idle objects
-        DefaultObjectPool<Object> pool = new DefaultObjectPool<>(manager, cfg);
+        DefaultObjectPool<Object> pool = new DefaultObjectPool<Object>(manager, cfg);
         DefaultObjectPool.PoolStats poolStats = pool.getPoolStats();
         Object[] borrowedObjects = new Object[cfg.getMaxPoolSize()];
         for (int i = 0; i < borrowedObjects.length; i++) {
@@ -69,7 +69,8 @@ public class DefaultObjectPoolTest {
         PoolConfiguration cfg = PoolConfiguration.defaultPoolCfg();
         cfg.setIdleTimeout(500L);        // 0.5s idle timeout
         cfg.setIdleCheckInterval(1000L); // check pre 1s
-        try (DefaultObjectPool<Object> pool = new DefaultObjectPool<>(manager, cfg)) {
+        DefaultObjectPool<Object> pool = new DefaultObjectPool<Object>(manager, cfg);
+        try {
             Object[] borrowedObjects = new Object[cfg.getMaxPoolSize()];
             for (int i = 0; i < borrowedObjects.length; i++) {
                 Object obj = pool.borrowObject();
@@ -86,10 +87,13 @@ public class DefaultObjectPoolTest {
             // let pool maintainer try to purge idle object again
             Thread.sleep(1200L);
             assertTrue(pool.isPoolEmpty());
+        } finally {
+            pool.close();
         }
 
         cfg.setIdleTimeout(-1); // idle object never timeout
-        try (DefaultObjectPool<Object> pool = new DefaultObjectPool<>(manager, cfg)) {
+        pool = new DefaultObjectPool<Object>(manager, cfg);
+        try {
             Object[] borrowedObjects = new Object[cfg.getMaxPoolSize()];
             for (int i = 0; i < borrowedObjects.length; i++) {
                 Object obj = pool.borrowObject();
@@ -106,6 +110,8 @@ public class DefaultObjectPoolTest {
             // let pool maintainer try to purge idle object again
             Thread.sleep(1200L);
             assertEquals(pool.getPoolStats().poolSize, cfg.getMaxPoolSize());
+        } finally {
+            pool.close();
         }
     }
 
@@ -114,22 +120,26 @@ public class DefaultObjectPoolTest {
         PoolConfiguration cfg = PoolConfiguration.defaultPoolCfg();
         cfg.setIdleTimeout(500L);        // 0.5s idle timeout
         cfg.setIdleCheckInterval(500L); // check pre 1s
-        try (DefaultObjectPool<Object> pool = new DefaultObjectPool<>(manager, cfg)) {
+        final DefaultObjectPool<Object> pool = new DefaultObjectPool<Object>(manager, cfg);
+        try {
             Thread[] threads = new Thread[80];
             for (int i = 0; i < threads.length; i++) {
-                threads[i] = new Thread(() -> {
-                    Object obj = null;
-                    try {
-                        obj = pool.borrowObject();
-                        Thread.sleep(1000L);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    } finally {
-                        if (obj != null) {
-                            try {
-                                pool.returnObject(obj);
-                            } catch (Exception e) {
-                                e.printStackTrace();
+                threads[i] = new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        Object obj = null;
+                        try {
+                            obj = pool.borrowObject();
+                            Thread.sleep(1000L);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        } finally {
+                            if (obj != null) {
+                                try {
+                                    pool.returnObject(obj);
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
                             }
                         }
                     }
@@ -144,6 +154,8 @@ public class DefaultObjectPoolTest {
             Thread.sleep(2000L); // sleep enough time to purge idle objects
 
             assertTrue(pool.isPoolEmpty());
+        } finally {
+            pool.close();
         }
     }
 
@@ -152,17 +164,23 @@ public class DefaultObjectPoolTest {
         PoolConfiguration cfg = PoolConfiguration.defaultPoolCfg();
         cfg.setPollTimeout(100L);
         cfg.setMaxPoolSize(1);
-        try (DefaultObjectPool<Object> pool = new DefaultObjectPool<>(manager, cfg)) {
+        DefaultObjectPool<Object> pool = new DefaultObjectPool<Object>(manager, cfg);
+        try {
             pool.borrowObject();
             pool.borrowObject();
+        } finally {
+            pool.close();
         }
     }
 
     @Test(expected = NullPointerException.class)
     public void testReturnException() throws Exception {
         PoolConfiguration cfg = PoolConfiguration.defaultPoolCfg();
-        try (DefaultObjectPool<Object> pool = new DefaultObjectPool<>(manager, cfg)) {
+        DefaultObjectPool<Object> pool = new DefaultObjectPool<Object>(manager, cfg);
+        try {
             pool.returnObject(new Object());
+        } finally {
+            pool.close();
         }
     }
 

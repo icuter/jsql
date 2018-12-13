@@ -3,9 +3,7 @@ package cn.icuter.jsql.builder;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.function.Predicate;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 /**
  * @author edward
@@ -14,7 +12,7 @@ import java.util.stream.Collectors;
 public class SQLStringBuilder {
 
     private String delimiter;
-    private List<SQLItem> sqlItems = new LinkedList<>();
+    private List<SQLItem> sqlItems = new LinkedList<SQLItem>();
 
     SQLStringBuilder(String delimiter) {
         this.setDelimiter(delimiter);
@@ -86,12 +84,22 @@ public class SQLStringBuilder {
         return sqlItems.size();
     }
 
-    public List<SQLItem> findByType(String fragmentType) {
-        return filterSQLItems(item -> fragmentType == null ? item.type == null : fragmentType.equalsIgnoreCase(item.type));
+    public List<SQLItem> findByType(final String fragmentType) {
+        return filterSQLItems(new Predicate<SQLItem>() {
+            @Override
+            public boolean test(SQLItem obj) {
+                return fragmentType == null ? obj.type == null : fragmentType.equalsIgnoreCase(obj.type);
+            }
+        });
     }
 
-    public List<SQLItem> findBySQL(String sql) {
-        return filterSQLItems(item -> sql == null ? item.sql == null : sql.equalsIgnoreCase(item.sql));
+    public List<SQLItem> findBySQL(final String sql) {
+        return filterSQLItems(new Predicate<SQLItem>() {
+            @Override
+            public boolean test(SQLItem obj) {
+                return sql == null ? obj.sql == null : sql.equalsIgnoreCase(obj.sql);
+            }
+        });
     }
 
     /**
@@ -101,12 +109,17 @@ public class SQLStringBuilder {
      * @return Matched SQLItem list
      */
     public List<SQLItem> findByRegex(String pattern) {
-        Pattern p = Pattern.compile(pattern, Pattern.CASE_INSENSITIVE);
-        return filterSQLItems(item -> p.matcher(item.sql).find());
+        final Pattern p = Pattern.compile(pattern, Pattern.CASE_INSENSITIVE);
+        return filterSQLItems(new Predicate<SQLItem>() {
+            @Override
+            public boolean test(SQLItem obj) {
+                return p.matcher(obj.sql).find();
+            }
+        });
     }
 
     private List<SQLItem> filterSQLItems(Predicate<SQLItem> predicate) {
-        List<SQLItem> resultList = new ArrayList<>();
+        List<SQLItem> resultList = new ArrayList<SQLItem>();
         for (int i = 0; i < sqlItems.size(); i++) {
             SQLItem item = sqlItems.get(i);
             if (predicate.test(item)) {
@@ -118,7 +131,14 @@ public class SQLStringBuilder {
     }
 
     public String serialize() {
-        return sqlItems.stream().map(item -> item.sql).collect(Collectors.joining(delimiter));
+        StringBuilder builder  = new StringBuilder();
+        for (int i = 0; i < sqlItems.size(); i++) {
+            builder.append(sqlItems.get(i).sql);
+            if (i != sqlItems.size() - 1) {
+                builder.append(delimiter);
+            }
+        }
+        return builder.toString();
     }
 
     public void setDelimiter(String delimiter) {
@@ -151,5 +171,8 @@ public class SQLStringBuilder {
             sb.append('}');
             return sb.toString();
         }
+    }
+    public interface Predicate<T> {
+        boolean test(T obj);
     }
 }

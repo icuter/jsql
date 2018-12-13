@@ -6,7 +6,7 @@ import cn.icuter.jsql.builder.BuilderContext;
  * @author edward
  * @since 2018-08-29
  */
-public class MySQLDialect implements Dialect {
+public class MySQLDialect extends AbstractDialect {
     @Override
     public String getDriverClassName() {
         return "com.mysql.jdbc.Driver";

@@ -8,7 +8,7 @@ import cn.icuter.jsql.condition.Cond;
  * @author edward
  * @since 2018-08-30
  */
-public class SQLServer2012PlusDialect implements Dialect {
+public class SQLServer2012PlusDialect extends AbstractDialect {
     @Override
     public String getDriverClassName() {
         return "com.microsoft.sqlserver.jdbc.SQLServerDriver";

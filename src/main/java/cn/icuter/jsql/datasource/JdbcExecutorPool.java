@@ -44,7 +44,10 @@ public class JdbcExecutorPool {
             Connection connection = pool.borrowObject();
             connection.setAutoCommit(false);
             return new ConnectionTransactionExecutor(connection);
-        } catch (SQLException | JSQLException e) {
+        } catch (SQLException e) {
+            LOGGER.error("getting TransactionExecutor error", e);
+            throw new BorrowObjectException("getting TransactionExecutor error", e);
+        } catch (JSQLException e) {
             LOGGER.error("getting TransactionExecutor error", e);
             throw new BorrowObjectException("getting TransactionExecutor error", e);
         }
@@ -71,7 +74,10 @@ public class JdbcExecutorPool {
                 pool.returnObject(connExecutor.getConnection());
                 connExecutor.release(); // in case reused after transaction executor returned
             }
-        } catch (SQLException | JSQLException e) {
+        } catch (SQLException e) {
+            LOGGER.error("returning Executor error", e);
+            throw new ReturnObjectException("returning Executor error", e);
+        } catch (JSQLException e) {
             LOGGER.error("returning Executor error", e);
             throw new ReturnObjectException("returning Executor error", e);
         }

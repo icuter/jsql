@@ -2,20 +2,21 @@ package cn.icuter.jsql.builder;
 
 import cn.icuter.jsql.condition.Cond;
 import cn.icuter.jsql.condition.Condition;
+import cn.icuter.jsql.condition.Eq;
 import cn.icuter.jsql.condition.PrepareType;
 import cn.icuter.jsql.dialect.Dialect;
 import cn.icuter.jsql.dialect.Dialects;
 import cn.icuter.jsql.exception.ExecutionException;
 import cn.icuter.jsql.exception.JSQLException;
 import cn.icuter.jsql.executor.JdbcExecutor;
+import cn.icuter.jsql.util.CollectionUtil;
+import cn.icuter.jsql.util.ObjectUtil;
 
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.stream.Collectors;
 
 /**
  * @author edward
@@ -27,7 +28,7 @@ public abstract class AbstractBuilder implements Builder {
     protected BuilderContext builderContext;
 
     SQLStringBuilder sqlStringBuilder = new SQLStringBuilder();
-    protected List<Condition> conditionList = new LinkedList<>();
+    protected List<Condition> conditionList = new LinkedList<Condition>();
     private List<Object> preparedValueList;
     private int offset;
     private int limit;
@@ -67,7 +68,7 @@ public abstract class AbstractBuilder implements Builder {
     public Builder select(String... columns) {
         String columnStr = "*";
         if (columns != null && columns.length > 0) {
-            columnStr = Arrays.stream(columns).collect(Collectors.joining(", "));
+            columnStr = CollectionUtil.join(columns, ", ");
         }
         sqlStringBuilder.append("select", "top-select").append(columnStr);
         return this;
@@ -75,7 +76,7 @@ public abstract class AbstractBuilder implements Builder {
 
     @Override
     public Builder from(String... tableName) {
-        sqlStringBuilder.append("from").append(Arrays.stream(tableName).collect(Collectors.joining(",")));
+        sqlStringBuilder.append("from").append(CollectionUtil.join(tableName, ","));
         return this;
     }
 
@@ -129,7 +130,7 @@ public abstract class AbstractBuilder implements Builder {
         if (columns == null || columns.length <= 0) {
             throw new IllegalArgumentException("columns must not be null or empty! ");
         }
-        String columnStr = Arrays.stream(columns).collect(Collectors.joining(","));
+        String columnStr = CollectionUtil.join(columns, ",");
         sqlStringBuilder.append("group by").append(columnStr);
         return this;
     }
@@ -206,10 +207,12 @@ public abstract class AbstractBuilder implements Builder {
             dialect.injectOffsetLimit(builderContext);
         }
         buildSql = sqlStringBuilder.serialize();
-        preparedValueList = conditionList.stream()
-                .filter(condition -> condition.prepareType() == PrepareType.PLACEHOLDER.getType())
-                .map(Condition::getValue)
-                .collect(LinkedList::new, this::addPreparedValue, LinkedList::addAll);
+        preparedValueList = new LinkedList<Object>();
+        for (Condition condition : conditionList) {
+            if (condition.prepareType() == PrepareType.PLACEHOLDER.getType()) {
+                addPreparedValue(preparedValueList, condition.getValue());
+            }
+        }
         builderContext.built = true;
         return this;
     }
@@ -390,8 +393,10 @@ public abstract class AbstractBuilder implements Builder {
 
     @Override
     public Builder value(Object... values) {
-        Objects.requireNonNull(values, "values must not be null");
-        addCondition(Arrays.stream(values).map(Cond::value).collect(Collectors.toList()));
+        ObjectUtil.requireNonNull(values, "values must not be null");
+        for (Object val : values) {
+            conditionList.add(Cond.value(val));
+        }
         return this;
     }
 
@@ -454,7 +459,63 @@ public abstract class AbstractBuilder implements Builder {
             conditionList.addAll(conditions);
         }
     }
-
+    // Select Builder
+    @Override
+    public Builder orderBy(String... columns) {
+        throw new UnsupportedOperationException();
+    }
+    @Override
+    public Builder forUpdate(String... columns) {
+        throw new UnsupportedOperationException();
+    }
+    // Insert Builder
+    @Override
+    public Builder insert(String tableName) {
+        throw new UnsupportedOperationException();
+    }
+    @Override
+    public Builder values(Eq... values) {
+        throw new UnsupportedOperationException();
+    }
+    @Override
+    public Builder values(Object value) {
+        throw new UnsupportedOperationException();
+    }
+    @Override
+    public <T> Builder values(T value, FieldInterceptor<T> interceptor) {
+        throw new UnsupportedOperationException();
+    }
+    // Update Builder
+    @Override
+    public Builder update(String tableName) {
+        throw new UnsupportedOperationException();
+    }
+    @Override
+    public Builder set(Eq... eqs) {
+        throw new UnsupportedOperationException();
+    }
+    @Override
+    public Builder set(Object value) {
+        throw new UnsupportedOperationException();
+    }
+    @Override
+    public <T> Builder set(T value, FieldInterceptor<T> interceptor) {
+        throw new UnsupportedOperationException();
+    }
+    // Delete Builder
+    @Override
+    public Builder delete() {
+        throw new UnsupportedOperationException();
+    }
+    // Union Select Builder
+    @Override
+    public Builder union(Builder builder) {
+        throw new UnsupportedOperationException();
+    }
+    @Override
+    public Builder unionAll(Builder builder) {
+        throw new UnsupportedOperationException();
+    }
     @Override
     public String toString() {
         return builderContext.built ? ("sql: " + buildSql + ", values:" + preparedValueList) : "Builder not build yet";

@@ -316,7 +316,7 @@ public class BuilderTest {
 
     @Test
     public void testSelectWithInBuilder() throws Exception {
-        Builder selectCondIn = new SelectBuilder()
+        final Builder selectCondIn = new SelectBuilder()
                 .select("name").from("table_1").where().like("name", "%Edward%").build();
         Builder select = new SelectBuilder() {{
             select().from("table").where().in("name", selectCondIn).build();

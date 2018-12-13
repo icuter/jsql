@@ -43,9 +43,11 @@ public abstract class JdbcExecutorBaseTest {
 
     @AfterClass
     public static void tearDown() throws JSQLException, IOException {
-        try (JdbcExecutor executor = pool.getExecutor()) {
+        JdbcExecutor executor = pool.getExecutor();
+        try {
             dataSource.sql("DROP TABLE " + TABLE_NAME).execUpdate(executor);
         } finally {
+            executor.close();
             pool.close();
             poolConn.close();
             dataSource = null;
@@ -56,8 +58,11 @@ public abstract class JdbcExecutorBaseTest {
 
     @Test
     public void testDefaultExecutor() throws Exception {
-        try (JdbcExecutor executor = pool.getExecutor()) {
+        JdbcExecutor executor = pool.getExecutor();
+        try {
             testExecutorBase(executor);
+        } finally {
+            executor.close();
         }
     }
 
@@ -88,12 +93,15 @@ public abstract class JdbcExecutorBaseTest {
         Assert.assertTrue(executor.wasCommitted());
         Assert.assertFalse(executor.wasRolledBack());
 
-        try (JdbcExecutor jdbcExecutor = pool.getExecutor()) {
+        JdbcExecutor jdbcExecutor = pool.getExecutor();
+        try {
             List<Map<String, Object>> list = dataSource.select().from(TABLE_NAME).execQuery(jdbcExecutor);
             Assert.assertEquals(list.size(), 2);
 
             int delCnt = dataSource.delete().from(TABLE_NAME).execUpdate(jdbcExecutor);
             Assert.assertEquals(delCnt, 2);
+        } finally {
+            jdbcExecutor.close();
         }
     }
 
@@ -236,16 +244,19 @@ public abstract class JdbcExecutorBaseTest {
     @Test
     public void testUnionSelect() throws Exception {
         JdbcExecutor jdbcExecutor = pool.getExecutor();
-        List<TestTable> testTableList = new LinkedList<>();
+        List<TestTable> testTableList = new LinkedList<TestTable>();
         for (int i = 0; i < 10; i++) {
             testTableList.add(insertTestRecord(jdbcExecutor));
         }
-        testTableList.sort((Comparator<Object>) (o1, o2) -> {
-            TestTable t1 = (TestTable) o1;
-            TestTable t2 = (TestTable) o2;
-            int t1OrderNum = t1.getOrderNum();// != null ? t1.getOrderNum() : 0;
-            int t2OrderNum = t2.getOrderNum();// != null ? t2.getOrderNum() : 0;
-            return t2OrderNum - t1OrderNum;
+        Collections.sort(testTableList, new Comparator<TestTable>() {
+            @Override
+            public int compare(TestTable o1, TestTable o2) {
+                TestTable t1 = (TestTable) o1;
+                TestTable t2 = (TestTable) o2;
+                int t1OrderNum = t1.getOrderNum();// != null ? t1.getOrderNum() : 0;
+                int t2OrderNum = t2.getOrderNum();// != null ? t2.getOrderNum() : 0;
+                return t2OrderNum - t1OrderNum;
+            }
         });
         try {
             List<TestTable> unionResult = dataSource.unionAll(
@@ -311,47 +322,62 @@ public abstract class JdbcExecutorBaseTest {
     @Test
     public void testCreateTransaction() throws Exception {
         TestTable testTable;
-        try (TransactionExecutor txExecutor = dataSource.createTransaction()) {
+        TransactionExecutor txExecutor = dataSource.createTransaction();
+        try {
             testTable = insertTestRecord(txExecutor);
             txExecutor.commit();
+        } finally {
+            txExecutor.close();
         }
-        try (TransactionExecutor txExecutorEnd = dataSource.createTransaction()) {
+        TransactionExecutor txExecutorEnd = dataSource.createTransaction();
+        try {
             int cnt = dataSource
                     .update(TABLE_NAME).set(Cond.eq("t_col_1", testTable.getCol1() + "_updated"))
                     .where().eq("test_id", testTable.getTestId())
                     .execUpdate(txExecutorEnd);
             Assert.assertEquals(cnt, 1);
             txExecutorEnd.commit();
+        } finally {
+            txExecutorEnd.close();
         }
-        try (TransactionExecutor txExecutorClose = dataSource.createTransaction()) {
+        TransactionExecutor txExecutorClose = dataSource.createTransaction();
+        try {
             int cnt = dataSource
                     .delete().from(TABLE_NAME).where().eq("test_id", testTable.getTestId())
                     .execUpdate(txExecutorClose);
             Assert.assertEquals(cnt, 1);
             txExecutorClose.commit();
+        } finally {
+            txExecutorClose.close();
         }
     }
 
     @Test
     public void testBatchUpdate() throws Exception {
-        List<Builder> batchList = new LinkedList<>();
+        List<Builder> batchList = new LinkedList<Builder>();
         batchList.add(newInsertBuilder());
         batchList.add(newInsertBuilder());
         batchList.add(newInsertBuilder());
         batchList.add(newInsertBuilder());
-        try (TransactionExecutor txExecutor = dataSource.createTransaction()) {
+        TransactionExecutor txExecutor = dataSource.createTransaction();
+        try {
             txExecutor.execBatch(batchList);
             txExecutor.commit();
+        } finally {
+            txExecutor.close();
         }
-        try (JdbcExecutor jdbcExecutor = dataSource.createJdbcExecutor()) {
+        JdbcExecutor jdbcExecutor = dataSource.createJdbcExecutor();
+        try {
             int cnt = dataSource.delete().from(TABLE_NAME).execUpdate(jdbcExecutor);
             Assert.assertEquals(cnt, batchList.size());
+        } finally {
+            jdbcExecutor.close();
         }
     }
 
     @Test
     public void testMultipleBatchUpdate() throws Exception {
-        List<Builder> batchList = new LinkedList<>();
+        List<Builder> batchList = new LinkedList<Builder>();
         int size = 10;
         for (int i = 0; i < size; i++) {
             TestTable testTable = createTestTableRecord();
@@ -367,15 +393,18 @@ public abstract class JdbcExecutorBaseTest {
                     .where().eq("test_id", testTable.getTestId()).build();
             batchList.add(deleteBuilder);
         }
-        try (TransactionExecutor jdbcExecutor = dataSource.createTransaction()) {
+        TransactionExecutor jdbcExecutor = dataSource.createTransaction();
+        try {
             jdbcExecutor.execBatch(batchList);
             jdbcExecutor.commit();
+        } finally {
+            jdbcExecutor.close();
         }
     }
 
     @Test(expected = ExecutionException.class)
     public void testBatchUpdateException() throws Exception {
-        List<Builder> batchList = new LinkedList<>();
+        List<Builder> batchList = new LinkedList<Builder>();
         batchList.add(newInsertBuilder());
         batchList.add(newInsertBuilder());
 
@@ -540,3 +569,4 @@ public abstract class JdbcExecutorBaseTest {
         return testTable;
     }
 }
+

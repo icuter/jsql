@@ -15,7 +15,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <java-source.version>1.8</java-source.version>
+        <java-source.version>1.6</java-source.version>
         <javadoc.version>8</javadoc.version>
 
         <mvn-compiler-plugin.version>3.8.0</mvn-compiler-plugin.version>

@@ -1,6 +1,7 @@
 package cn.icuter.jsql.orm;
 
 import cn.icuter.jsql.ORMTable;
+import cn.icuter.jsql.builder.FieldInterceptor;
 import cn.icuter.jsql.data.JSQLBlob;
 import cn.icuter.jsql.data.JSQLClob;
 import org.junit.Assert;
@@ -47,7 +48,12 @@ public class ORMapperTest {
 
         ormTable = createOrmTable();
         orMapper = ORMapper.of(ormTable);
-        map = orMapper.toMap((object, fieldName, colName, value, resultMap) -> "f_clob".equals(colName));
+        map = orMapper.toMap(new FieldInterceptor<ORMTable>() {
+            @Override
+            public boolean accept(ORMTable object, String fieldName, String colName, Object value, Map<String, Object> resultMap) {
+                return "f_clob".equals(colName);
+            }
+        });
         Assert.assertTrue(map.containsKey("f_clob"));
         Assert.assertFalse(map.containsKey("f_int"));
         Assert.assertFalse(map.containsKey("f_string"));

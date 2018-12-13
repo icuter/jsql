@@ -30,21 +30,27 @@ public class JSQLBlobTest {
         JSQLBlob blob = new JSQLBlob(SRC.getBytes());
         byte[] bytesFromStr = SRC.getBytes();
         int i = 0;
-        try (InputStream in = blob.getBinaryStream()) {
+        InputStream in = blob.getBinaryStream();
+        try {
             int read;
             while ((read = in.read()) != -1) {
                 Assert.assertEquals(bytesFromStr[i++], read);
             }
+        } finally {
+            in.close();
         }
         i = 0;
         int pos = 6;
         int len = 4;
-        try (InputStream in = blob.getBinaryStream(pos, len)) {
+        in = blob.getBinaryStream(pos, len);
+        try {
             byte[] subBytes = SRC.substring(pos - 1, pos - 1 + len).getBytes();
             int read;
             while ((read = in.read()) != -1) {
                 Assert.assertEquals(subBytes[i++], read);
             }
+        } finally {
+            in.close();
         }
     }
 

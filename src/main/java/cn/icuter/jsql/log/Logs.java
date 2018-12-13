@@ -28,7 +28,7 @@ public abstract class Logs {
             JSQLLogger jsqlLogger = loggerClass.newInstance();
             jsqlLogger.init(clazz);
             return jsqlLogger;
-        } catch (InstantiationException | IllegalAccessException e) {
+        } catch (Exception e) {
             JDKLogger jdkLogger = new JDKLogger();
             jdkLogger.init(clazz);
             jdkLogger.warn("no logger for " + loggerClass.getName() + ", using JDKLogger instead", e);

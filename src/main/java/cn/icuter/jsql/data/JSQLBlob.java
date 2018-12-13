@@ -81,8 +81,11 @@ public class JSQLBlob implements java.sql.Blob {
     public int setBytes(long pos, byte[] bytes, int offset, int len) throws SQLException {
         checkPosition(pos);
         try {
-            try (OutputStream outputStream = setBinaryStream(pos)) {
+            OutputStream outputStream = setBinaryStream(pos);
+            try {
                 outputStream.write(bytes, offset, len);
+            } finally {
+                outputStream.close();
             }
         } catch (IOException e) {
             throw new SQLException(e);

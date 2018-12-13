@@ -23,7 +23,8 @@ public class JdbcExecutorMariaDBTest extends JdbcExecutorBaseTest {
         dataSource = TestUtils.getDataSource("mariadb");
         pool = dataSource.createExecutorPool(poolConfiguration);
         poolConn = dataSource.createConnectionPool(poolConfiguration);
-        try (JdbcExecutor executor = pool.getExecutor()) {
+        JdbcExecutor executor = pool.getExecutor();
+        try {
             dataSource.sql("CREATE TABLE " + TABLE_NAME + "\n" +
                     "(\n" +
                     "  test_id VARCHAR(60) NOT NULL,\n" +
@@ -33,6 +34,8 @@ public class JdbcExecutorMariaDBTest extends JdbcExecutorBaseTest {
                     "  PRIMARY KEY (test_id))").execUpdate(executor);
         } catch (JSQLException e) {
             throw new IOException(e);
+        } finally {
+            executor.close();
         }
     }
 }

@@ -8,7 +8,7 @@ import cn.icuter.jsql.condition.Cond;
  * @author edward
  * @since 2018-08-30
  */
-public class OracleDialect implements Dialect {
+public class OracleDialect extends AbstractDialect {
     @Override
     public String getDriverClassName() {
         return "oracle.jdbc.driver.OracleDriver";

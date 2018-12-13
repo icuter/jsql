@@ -4,7 +4,6 @@ import cn.icuter.jsql.builder.Builder;
 import cn.icuter.jsql.exception.JSQLException;
 
 import java.io.Closeable;
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
@@ -22,8 +21,4 @@ public interface JdbcExecutor extends Closeable {
     List<Map<String, Object>> execQuery(Builder builder) throws JSQLException;
 
     void execBatch(List<Builder> builders) throws JSQLException;
-
-    default void close() throws IOException {
-        throw new UnsupportedOperationException();
-    }
 }

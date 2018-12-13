@@ -2,12 +2,12 @@ package cn.icuter.jsql.builder;
 
 import cn.icuter.jsql.dialect.Dialect;
 import cn.icuter.jsql.dialect.Dialects;
+import cn.icuter.jsql.util.ObjectUtil;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Objects;
-import java.util.stream.Collectors;
 
 /**
  * @author edward
@@ -31,7 +31,7 @@ public class UnionSelectBuilder extends SelectBuilder {
         unionDialect = builderContext.getDialect();
     }
 
-    private List<UnionBuilderDescriptor> unionBuilderDescriptors = new LinkedList<>();
+    private List<UnionBuilderDescriptor> unionBuilderDescriptors = new LinkedList<UnionBuilderDescriptor>();
 
     public static Builder union(Builder... builders) {
         return union(Dialects.UNKNOWN, builders);
@@ -46,60 +46,36 @@ public class UnionSelectBuilder extends SelectBuilder {
         return unionAll(Dialects.UNKNOWN, builders);
     }
     public static Builder union(Dialect dialect, Builder... builders) {
-        Objects.requireNonNull(builders);
-        UnionSelectBuilder unionBuilder = new UnionSelectBuilder(dialect);
-        for (Builder builder : builders) {
-            UnionBuilderDescriptor descriptor = new UnionBuilderDescriptor();
-            descriptor.builder = builder;
-            unionBuilder.checkAndSetUnionDialect(builder);
-            unionBuilder.unionBuilderDescriptors.add(descriptor);
-        }
-        return unionBuilder;
+        ObjectUtil.requireNonNull(builders);
+        return union(dialect, Arrays.asList(builders));
     }
 
     public static Builder union(Dialect dialect, Collection<Builder> builders) {
-        Objects.requireNonNull(builders);
+        ObjectUtil.requireNonNull(builders);
         UnionSelectBuilder unionBuilder = new UnionSelectBuilder(dialect);
-        List<UnionBuilderDescriptor> descriptorList = builders.stream().map(builder -> {
-            UnionBuilderDescriptor descriptor = new UnionBuilderDescriptor();
-            descriptor.builder = builder;
-            unionBuilder.checkAndSetUnionDialect(builder);
-            return descriptor;
-        }).collect(Collectors.toList());
-        unionBuilder.unionBuilderDescriptors.addAll(descriptorList);
+        for (Builder builder : builders) {
+            unionBuilder.union(builder);
+        }
         return unionBuilder;
     }
 
     public static Builder unionAll(Dialect dialect, Builder... builders) {
-        Objects.requireNonNull(builders);
-        UnionSelectBuilder unionBuilder = new UnionSelectBuilder(dialect);
-        for (Builder builder : builders) {
-            UnionBuilderDescriptor descriptor = new UnionBuilderDescriptor();
-            descriptor.isUnionAll = true;
-            descriptor.builder = builder;
-            unionBuilder.checkAndSetUnionDialect(builder);
-            unionBuilder.unionBuilderDescriptors.add(descriptor);
-        }
-        return unionBuilder;
+        ObjectUtil.requireNonNull(builders);
+        return unionAll(dialect, Arrays.asList(builders));
     }
 
     public static Builder unionAll(Dialect dialect, Collection<Builder> builders) {
-        Objects.requireNonNull(builders);
+        ObjectUtil.requireNonNull(builders);
         UnionSelectBuilder unionBuilder = new UnionSelectBuilder(dialect);
-        List<UnionBuilderDescriptor> descriptorList = builders.stream().map(builder -> {
-            UnionBuilderDescriptor descriptor = new UnionBuilderDescriptor();
-            descriptor.isUnionAll = true;
-            descriptor.builder = builder;
-            unionBuilder.checkAndSetUnionDialect(builder);
-            return descriptor;
-        }).collect(Collectors.toList());
-        unionBuilder.unionBuilderDescriptors.addAll(descriptorList);
+        for (Builder builder : builders) {
+            unionBuilder.unionAll(builder);
+        }
         return unionBuilder;
     }
 
     @Override
     public Builder union(Builder builder) {
-        Objects.requireNonNull(builder);
+        ObjectUtil.requireNonNull(builder);
         UnionBuilderDescriptor descriptor = new UnionBuilderDescriptor();
         descriptor.builder = builder;
         checkAndSetUnionDialect(builder);
@@ -109,7 +85,7 @@ public class UnionSelectBuilder extends SelectBuilder {
 
     @Override
     public Builder unionAll(Builder builder) {
-        Objects.requireNonNull(builder);
+        ObjectUtil.requireNonNull(builder);
         UnionBuilderDescriptor descriptor = new UnionBuilderDescriptor();
         descriptor.isUnionAll = true;
         descriptor.builder = builder;

@@ -9,12 +9,12 @@ import cn.icuter.jsql.exception.PooledObjectPollTimeoutException;
 import cn.icuter.jsql.exception.PooledObjectReturnException;
 import cn.icuter.jsql.log.JSQLLogger;
 import cn.icuter.jsql.log.Logs;
+import cn.icuter.jsql.util.CollectionUtil;
+import cn.icuter.jsql.util.ObjectUtil;
 
 import java.sql.Timestamp;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
+import java.text.SimpleDateFormat;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -39,7 +39,7 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
 
     private PoolConfiguration poolConfiguration;
     private final PooledObjectManager<T> manager;
-    private BlockingDeque<PooledObject<T>> idlePooledObjects = new LinkedBlockingDeque<>();
+    private BlockingDeque<PooledObject<T>> idlePooledObjects = new LinkedBlockingDeque<PooledObject<T>>();
     private Map<Integer, PooledObject<T>> allPooledObjects;
 
     private ReentrantLock createLock = new ReentrantLock();
@@ -68,7 +68,7 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
         if (this.poolConfiguration.getMaxPoolSize() <= 0) {
             throw new IllegalArgumentException("max pool size must not be zero!");
         }
-        this.allPooledObjects = new ConcurrentHashMap<>(this.poolConfiguration.getMaxPoolSize());
+        this.allPooledObjects = new ConcurrentHashMap<Integer, PooledObject<T>>(this.poolConfiguration.getMaxPoolSize());
 
         long idleCheckInterval = this.poolConfiguration.getIdleCheckInterval();
         long idleObjectTimeout = this.poolConfiguration.getIdleTimeout();
@@ -184,7 +184,7 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
         }
         PooledObject<T> pooledObject = getPooledObject(object);
 
-        Objects.requireNonNull(pooledObject, "no such object in pool!");
+        ObjectUtil.requireNonNull(pooledObject, "no such object in pool!");
 
         if (!pooledObject.isBorrowed()) {
             throw new PooledObjectReturnException("Object has been returned!");
@@ -276,6 +276,7 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
         volatile long returnedCnt;
         volatile long lastAccessTime;
         volatile String formattedLastAccessTime;
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
 
         PoolStats() {
             lastAccessTime = System.currentTimeMillis();
@@ -300,8 +301,7 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
         }
         synchronized void updateLastAccessTime() {
             lastAccessTime = System.currentTimeMillis();
-            LocalDateTime localDateTime = new Timestamp(lastAccessTime).toLocalDateTime();
-            formattedLastAccessTime = localDateTime.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+            formattedLastAccessTime = dateFormat.format(new Timestamp(lastAccessTime));
         }
 
         @Override
@@ -332,17 +332,20 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
                     TIMER_LOGGER.trace("idle pooled object is empty");
                     return;
                 }
-                idlePooledObjects.removeIf(obj -> {
-                    if (isPoolObjectIdleTimeout(obj)) {
-                        try {
-                            TIMER_LOGGER.trace("pooled object was timeout after idled " +  poolConfiguration.getIdleTimeout() + "ms");
-                            invalidPooledObject(obj);
-                        } catch (JSQLException e) {
-                            throw new PoolMaintainerException("invaliding pooled object error", e);
+                CollectionUtil.iterate(idlePooledObjects, new CollectionUtil.RemoveFilter<PooledObject<T>>() {
+                    @Override
+                    public boolean removeIf(PooledObject<T> obj) {
+                        if (isPoolObjectIdleTimeout(obj)) {
+                            try {
+                                TIMER_LOGGER.trace("pooled object was timeout after idled " +  poolConfiguration.getIdleTimeout() + "ms");
+                                invalidPooledObject(obj);
+                            } catch (JSQLException e) {
+                                throw new PoolMaintainerException("invaliding pooled object error", e);
+                            }
+                            return true;
                         }
-                        return true;
+                        return false;
                     }
-                    return false;
                 });
             } finally {
                 opLock.unlock();
