@@ -9,7 +9,7 @@
     <description>JDBC framework for writing sql like java programing</description>
 
     <groupId>cn.icuter</groupId>
-    <artifactId>jsql</artifactId>
+    <artifactId>jsql-jdk1.6</artifactId>
     <packaging>jar</packaging>
     <version>1.0.0</version>
 
