@@ -326,34 +326,29 @@ public class PooledConnection implements Connection {
         return connection.createStruct(typeName, attributes);
     }
 
-    @Override
     public void setSchema(String schema) throws SQLException {
         checkIsBorrowed();
-        connection.setSchema(schema);
+        throw new UnsupportedOperationException("Unsupport JDK 1.7+ feature");
     }
 
-    @Override
     public String getSchema() throws SQLException {
         checkIsBorrowed();
-        return connection.getSchema();
+        throw new UnsupportedOperationException("Unsupport JDK 1.7+ feature");
     }
 
-    @Override
     public void abort(Executor executor) throws SQLException {
         checkIsBorrowed();
-        connection.abort(executor);
+        throw new UnsupportedOperationException("Unsupport JDK 1.7+ feature");
     }
 
-    @Override
     public void setNetworkTimeout(Executor executor, int milliseconds) throws SQLException {
         checkIsBorrowed();
-        connection.setNetworkTimeout(executor, milliseconds);
+        throw new UnsupportedOperationException("Unsupport JDK 1.7+ feature");
     }
 
-    @Override
     public int getNetworkTimeout() throws SQLException {
         checkIsBorrowed();
-        return connection.getNetworkTimeout();
+        throw new UnsupportedOperationException("Unsupport JDK 7+ feature");
     }
 
     @Override

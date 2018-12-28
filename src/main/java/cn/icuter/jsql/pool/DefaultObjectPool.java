@@ -11,6 +11,7 @@ import cn.icuter.jsql.log.JSQLLogger;
 import cn.icuter.jsql.log.Logs;
 import cn.icuter.jsql.util.CollectionUtil;
 import cn.icuter.jsql.util.ObjectUtil;
+import cn.icuter.jsql.util.RemoveFilter;
 
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
@@ -332,7 +333,7 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
                     TIMER_LOGGER.trace("idle pooled object is empty");
                     return;
                 }
-                CollectionUtil.iterate(idlePooledObjects, new CollectionUtil.RemoveFilter<PooledObject<T>>() {
+                CollectionUtil.iterate(idlePooledObjects, new RemoveFilter<PooledObject<T>>() {
                     @Override
                     public boolean removeIf(PooledObject<T> obj) {
                         if (isPoolObjectIdleTimeout(obj)) {

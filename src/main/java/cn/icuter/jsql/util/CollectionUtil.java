@@ -25,8 +25,4 @@ public abstract class CollectionUtil {
             }
         }
     }
-
-    public interface RemoveFilter<T> {
-        boolean removeIf(T obj);
-    }
 }

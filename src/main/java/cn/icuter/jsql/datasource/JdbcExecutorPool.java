@@ -74,10 +74,7 @@ public class JdbcExecutorPool {
                 pool.returnObject(connExecutor.getConnection());
                 connExecutor.release(); // in case reused after transaction executor returned
             }
-        } catch (SQLException e) {
-            LOGGER.error("returning Executor error", e);
-            throw new ReturnObjectException("returning Executor error", e);
-        } catch (JSQLException e) {
+        } catch (Exception e) {
             LOGGER.error("returning Executor error", e);
             throw new ReturnObjectException("returning Executor error", e);
         }
