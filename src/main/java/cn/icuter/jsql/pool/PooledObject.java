@@ -54,10 +54,6 @@ public class PooledObject<T> {
         this.lastReturnedTime = System.currentTimeMillis();
     }
 
-    void setBorrowed(boolean borrowed) {
-        this.borrowed = borrowed;
-    }
-
     void markBorrowed() {
         borrowed = true;
     }

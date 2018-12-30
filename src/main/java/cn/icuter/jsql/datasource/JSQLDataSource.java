@@ -11,7 +11,6 @@ import cn.icuter.jsql.dialect.Dialect;
 import cn.icuter.jsql.dialect.Dialects;
 import cn.icuter.jsql.dialect.UnknownDialect;
 import cn.icuter.jsql.exception.DataSourceException;
-import cn.icuter.jsql.exception.ExecutionException;
 import cn.icuter.jsql.executor.CloseableJdbcExecutor;
 import cn.icuter.jsql.executor.JdbcExecutor;
 import cn.icuter.jsql.executor.TransactionExecutor;
@@ -117,20 +116,7 @@ public class JSQLDataSource {
     }
 
     public TransactionExecutor createTransaction() {
-        Connection connection = createConnection(false);
-        TransactionExecutor executor = new TransactionExecutor(connection);
-        executor.setStateListener((tx, state) -> {
-            if (tx.wasCommitted() || tx.wasRolledBack()) {
-                try {
-                    if (connection != null && !connection.isClosed()) {
-                        connection.close();
-                    }
-                } catch (SQLException e) {
-                    throw new ExecutionException("closing Connection error", e);
-                }
-            }
-        });
-        return executor;
+        return new TransactionExecutor(createConnection(false));
     }
 
     public JdbcExecutor createJdbcExecutor() {

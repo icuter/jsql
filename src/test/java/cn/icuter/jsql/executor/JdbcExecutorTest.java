@@ -5,6 +5,7 @@ import cn.icuter.jsql.TestTable;
 import cn.icuter.jsql.builder.Builder;
 import cn.icuter.jsql.builder.SelectBuilder;
 import cn.icuter.jsql.condition.Cond;
+import cn.icuter.jsql.datasource.ConnectionPool;
 import cn.icuter.jsql.datasource.JdbcExecutorPool;
 import cn.icuter.jsql.datasource.PoolConfiguration;
 import cn.icuter.jsql.exception.ExecutionException;
@@ -19,6 +20,8 @@ import org.junit.FixMethodOrder;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -35,12 +38,14 @@ public class JdbcExecutorTest extends BaseDataSourceTest {
 
     private static final String TABLE_NAME = "t_jsql_test";
     static JdbcExecutorPool pool;
+    static ConnectionPool poolConn;
 
     @BeforeClass
-    public static void setup() throws JSQLException, IOException {
+    public static void setup() throws IOException {
         PoolConfiguration poolConfiguration = PoolConfiguration.defaultPoolCfg();
         poolConfiguration.setMaxPoolSize(1);
         pool = dataSource.createExecutorPool(poolConfiguration);
+        poolConn = dataSource.createConnectionPool(poolConfiguration);
         try (JdbcExecutor executor = pool.getExecutor()) {
             dataSource.sql("CREATE TABLE " + TABLE_NAME + "\n" +
                     "(\n" +
@@ -48,6 +53,8 @@ public class JdbcExecutorTest extends BaseDataSourceTest {
                     "  t_col_1 VARCHAR(60) NULL,\n" +
                     "  t_col_2 VARCHAR(60) NULL\n" +
                     ")").execUpdate(executor);
+        } catch (JSQLException e) {
+            // ignore
         }
     }
 
@@ -190,6 +197,7 @@ public class JdbcExecutorTest extends BaseDataSourceTest {
         TestTable testTable;
         try (TransactionExecutor txExecutor = dataSource.createTransaction()) {
             testTable = insertTestRecord(txExecutor);
+            txExecutor.commit();
         }
         TransactionExecutor txExecutorEnd = dataSource.createTransaction();
         try {
@@ -198,8 +206,9 @@ public class JdbcExecutorTest extends BaseDataSourceTest {
                     .where().eq("test_id", testTable.getTestId())
                     .execUpdate(txExecutorEnd);
             Assert.assertEquals(cnt, 1);
+            txExecutorEnd.commit();
         } finally {
-            txExecutorEnd.end();
+            txExecutorEnd.close();
         }
         TransactionExecutor txExecutorClose = dataSource.createTransaction();
         try {
@@ -207,6 +216,7 @@ public class JdbcExecutorTest extends BaseDataSourceTest {
                     .delete().from(TABLE_NAME).where().eq("test_id", testTable.getTestId())
                     .execUpdate(txExecutorClose);
             Assert.assertEquals(cnt, 1);
+            txExecutorClose.commit();
         } finally {
             txExecutorClose.close();
         }
@@ -222,6 +232,7 @@ public class JdbcExecutorTest extends BaseDataSourceTest {
         }};
         try (TransactionExecutor txExecutor = dataSource.createTransaction()) {
             txExecutor.execBatch(batchList);
+            txExecutor.commit();
         }
         try (JdbcExecutor jdbcExecutor = dataSource.createJdbcExecutor()) {
             int cnt = dataSource.delete().from(TABLE_NAME).execUpdate(jdbcExecutor);
@@ -247,8 +258,9 @@ public class JdbcExecutorTest extends BaseDataSourceTest {
                     .where().eq("test_id", testTable.getTestId()).build();
             batchList.add(deleteBuilder);
         }
-        try (JdbcExecutor jdbcExecutor = dataSource.createTransaction()) {
+        try (TransactionExecutor jdbcExecutor = dataSource.createTransaction()) {
             jdbcExecutor.execBatch(batchList);
+            jdbcExecutor.commit();
         }
     }
 
@@ -276,34 +288,13 @@ public class JdbcExecutorTest extends BaseDataSourceTest {
         }
     }
 
-    @Test(expected = ExecutionException.class)
-    public void testTransactionEndedException() throws Exception {
-        try (TransactionExecutor txExecutorRollback = dataSource.createTransaction()) {
-            TestTable testTable1 = insertTestRecord(txExecutorRollback);
-
-            txExecutorRollback.rollback();
-
-            dataSource.select().from(TABLE_NAME).where().eq("test_id", testTable1.getTestId()).execQuery(txExecutorRollback);
-        }
-    }
-
-    @Test(expected = TransactionCommitException.class)
-    public void testTransactionEndedOperationException() throws Exception {
-        try (TransactionExecutor txExecutorRollback = dataSource.createTransaction()) {
-            insertTestRecord(txExecutorRollback);
-
-            txExecutorRollback.rollback();
-            txExecutorRollback.commit();
-        }
-    }
-
-    @Test(expected = TransactionRollbackExcetpion.class)
-    public void testTransactionEndedOperationException2() throws Exception {
-        try (TransactionExecutor txExecutorRollback = dataSource.createTransaction()) {
-            dataSource.select().from(TABLE_NAME).execQuery(txExecutorRollback);
-
-            txExecutorRollback.commit();
-            txExecutorRollback.rollback();
+    @Test
+    public void testPooledConnectionSelect() throws SQLException, JSQLException {
+        for (int i = 0; i < 5; i++) {
+            Connection connection = poolConn.getConnection();
+            JdbcExecutor jdbcExecutor = new DefaultJdbcExecutor(connection);
+            dataSource.select().from(TABLE_NAME).execQuery(jdbcExecutor);
+            connection.close();
         }
     }
 
@@ -321,20 +312,45 @@ public class JdbcExecutorTest extends BaseDataSourceTest {
     @Test(expected = ExecutionException.class)
     public void testTransactionExecutorCommitException() throws Exception {
         TransactionExecutor txExecutor = dataSource.createTransaction();
-        dataSource.select().from(TABLE_NAME).execQuery(txExecutor);
-        txExecutor.commit();
-
+        try {
+            dataSource.select().from(TABLE_NAME).execQuery(txExecutor);
+            txExecutor.commit();
+        } finally {
+            txExecutor.close();
+        }
         dataSource.select().from(TABLE_NAME).execQuery(txExecutor);
     }
 
     @Test(expected = ExecutionException.class)
     public void testTransactionExecutorRollbackException() throws Exception {
         TransactionExecutor txExecutor = dataSource.createTransaction();
-        dataSource.select().from(TABLE_NAME).execQuery(txExecutor);
-        txExecutor.rollback();
-
+        try {
+            dataSource.select().from(TABLE_NAME).execQuery(txExecutor);
+            txExecutor.rollback();
+        } finally {
+            txExecutor.close();
+        }
         dataSource.select().from(TABLE_NAME).execQuery(txExecutor);
     }
+
+    @Test(expected = ExecutionException.class)
+    public void testExceptionAfterReturned() throws Exception {
+        Connection connection = poolConn.getConnection();
+        JdbcExecutor jdbcExecutor = new DefaultJdbcExecutor(connection);
+        dataSource.select().from(TABLE_NAME).execQuery(jdbcExecutor);
+        poolConn.returnConnection(connection);
+        dataSource.select().from(TABLE_NAME).execQuery(jdbcExecutor);
+    }
+
+    @Test(expected = ExecutionException.class)
+    public void testExceptionAfterClosed() throws Exception {
+        Connection connection = poolConn.getConnection();
+        JdbcExecutor jdbcExecutor = new DefaultJdbcExecutor(connection);
+        dataSource.select().from(TABLE_NAME).execQuery(jdbcExecutor);
+        connection.close();
+        dataSource.select().from(TABLE_NAME).execQuery(jdbcExecutor);
+    }
+
     @Test(expected = ExecutionException.class)
     public void testJdbcExecutorException() throws JSQLException {
         JdbcExecutor jdbcExecutor = pool.getExecutor();
@@ -415,6 +431,7 @@ public class JdbcExecutorTest extends BaseDataSourceTest {
             dataSource.sql("DROP TABLE " + TABLE_NAME).execUpdate(executor);
         }
         pool.close();
+        poolConn.close();
     }
 
 }

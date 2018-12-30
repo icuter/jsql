@@ -132,9 +132,9 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
                     }
                 }
                 if (pooledObject != null) {
-                    if (isIdleObjectTimeout(pooledObject) || !manager.validate(pooledObject)) {
-                        manager.invalid(pooledObject);
-                        removePooledObject(pooledObject);
+                    // check idle timeout just in case Pool Maintainer invalid PoolObject which has been borrowed
+                    if (isPoolObjectIdleTimeout(pooledObject) || !manager.validate(pooledObject)) {
+                        invalidPooledObject(pooledObject);
                     } else {
                         break;
                     }
@@ -148,7 +148,7 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
         return pooledObject;
     }
 
-    private boolean isIdleObjectTimeout(PooledObject<T> pooledObject) {
+    private boolean isPoolObjectIdleTimeout(PooledObject<T> pooledObject) {
         long lastReturnedTime = pooledObject.getLastReturnedTime();
         return lastReturnedTime > 0 && System.currentTimeMillis() - lastReturnedTime > poolConfiguration.getIdleTimeout();
     }
@@ -161,9 +161,11 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
         return poolStats.getPoolSize() == 0;
     }
 
-    private void removePooledObject(PooledObject pooledObject) {
-        allPooledObjects.remove(System.identityHashCode(pooledObject.getObject()));
-        poolStats.updateRemoveStats();
+    private void invalidPooledObject(PooledObject<T> pooledObject) throws JSQLException {
+        if (allPooledObjects.remove(System.identityHashCode(pooledObject.getObject())) != null) {
+            manager.invalid(pooledObject);
+            poolStats.updateRemoveStats();
+        }
     }
 
     @Override
@@ -180,16 +182,15 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
         if (!pooledObject.isBorrowed()) {
             throw new PooledObjectReturnException("Object has been returned!");
         }
-        pooledObject.markReturned();
-        pooledObject.updateLastReturnedTime();
         poolStats.updateLastAccessTime();
         try {
             opLock.lock();
             if (isPoolClosed() || !manager.validate(pooledObject)) {
-                manager.invalid(pooledObject);
-                removePooledObject(pooledObject);
+                invalidPooledObject(pooledObject);
                 return;
             }
+            pooledObject.markReturned();
+            pooledObject.updateLastReturnedTime();
             idlePooledObjects.addLast(pooledObject);
             poolStats.updateReturnStats();
         } finally {
@@ -218,8 +219,7 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
             pooledObjectMaintainer.cancel();
             PooledObject<T> pooledObject = idlePooledObjects.poll();
             while (pooledObject != null) {
-                manager.invalid(pooledObject);
-                removePooledObject(pooledObject);
+                invalidPooledObject(pooledObject);
                 pooledObject = idlePooledObjects.poll();
             }
         } finally {
@@ -241,8 +241,7 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
         Set<Integer> pooledObjKeys = allPooledObjects.keySet();
         for (Integer key : pooledObjKeys) {
             PooledObject<T> pooledObject = allPooledObjects.get(key);
-            manager.invalid(pooledObject);
-            removePooledObject(pooledObject);
+            invalidPooledObject(pooledObject);
         }
     }
 
@@ -324,17 +323,13 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
                     TIMER_LOGGER.trace("idle pooled object is empty");
                     return;
                 }
-                long idleTimeout = poolConfiguration.getIdleTimeout();
-                final long checkingTime = System.currentTimeMillis();
-                idlePooledObjects.removeIf(pooledObj -> {
-                    if (checkingTime - pooledObj.getLastReturnedTime() > idleTimeout) {
+                idlePooledObjects.removeIf(obj -> {
+                    if (isPoolObjectIdleTimeout(obj)) {
                         try {
-                            TIMER_LOGGER.trace("pooled object was timeout after idled " + idleTimeout + "ms");
-                            manager.invalid(pooledObj);
+                            TIMER_LOGGER.trace("pooled object was timeout after idled " +  poolConfiguration.getIdleTimeout() + "ms");
+                            invalidPooledObject(obj);
                         } catch (JSQLException e) {
                             throw new PoolMaintainerException("invaliding pooled object error", e);
-                        } finally {
-                            removePooledObject(pooledObj);
                         }
                         return true;
                     }

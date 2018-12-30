@@ -60,11 +60,4 @@ public interface Transaction {
      * </pre>
      */
     void releaseAllSavepoints() throws JSQLException;
-
-    void setStateListener(StateListener listener);
-
-    @FunctionalInterface
-    interface StateListener {
-        void fireEvent(Transaction transaction, State state) throws JSQLException;
-    }
 }

@@ -2,7 +2,6 @@ package cn.icuter.jsql.datasource;
 
 import cn.icuter.jsql.builder.Builder;
 import cn.icuter.jsql.exception.BorrowObjectException;
-import cn.icuter.jsql.exception.ExecutionException;
 import cn.icuter.jsql.exception.JSQLException;
 import cn.icuter.jsql.exception.PoolCloseException;
 import cn.icuter.jsql.exception.ReturnObjectException;
@@ -25,7 +24,7 @@ import java.util.Map;
  */
 public class JdbcExecutorPool {
     private static final JSQLLogger LOGGER = Logs.getLogger(JdbcExecutorPool.class);
-    final ObjectPool<Connection> pool;
+    private final ObjectPool<Connection> pool;
 
     JdbcExecutorPool(ObjectPool<Connection> pool) {
         this.pool = pool;
@@ -114,22 +113,18 @@ public class JdbcExecutorPool {
         }
         @Override
         public List<Map<String, Object>> execQuery(Builder builder) throws JSQLException {
-            checkExecutable();
             return super.execQuery(builder);
         }
         @Override
         public <T> List<T> execQuery(Builder builder, Class<T> clazz) throws JSQLException {
-            checkExecutable();
             return super.execQuery(builder, clazz);
         }
         @Override
         public int execUpdate(Builder builder) throws JSQLException {
-            checkExecutable();
             return super.execUpdate(builder);
         }
         @Override
         public void execBatch(List<Builder> builders) throws JSQLException {
-            checkExecutable();
             super.execBatch(builders);
         }
     }
@@ -169,22 +164,18 @@ public class JdbcExecutorPool {
         }
         @Override
         public List<Map<String, Object>> execQuery(Builder builder) throws JSQLException {
-            checkExecutable();
             return super.execQuery(builder);
         }
         @Override
         public <T> List<T> execQuery(Builder builder, Class<T> clazz) throws JSQLException {
-            checkExecutable();
             return super.execQuery(builder, clazz);
         }
         @Override
         public int execUpdate(Builder builder) throws JSQLException {
-            checkExecutable();
             return super.execUpdate(builder);
         }
         @Override
         public void execBatch(List<Builder> builders) throws JSQLException {
-            checkExecutable();
             super.execBatch(builders);
         }
     }
@@ -194,11 +185,5 @@ public class JdbcExecutorPool {
         void release();
         boolean isTransaction();
         JdbcExecutor getExecutor();
-
-        default void checkExecutable() throws JSQLException {
-            if (getConnection() == null) {
-                throw new ExecutionException("executing error, due to executor has been return to pool");
-            }
-        }
     }
 }

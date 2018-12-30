@@ -8,6 +8,7 @@ import cn.icuter.jsql.transaction.DefaultTransaction;
 
 import java.io.IOException;
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 
@@ -67,8 +68,10 @@ public class TransactionExecutor extends DefaultTransaction implements JdbcExecu
     @Override
     public void close() throws IOException {
         try {
-            end();
-        } catch (JSQLException e) {
+            if (connection != null && !connection.isClosed()) {
+                connection.close();
+            }
+        } catch (SQLException e) {
             try {
                 setState(State.ERROR);
             } catch (JSQLException e1) {

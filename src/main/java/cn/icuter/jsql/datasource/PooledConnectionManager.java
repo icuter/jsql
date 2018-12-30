@@ -68,12 +68,12 @@ public class PooledConnectionManager implements PooledObjectManager<Connection> 
     @Override
     public PooledObject<Connection> create() throws JSQLException {
         try {
-            PooledObject<Connection> pooledObject = new PooledObject<>(newConnection());
+            PooledConnection pooledConnection = new PooledConnection(newConnection());
 
             LOGGER.trace("pooled object was created");
-            LOGGER.trace("created pooled object detail: " + pooledObject);
+            LOGGER.trace("created pooled connection object detail: " + pooledConnection.pooledObject);
 
-            return pooledObject;
+            return pooledConnection.pooledObject;
         } catch (SQLException e) {
             throw new PoolException("creating connection error", e);
         }
@@ -88,8 +88,10 @@ public class PooledConnectionManager implements PooledObjectManager<Connection> 
     @Override
     public void invalid(PooledObject<Connection> pooledObject) throws JSQLException {
         LOGGER.trace("invalidating pooled object");
+
+        Connection connection = getRawConnection(pooledObject);
         try {
-            while (pooledObject.isBorrowed() && !pooledObject.getObject().isClosed()) {
+            while (pooledObject.isBorrowed() && !connection.isClosed()) {
                 if (invalidTimeout > 0) {
                     long now = System.currentTimeMillis();
                     if (now - pooledObject.getLastBorrowedTime() > invalidTimeout) {
@@ -102,8 +104,8 @@ public class PooledConnectionManager implements PooledObjectManager<Connection> 
                     break;
                 }
             }
-            if (!pooledObject.getObject().isClosed()) {
-                pooledObject.getObject().close();
+            if (!connection.isClosed()) {
+                connection.close();
             }
             LOGGER.debug("invalidated pooled object detail: " + pooledObject);
         } catch (SQLException e) {
@@ -127,13 +129,24 @@ public class PooledConnectionManager implements PooledObjectManager<Connection> 
     }
 
     private boolean validateConnection(PooledObject<Connection> pooledObject) throws SQLException {
-        return pooledObject != null && !pooledObject.getObject().isClosed() && validateQuery(pooledObject.getObject());
+        if (pooledObject == null) {
+            return false;
+        }
+        Connection connection = getRawConnection(pooledObject);
+        return !connection.isClosed() && validateQuery(connection);
     }
 
     private boolean validateQuery(Connection connection) throws SQLException {
         return connection.isValid(checkValidTimeout);
     }
 
+    private Connection getRawConnection(PooledObject<Connection> pooledObject) {
+        Connection connection = pooledObject.getObject();
+        if (connection instanceof PooledConnection) {
+            return ((PooledConnection) connection).connection;
+        }
+        return connection;
+    }
     public void setInvalidTimeout(int invalidTimeout) {
         this.invalidTimeout = invalidTimeout;
     }
