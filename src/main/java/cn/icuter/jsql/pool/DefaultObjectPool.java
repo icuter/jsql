@@ -223,7 +223,9 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
                 return;
             }
             closed = true;
-            pooledObjectMaintainer.cancel();
+            if (pooledObjectMaintainer != null) {
+                pooledObjectMaintainer.cancel();
+            }
             PooledObject<T> pooledObject = idlePooledObjects.poll();
             while (pooledObject != null) {
                 invalidPooledObject(pooledObject);

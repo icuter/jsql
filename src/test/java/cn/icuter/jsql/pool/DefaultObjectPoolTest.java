@@ -88,7 +88,7 @@ public class DefaultObjectPoolTest {
             assertTrue(pool.isPoolEmpty());
         }
 
-        cfg.setIdleTimeout(Long.MAX_VALUE); // assume never timeout
+        cfg.setIdleTimeout(-1); // idle object never timeout
         try (DefaultObjectPool<Object> pool = new DefaultObjectPool<>(manager, cfg)) {
             Object[] borrowedObjects = new Object[cfg.getMaxPoolSize()];
             for (int i = 0; i < borrowedObjects.length; i++) {
