@@ -35,6 +35,8 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
 
     private static final JSQLLogger LOGGER = Logs.getLogger(DefaultObjectPool.class);
 
+    private static final int IDLE_NEVER_TIMEOUT = -1;
+
     private PoolConfiguration poolConfiguration;
     private final PooledObjectManager<T> manager;
     private BlockingDeque<PooledObject<T>> idlePooledObjects = new LinkedBlockingDeque<>();
@@ -149,8 +151,13 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
     }
 
     private boolean isPoolObjectIdleTimeout(PooledObject<T> pooledObject) {
+        long idleTimeoutInCfg = poolConfiguration.getIdleTimeout();
+        if (idleTimeoutInCfg == IDLE_NEVER_TIMEOUT) {
+            // never timeout
+            return false;
+        }
         long lastReturnedTime = pooledObject.getLastReturnedTime();
-        return lastReturnedTime > 0 && System.currentTimeMillis() - lastReturnedTime > poolConfiguration.getIdleTimeout();
+        return lastReturnedTime > 0 && System.currentTimeMillis() - lastReturnedTime > idleTimeoutInCfg;
     }
 
     private boolean isPoolNotFull() {
