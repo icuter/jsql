@@ -126,7 +126,6 @@
         </dependency>
     </dependencies>
 
-
     <distributionManagement>
         <repository>
             <id>oss</id>
