@@ -370,7 +370,7 @@ public class PooledConnection implements Connection {
 
     private void checkIsBorrowed() throws SQLException {
         if (!pooledObject.isBorrowed()) {
-            throw new SQLException("PooledConnection has been return to pool");
+            throw new SQLException("PooledConnection has been returned to pool");
         }
     }
 }

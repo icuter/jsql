@@ -31,9 +31,9 @@ public interface Transaction {
     void rollback(String savePointName) throws JSQLException;
 
     /**
-     * <pre>
-     * Release a savepoint by name in transaction that is before commit/rollback
      *
+     * Release a savepoint by name in transaction that is before commit/rollback
+     * <pre>
      * <em>Note</em>
      * Savepoint should be released after transaction end with commit/rollback operation
      * Refer to mysql docs <a href="https://dev.mysql.com/doc/refman/5.6/en/savepoint.html">RELEASE SAVEPOINT</a>
@@ -43,13 +43,14 @@ public interface Transaction {
      * <em>&gt; A simple rollback or commit erases all savepoints.</em>
      * </pre>
      * @param savePointName savepoint's name
+     * @throws JSQLException try to release specified savepoint, error occurs will throw JSQLException
      */
     void releaseSavepoint(String savePointName) throws JSQLException;
 
     /**
-     * <pre>
-     * Release all savepoint in transaction that is before commit/rollback
      *
+     * Release all savepoint in transaction that is before commit/rollback
+     * <pre>
      * <em>Note</em>
      * Savepoint should be released after transaction end with commit/rollback operation
      * Refer to mysql docs <a href="https://dev.mysql.com/doc/refman/5.6/en/savepoint.html">RELEASE SAVEPOINT</a>
@@ -58,6 +59,8 @@ public interface Transaction {
      * Refer to oracle docs <a href="https://docs.oracle.com/cd/B19306_01/appdev.102/b14261/savepoint_statement.htm">SAVEPOINT Statement</a>
      * <em>&gt; A simple rollback or commit erases all savepoints.</em>
      * </pre>
+     *
+     * @throws JSQLException try to release all savepoint, error occurs will throw JSQLException
      */
     void releaseAllSavepoints() throws JSQLException;
 }

@@ -21,7 +21,6 @@ public class DerbyDialect implements Dialect {
     }
 
     /**
-     * <p/>
      * From Derby Docs:
      * <pre>
      * SELECT statement
@@ -31,6 +30,8 @@ public class DerbyDialect implements Dialect {
      * [FOR UPDATE clause]
      * [WITH {RR|RS|CS|UR}]
      * </pre>
+     *
+     * @param builderCtx BuilderContext for more pagination sql combination
      */
     @Override
     public void injectOffsetLimit(BuilderContext builderCtx) {

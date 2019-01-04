@@ -29,7 +29,7 @@ public class SQLStringBuilder {
      *
      * @param sqlFragment source string
      * @param fragmentType source string type
-     * @return
+     * @return SQLStringBuilder for chain calling
      */
     public SQLStringBuilder append(String sqlFragment, String fragmentType) {
         sqlItems.add(newSQLItem(sqlFragment, fragmentType));
@@ -41,7 +41,7 @@ public class SQLStringBuilder {
      *
      * @param sqlFragment source string
      * @param fragmentType source string type
-     * @return this
+     * @return SQLStringBuilder for chain calling
      */
     public SQLStringBuilder prepend(String sqlFragment, String fragmentType) {
         sqlItems.add(0, newSQLItem(sqlFragment, fragmentType));
@@ -54,7 +54,7 @@ public class SQLStringBuilder {
      * @param position the position of List
      * @param sqlFragment source string
      * @param fragmentType source string type
-     * @return this
+     * @return SQLStringBuilder for chain calling
      */
     public SQLStringBuilder insert(int position, String sqlFragment, String fragmentType) {
         sqlItems.add(position, newSQLItem(sqlFragment, fragmentType));
