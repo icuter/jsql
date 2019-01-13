@@ -1,0 +1,46 @@
+kind: pipeline
+name: jsql-ci
+
+steps:
+- name: checkstyle
+  image: maven:3-jdk-8
+  volumes:
+  - name: maven
+    path: /root/.m2
+  commands:
+  - mvn validate -B
+
+- name: test
+  image: maven:3-jdk-8
+  volumes:
+  - name: maven
+    path: /root/.m2
+  - name: icuter_home
+    path: /home/icuter/
+  commands:
+  - export ICUTER_HOME=/home/icuter/
+  - mvn test -B -Dcheckstyle.skip=true
+
+- name: release
+  image: maven:3-jdk-8
+  volumes:
+  - name: maven
+    path: /root/.m2
+  - name: gnupg
+    path: /root/.gnupg/
+  commands:
+  - mvn deploy -P release -DskipTests=true -Dcheckstyle.skip=true
+  when:
+    event:
+    - tag
+
+volumes:
+- name: maven
+  host:
+    path: /root/.m2
+- name: gnupg
+  host:
+    path: /root/.gnupg/
+- name: icuter_home
+  host:
+    path: /home/icuter/

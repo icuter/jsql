@@ -24,6 +24,7 @@
         <mvn-gpg-plugin.version>1.6</mvn-gpg-plugin.version>
         <mvn-checkstyle-plugin.version>3.0.0</mvn-checkstyle-plugin.version>
         <mvn-surefire-plugin.version>2.9</mvn-surefire-plugin.version>
+        <mvn-deploy-plugin.version>2.8.2</mvn-deploy-plugin.version>
         <mvn-nexus-staging-plugin.version>1.6.8</mvn-nexus-staging-plugin.version>
     </properties>
 
@@ -35,7 +36,6 @@
         </license>
     </licenses>
     <scm>
-        <tag>master</tag>
         <url>https://github.com/icuter/jsql</url>
         <connection>scm:git:git@github.com:icuter/jsql.git</connection>
         <developerConnection>scm:git:git@github.com:icuter/jsql.git</developerConnection>
@@ -107,13 +107,18 @@
         </dependency>
     </dependencies>
 
+
     <distributionManagement>
+        <repository>
+            <id>oss</id>
+            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+        </repository>
         <snapshotRepository>
             <id>oss</id>
             <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-            <uniqueVersion>false</uniqueVersion>
         </snapshotRepository>
     </distributionManagement>
+
     <build>
         <pluginManagement>
             <plugins>
@@ -173,6 +178,8 @@
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>${mvn-surefire-plugin.version}</version>
                     <configuration>
+                        <!-- openjdk need it -->
+                        <argLine>-Djdk.net.URLClassPath.disableClassPathURLCheck=true</argLine>
                         <skip>false</skip>
                     </configuration>
                 </plugin>
@@ -215,9 +222,27 @@
                         </gpgArguments>
                     </configuration>
                 </plugin>
+                <plugin>
+                    <groupId>org.sonatype.plugins</groupId>
+                    <artifactId>nexus-staging-maven-plugin</artifactId>
+                    <version>${mvn-nexus-staging-plugin.version}</version>
+                    <executions>
+                        <execution>
+                            <id>nexus-deploy</id>
+                            <phase>deploy</phase>
+                            <goals>
+                                <goal>deploy</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                    <configuration>
+                        <serverId>oss</serverId>
+                        <nexusUrl>https://oss.sonatype.org/</nexusUrl>
+                        <autoReleaseAfterClose>true</autoReleaseAfterClose>
+                    </configuration>
+                </plugin>
             </plugins>
         </pluginManagement>
-
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -275,14 +300,20 @@
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-gpg-plugin</artifactId>
                     </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-deploy-plugin</artifactId>
+                        <version>${mvn-deploy-plugin.version}</version>
+                        <configuration>
+                            <skip>true</skip>
+                        </configuration>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.sonatype.plugins</groupId>
+                        <artifactId>nexus-staging-maven-plugin</artifactId>
+                    </plugin>
                 </plugins>
             </build>
-            <distributionManagement>
-                <repository>
-                    <id>oss</id>
-                    <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
-                </repository>
-            </distributionManagement>
         </profile>
     </profiles>
 
