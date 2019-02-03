@@ -2,17 +2,14 @@ package cn.icuter.jsql.builder;
 
 import cn.icuter.jsql.condition.Condition;
 import cn.icuter.jsql.condition.Eq;
-import cn.icuter.jsql.exception.JSQLException;
-import cn.icuter.jsql.executor.JdbcExecutor;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * @author edward
  * @since 2018-08-05
  */
-public interface Builder extends ConditionBuilder {
+public interface Builder extends ConditionBuilder, ExecutableBuilder {
 
     Builder select(String... columns);
 
@@ -47,12 +44,6 @@ public interface Builder extends ConditionBuilder {
     List<Condition> getConditionList();
 
     BuilderContext getBuilderContext();
-
-    <E> List<E> execQuery(JdbcExecutor executor, Class<E> clazz) throws JSQLException;
-
-    List<Map<String, Object>> execQuery(JdbcExecutor executor) throws JSQLException;
-
-    int execUpdate(JdbcExecutor executor) throws JSQLException;
 
     // Select Builder
     default Builder orderBy(String... columns) {

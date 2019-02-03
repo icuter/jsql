@@ -4,7 +4,7 @@ package cn.icuter.jsql.dialect;
  * @author edward
  * @since 2018-08-30
  */
-public class MariadbDialect extends MySQLDialect {
+public class MariaDBDialect extends MySQLDialect {
     @Override
     public String getDriverClassName() {
         return "org.mariadb.jdbc.Driver";

@@ -9,6 +9,8 @@ import cn.icuter.jsql.log.Logs;
 import cn.icuter.jsql.orm.ORMapper;
 
 import java.lang.reflect.Field;
+import java.sql.Blob;
+import java.sql.Clob;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -34,7 +36,7 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
     private boolean columnLowerCase;
 
     public DefaultJdbcExecutor(Connection connection) {
-        this.connection = connection;
+        this(connection, true);
     }
 
     public DefaultJdbcExecutor(Connection connection, boolean columnLowerCase) {
@@ -62,16 +64,53 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
     @Override
     public <T> List<T> execQuery(Builder builder, final Class<T> clazz) throws JSQLException {
         return doExecQuery(builder, (rs, meta) -> {
-            Map<Integer, Field> colIndexFieldMap = mapColumnIndexAndField(clazz, meta);
+            int fetchSize = rs.getFetchSize();
+            boolean hasLimit = fetchSize > 0;
+            Map<Field, Integer> colIndexFieldMap = mapColumnFieldAndIndex(clazz, meta);
             List<T> queriedResult = new LinkedList<>();
             while (rs.next()) {
                 T record = clazz.newInstance();
-                for (Map.Entry<Integer, Field> entry : colIndexFieldMap.entrySet()) {
-                    Field field = entry.getValue();
+                for (Map.Entry<Field, Integer> entry : colIndexFieldMap.entrySet()) {
+                    Field field = entry.getKey();
+                    int rsIndex = entry.getValue();
                     field.setAccessible(true);
-                    field.set(record, rs.getObject(entry.getKey()));
+                    if (field.getType().isPrimitive()) {
+                        if (field.getType() == Boolean.TYPE) {
+                            field.set(record, rs.getBoolean(rsIndex));
+
+                        } else if (field.getType() == Byte.TYPE) {
+                            field.set(record, rs.getByte(rsIndex));
+
+                        } else if (field.getType() == Short.TYPE) {
+                            field.set(record, rs.getShort(rsIndex));
+
+                        } else if (field.getType() == Integer.TYPE) {
+                            field.set(record, rs.getInt(rsIndex));
+
+                        } else if (field.getType() == Long.TYPE) {
+                            field.set(record, rs.getLong(rsIndex));
+
+                        } else if (field.getType() == Float.TYPE) {
+                            field.set(record, rs.getFloat(rsIndex));
+
+                        } else if (field.getType() == Double.TYPE) {
+                            field.set(record, rs.getDouble(rsIndex));
+
+                        } else {
+                            field.set(record, rs.getObject(rsIndex, field.getType()));
+                        }
+                    } else if (Blob.class.isAssignableFrom(field.getType())) {
+                        field.set(record, rs.getBlob(rsIndex)); // compatible for mysql/mariaDB
+                    } else if (Clob.class.isAssignableFrom(field.getType())) {
+                        field.set(record, rs.getClob(rsIndex)); // compatible for mysql
+                    } else {
+                        field.set(record, rs.getObject(rsIndex, field.getType()));
+                    }
                 }
                 queriedResult.add(record);
+                if (hasLimit && --fetchSize <= 0) {
+                    break;
+                }
             }
             return queriedResult;
         });
@@ -80,24 +119,43 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
     @Override
     public List<Map<String, Object>> execQuery(Builder builder) throws JSQLException {
         return doExecQuery(builder, (rs, meta) -> {
+            int fetchSize = rs.getFetchSize();
+            boolean hasLimit = fetchSize > 0;
             List<Map<String, Object>> result = new LinkedList<>();
             while (rs.next()) {
                 Map<String, Object> record = new LinkedHashMap<>();
                 for (int i = 1; i <= meta.getColumnCount(); i++) {
                     String colName = meta.getColumnLabel(i);
-                    record.put(columnLowerCase ? colName.toLowerCase() : colName, rs.getObject(colName));
+                    if (colName.toLowerCase().startsWith("rownumber_")) {
+                        continue;
+                    }
+                    colName = columnLowerCase ? colName.toLowerCase() : colName;
+                    record.put(colName, rs.getObject(colName));
                 }
                 result.add(record);
+                if (hasLimit && --fetchSize <= 0) {
+                    break;
+                }
             }
             return result;
         });
     }
 
     private <T> T doExecQuery(Builder builder, QueryExecutor<T> queryExecutor) throws JSQLException {
+
         checkAndBuild(builder);
+
         LOGGER.info("executing query sql: " + builder.getSql());
         LOGGER.info("executing query values: " + builder.getPreparedValues());
-        try (PreparedStatement ps = connection.prepareStatement(builder.getSql())) {
+        PreparedStatement ps = null;
+        BuilderContext builderContext = builder.getBuilderContext();
+        try {
+            if (!builderContext.getDialect().supportOffsetLimit() && builderContext.getOffset() > 0) {
+                ps = connection.prepareStatement(builder.getSql(),
+                        ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+            } else {
+                ps = connection.prepareStatement(builder.getSql());
+            }
             List<Object> preparedValues = builder.getPreparedValues();
             for (int i = 0, len = preparedValues.size(); i < len; i++) {
                 ps.setObject(i + 1, preparedValues.get(i));
@@ -105,7 +163,6 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
             ResultSet rs = ps.executeQuery();
             ResultSetMetaData meta = rs.getMetaData();
 
-            BuilderContext builderContext = builder.getBuilderContext();
             if (!builderContext.getDialect().supportOffsetLimit()) {
                 // like sql paging, must set both offset and limit or limit only
                 int offset = builderContext.getOffset();
@@ -120,6 +177,14 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
         } catch (Exception e) {
             LOGGER.error("executing query error, builder detail: " + builder, e);
             throw new ExecutionException("executing query error, builder detail: " + builder, e);
+        } finally {
+            if (ps != null) {
+                try {
+                    ps.close();
+                } catch (SQLException e) {
+                    LOGGER.error("closing PreparedStatement error, builder detail: " + builder, e);
+                }
+            }
         }
     }
 
@@ -135,7 +200,7 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
         }
     }
 
-    private int[] execBatch(String sql, List<Builder> builderList) throws JSQLException {
+    private void execBatch(String sql, List<Builder> builderList) throws JSQLException {
         LOGGER.info("executing batch sql: " + sql);
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             for (Builder builder : builderList) {
@@ -149,7 +214,7 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
                 }
                 ps.addBatch();
             }
-            return ps.executeBatch();
+            ps.executeBatch();
         } catch (SQLException e) {
             List<Object> values = builderList.stream().map(Builder::getPreparedValues)
                     .collect(LinkedList::new, LinkedList::add, LinkedList::addAll);
@@ -164,7 +229,7 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
         this.columnLowerCase = columnLowerCase;
     }
 
-    private Map<Integer, Field> mapColumnIndexAndField(Class<?> clazz, ResultSetMetaData meta) throws SQLException {
+    private Map<Field, Integer> mapColumnFieldAndIndex(Class<?> clazz, ResultSetMetaData meta) throws SQLException {
         int colLen = meta.getColumnCount();
         List<String> returnColumnList = new ArrayList<>(colLen);
         for (int i = 0; i < colLen; i++) {
@@ -173,7 +238,7 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
                 returnColumnList.add(colLabel);
             }
         }
-        Map<Integer, Field> colFieldMap = new LinkedHashMap<>(returnColumnList.size());
+        Map<Field, Integer> colFieldMap = new LinkedHashMap<>(returnColumnList.size());
         ORMapper.mapColumn(clazz, (col, field) -> {
             for (int i = 0; i < returnColumnList.size(); i++) {
                 String retColName = returnColumnList.get(i);
@@ -182,7 +247,8 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
                     colIdx = i;
                 }
                 if (colIdx >= 0) {
-                    colFieldMap.put(colIdx + 1, field);
+                    colFieldMap.put(field, colIdx + 1);
+                    break;
                 }
             }
         });

@@ -189,6 +189,31 @@ public class JSQLDataSource {
     public Builder unionAll(Collection<Builder> builders) {
         return UnionSelectBuilder.unionAll(dialect, builders);
     }
+
+    public String getUrl() {
+        return url;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public String getDriverClassName() {
+        return driverClassName;
+    }
+
+    public Dialect getDialect() {
+        return dialect;
+    }
+
+    public int getLoginTimeout() {
+        return loginTimeout;
+    }
+
     @Override
     public String toString() {
         return new StringBuilder("JSQLDataSource{")

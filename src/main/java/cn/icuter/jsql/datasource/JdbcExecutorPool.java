@@ -11,6 +11,7 @@ import cn.icuter.jsql.executor.TransactionExecutor;
 import cn.icuter.jsql.log.JSQLLogger;
 import cn.icuter.jsql.log.Logs;
 import cn.icuter.jsql.pool.ObjectPool;
+import cn.icuter.jsql.transaction.Transaction;
 
 import java.io.IOException;
 import java.sql.Connection;
@@ -57,7 +58,11 @@ public class JdbcExecutorPool {
                     throw new ReturnObjectException("executor has been returned");
                 }
                 if (connExecutor instanceof ConnectionTransactionExecutor) {
-                    ((ConnectionTransactionExecutor) connExecutor).superEnd();
+                    ConnectionTransactionExecutor txExecutor = ((ConnectionTransactionExecutor) connExecutor);
+                    if (txExecutor.getState() == Transaction.State.ROLLBACK_SAVEPOINT
+                            || (!txExecutor.wasCommitted() && !txExecutor.wasRolledBack())) {
+                        txExecutor.commit();
+                    }
                 }
                 if (connExecutor.isTransaction()) {
                     // if transaction did not commit, setAutoCommit(true) will commit automatically
@@ -154,13 +159,6 @@ public class JdbcExecutorPool {
         @Override
         public void close() throws IOException {
             returnExecutor(this);
-        }
-        @Override
-        public void end() throws JSQLException {
-            returnExecutor(this);
-        }
-        private void superEnd() throws JSQLException {
-            super.end();
         }
         @Override
         public List<Map<String, Object>> execQuery(Builder builder) throws JSQLException {

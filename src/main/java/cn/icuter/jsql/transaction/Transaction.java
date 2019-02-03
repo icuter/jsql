@@ -25,7 +25,6 @@ public interface Transaction {
 
     void commit() throws JSQLException;
     void rollback() throws JSQLException;
-    void end() throws JSQLException;
 
     void addSavepoint(String name) throws JSQLException;
     void rollback(String savePointName) throws JSQLException;

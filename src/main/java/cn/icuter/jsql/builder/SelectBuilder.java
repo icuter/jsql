@@ -2,6 +2,7 @@ package cn.icuter.jsql.builder;
 
 import cn.icuter.jsql.condition.PrepareType;
 import cn.icuter.jsql.dialect.Dialect;
+import cn.icuter.jsql.executor.JdbcExecutor;
 
 import java.util.Arrays;
 import java.util.stream.Collectors;
@@ -18,6 +19,10 @@ public class SelectBuilder extends AbstractBuilder implements DQLBuilder {
 
     public SelectBuilder(Dialect dialect) {
         super(dialect);
+    }
+
+    public SelectBuilder(Dialect dialect, JdbcExecutor executor) {
+        super(dialect, executor);
     }
 
     @Override

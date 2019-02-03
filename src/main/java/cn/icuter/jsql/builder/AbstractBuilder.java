@@ -32,6 +32,7 @@ public abstract class AbstractBuilder implements Builder {
     private int offset;
     private int limit;
     private Dialect dialect;
+    private JdbcExecutor executor;
 
     public AbstractBuilder() {
         this(Dialects.UNKNOWN);
@@ -39,6 +40,12 @@ public abstract class AbstractBuilder implements Builder {
 
     public AbstractBuilder(Dialect dialect) {
         this.dialect = dialect;
+        init();
+    }
+
+    public AbstractBuilder(Dialect dialect, JdbcExecutor executor) {
+        this.dialect = dialect;
+        this.executor = executor;
         init();
     }
 
@@ -210,7 +217,7 @@ public abstract class AbstractBuilder implements Builder {
     private void addPreparedValue(List<Object> list, Object condValue) {
         if (condValue == null) {
             list.add(null);
-        } else if (condValue.getClass().isArray()) {
+        } else if (condValue.getClass().isArray() && !(condValue instanceof byte[])) {
             for (Object v : (Object[]) condValue) {
                 addPreparedValue(list, v);
             }
@@ -400,6 +407,11 @@ public abstract class AbstractBuilder implements Builder {
     }
 
     @Override
+    public int execUpdate() throws JSQLException {
+        return execUpdate(executor);
+    }
+
+    @Override
     public <E> List<E> execQuery(JdbcExecutor executor, Class<E> clazz) throws JSQLException {
         if (!(this instanceof DQLBuilder) && !(this instanceof SQLBuilder)) {
             throw new ExecutionException("class of " + this.getClass().getName() + " do not allow execQuery");
@@ -411,6 +423,11 @@ public abstract class AbstractBuilder implements Builder {
     }
 
     @Override
+    public <E> List<E> execQuery(Class<E> clazz) throws JSQLException {
+        return execQuery(executor, clazz);
+    }
+
+    @Override
     public List<Map<String, Object>> execQuery(JdbcExecutor executor) throws JSQLException {
         if (!(this instanceof DQLBuilder) && !(this instanceof SQLBuilder)) {
             throw new ExecutionException("class of " + this.getClass().getName() + " do not allow execQuery");
@@ -419,6 +436,11 @@ public abstract class AbstractBuilder implements Builder {
             build();
         }
         return executor.execQuery(this);
+    }
+
+    @Override
+    public List<Map<String, Object>> execQuery() throws JSQLException {
+        return execQuery(executor);
     }
 
     protected void addCondition(Condition... conditions) {

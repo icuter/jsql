@@ -11,6 +11,8 @@ public class TestTable {
     private String col1;
     @ColumnName("t_col_2")
     private String col2;
+    @ColumnName("order_num")
+    private int orderNum;
 
     @Override
     public String toString() {
@@ -18,6 +20,7 @@ public class TestTable {
         sb.append("testId='").append(testId).append('\'');
         sb.append(", col1='").append(col1).append('\'');
         sb.append(", col2='").append(col2).append('\'');
+        sb.append(", orderNum='").append(orderNum).append('\'');
         sb.append('}');
         return sb.toString();
     }
@@ -44,5 +47,13 @@ public class TestTable {
 
     public void setCol2(String col2) {
         this.col2 = col2;
+    }
+
+    public int getOrderNum() {
+        return orderNum;
+    }
+
+    public void setOrderNum(int orderNum) {
+        this.orderNum = orderNum;
     }
 }

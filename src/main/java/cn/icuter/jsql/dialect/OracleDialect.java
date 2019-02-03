@@ -26,23 +26,12 @@ public class OracleDialect implements Dialect {
         String rowNumberAlias = Dialects.getRowNumberAlias(builderCtx);
         SQLStringBuilder sqlStringBuilder = builderCtx.getSqlStringBuilder();
         if (offset > 0) {
-            sqlStringBuilder.prepend("select * from (select source_.*, rownum " + rowNumberAlias + " from (");
-            int forUpdateIndex = builderCtx.getForUpdatePosition(); // can't pre get forUpdate position
-            if (forUpdateIndex > 0) {
-                sqlStringBuilder.insert(forUpdateIndex, ") source_ where rownum <= ?) where " + rowNumberAlias + " > ?");
-            } else {
-                sqlStringBuilder.append(") source_ where rownum <= ?) where " + rowNumberAlias + " > ?");
-            }
-            builderCtx.addCondition(Cond.value(limit));
+            sqlStringBuilder.prepend("select * from (select source_.*, rownum " + rowNumberAlias + " from (")
+                    .append(") source_ where rownum <= ?) where " + rowNumberAlias + " > ?");
+            builderCtx.addCondition(Cond.value(limit + offset));
             builderCtx.addCondition(Cond.value(offset));
         } else {
-            sqlStringBuilder.prepend("select * from (");
-            int forUpdateIndex = builderCtx.getForUpdatePosition(); // can't pre get forUpdate position
-            if (forUpdateIndex > 0) {
-                sqlStringBuilder.insert(forUpdateIndex, ") where rownum <= ?");
-            } else {
-                sqlStringBuilder.append(") where rownum <= ?");
-            }
+            sqlStringBuilder.prepend("select * from (").append(") where rownum <= ?");
             builderCtx.addCondition(Cond.value(limit));
         }
     }

@@ -15,9 +15,9 @@ import java.util.Set;
 public abstract class Dialects {
 
     public static final Dialect MYSQL = new MySQLDialect();
-    public static final Dialect MARIADB = new MariadbDialect();
-    public static final Dialect SQLSERVER = new SqlServerDialect();
-    public static final Dialect SQLSERVER2012 = new SQLServer2012PlusDialect();
+    public static final Dialect MARIADB = new MariaDBDialect();
+    public static final Dialect SQLSERVER = new SQLServerDialect();
+    public static final Dialect SQLSERVER2012_PLUS = new SQLServer2012PlusDialect();
     public static final Dialect ORACLE = new OracleDialect();
     public static final Dialect H2 = new H2Dialect();
     public static final Dialect DERBY = new DerbyDialect();
@@ -31,8 +31,7 @@ public abstract class Dialects {
     static {
         SUPPORTED_DIALECT.add(MYSQL);
         SUPPORTED_DIALECT.add(MARIADB);
-        SUPPORTED_DIALECT.add(SQLSERVER);
-        SUPPORTED_DIALECT.add(SQLSERVER2012);
+        SUPPORTED_DIALECT.add(SQLSERVER2012_PLUS); // prior to SQLSERVER dialect for intelligent guess
         SUPPORTED_DIALECT.add(ORACLE);
         SUPPORTED_DIALECT.add(H2);
         SUPPORTED_DIALECT.add(DERBY);
@@ -40,6 +39,7 @@ public abstract class Dialects {
         SUPPORTED_DIALECT.add(CUBRID);
         SUPPORTED_DIALECT.add(DB2);
         SUPPORTED_DIALECT.add(SQLITE);
+        SUPPORTED_DIALECT.add(SQLSERVER);
         SUPPORTED_DIALECT.add(UNKNOWN);
     }
 

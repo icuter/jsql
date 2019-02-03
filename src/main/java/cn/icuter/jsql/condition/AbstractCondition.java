@@ -56,14 +56,15 @@ public abstract class AbstractCondition implements Condition {
     }
 
     private boolean isMultipleValue() {
-        return value != null && (Collection.class.isAssignableFrom(value.getClass()) || value.getClass().isArray());
+        return value != null && (Collection.class.isAssignableFrom(value.getClass())
+                        || (value.getClass().isArray()) && !(value instanceof byte[]));
     }
 
     private String createMultipleValueSql() {
         int placeHolderCnt = 0;
         if (Collection.class.isAssignableFrom(value.getClass())) {
             placeHolderCnt = ((Collection) value).size();
-        } else if (value.getClass().isArray()) {
+        } else if (value.getClass().isArray() && !(value instanceof byte[])) {
             placeHolderCnt = ((Object[]) value).length;
         }
         String placeHolder = Arrays.stream(new String[placeHolderCnt])

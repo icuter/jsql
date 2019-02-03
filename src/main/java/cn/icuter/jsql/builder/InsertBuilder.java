@@ -28,12 +28,6 @@ public class InsertBuilder extends AbstractBuilder implements DMLBuilder {
         return this;
     }
 
-    private String createPlaceHolder(int placeHolderCnt) {
-        return Arrays.stream(new String[placeHolderCnt])
-                .map(nvl -> "?")
-                .collect(Collectors.joining(","));
-    }
-
     @Override
     public Builder values(Eq... values) {
         if (values == null || values.length <= 0) {
@@ -44,6 +38,12 @@ public class InsertBuilder extends AbstractBuilder implements DMLBuilder {
                 .append("values(" + createPlaceHolder(values.length) + ")");
         addCondition(values);
         return this;
+    }
+
+    private String createPlaceHolder(int placeHolderCnt) {
+        return Arrays.stream(new String[placeHolderCnt])
+                .map(nvl -> "?")
+                .collect(Collectors.joining(","));
     }
 
     @SuppressWarnings("unchecked")

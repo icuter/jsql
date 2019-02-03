@@ -19,7 +19,7 @@ Why JSQL ?
 - Provide ExecutorPool/ConnectionPool for jdbc connection pooling
 
 ## Requirements
-- JDK8+
+- JDK6 or higher
 
 ## Features
 1. Connection/JdbcExecutor pool

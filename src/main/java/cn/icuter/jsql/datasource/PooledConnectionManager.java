@@ -21,10 +21,10 @@ public class PooledConnectionManager implements PooledObjectManager<Connection> 
 
     private final int checkValidTimeout; // seconds, default 5s
     private int invalidTimeout;          // milliseconds, default -1 set invalid immediately
-    private final String url;
-    private final String username;
-    private final String password;
-    private final String driverClassName;
+    protected final String url;
+    protected final String username;
+    protected final String password;
+    protected final String driverClassName;
 
     PooledConnectionManager(String url, String username, String password) {
         this(url, username, password, null, -1, 5);
@@ -54,7 +54,7 @@ public class PooledConnectionManager implements PooledObjectManager<Connection> 
     }
 
     private void registerDriverClassName() {
-        // maybe set outside
+        // maybe initialized out of PooledConnectionManager
         if (driverClassName == null) {
             return;
         }
@@ -79,7 +79,7 @@ public class PooledConnectionManager implements PooledObjectManager<Connection> 
         }
     }
 
-    private Connection newConnection() throws SQLException {
+    protected Connection newConnection() throws SQLException {
         Connection connection = DriverManager.getConnection(url, username, password);
         connection.setAutoCommit(true); // in case Driver's auto-commit is false
         return connection;

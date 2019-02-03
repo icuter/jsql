@@ -297,12 +297,12 @@ public class BuilderTest {
 
     @Test
     public void testSelectBuilderOffsetLimitSQLServer2012() throws Exception {
-        Builder select = new SelectBuilder(Dialects.SQLSERVER2012)
+        Builder select = new SelectBuilder(Dialects.SQLSERVER2012_PLUS)
                 .select().from("table").where().eq("id", "0123456789").orderBy("id desc").offset(5).limit(10).build();
         assertEquals(select.getSql(), "select * from table where id = ? order by id desc offset ? rows fetch next ? rows only");
         assertArrayEquals(select.getPreparedValues().toArray(), new Object[]{"0123456789", 5, 10});
 
-        select = new SelectBuilder(Dialects.SQLSERVER2012)
+        select = new SelectBuilder(Dialects.SQLSERVER2012_PLUS)
                 .select().from("table").where().eq("id", "0123456789").orderBy("id desc").limit(10).build();
         assertEquals(select.getSql(), "select * from table where id = ? order by id desc offset 0 rows fetch next ? rows only");
         assertArrayEquals(select.getPreparedValues().toArray(), new Object[]{"0123456789", 10});
@@ -310,7 +310,7 @@ public class BuilderTest {
 
     @Test(expected = IllegalArgumentException.class)
     public void testSelectBuilderOffsetLimitSQLServer2012Exception() throws Exception {
-        Builder select = new SelectBuilder(Dialects.SQLSERVER2012)
+        Builder select = new SelectBuilder(Dialects.SQLSERVER2012_PLUS)
                 .select().from("table").where().eq("id", "0123456789").offset(5).limit(10).build();
         assertEquals(select.getSql(), "select * from table where id = ? offset ? rows fetch next ? rows only");
         assertArrayEquals(select.getPreparedValues().toArray(), new Object[]{"0123456789", 5, 10});

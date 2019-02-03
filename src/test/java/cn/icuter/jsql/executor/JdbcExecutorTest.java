@@ -8,10 +8,9 @@ import cn.icuter.jsql.condition.Cond;
 import cn.icuter.jsql.datasource.ConnectionPool;
 import cn.icuter.jsql.datasource.JdbcExecutorPool;
 import cn.icuter.jsql.datasource.PoolConfiguration;
+import cn.icuter.jsql.dialect.Dialects;
 import cn.icuter.jsql.exception.ExecutionException;
 import cn.icuter.jsql.exception.JSQLException;
-import cn.icuter.jsql.exception.TransactionCommitException;
-import cn.icuter.jsql.exception.TransactionRollbackExcetpion;
 import cn.icuter.jsql.transaction.Transaction;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -22,6 +21,8 @@ import org.junit.Test;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -37,22 +38,24 @@ import static org.junit.Assert.assertEquals;
 public class JdbcExecutorTest extends BaseDataSourceTest {
 
     private static final String TABLE_NAME = "t_jsql_test";
-    static JdbcExecutorPool pool;
-    static ConnectionPool poolConn;
+    private static JdbcExecutorPool pool;
+    private static ConnectionPool poolConn;
+    private int order = 0;
 
     @BeforeClass
     public static void setup() throws IOException {
         PoolConfiguration poolConfiguration = PoolConfiguration.defaultPoolCfg();
-        poolConfiguration.setMaxPoolSize(1);
+        poolConfiguration.setMaxPoolSize(3);
         pool = dataSource.createExecutorPool(poolConfiguration);
         poolConn = dataSource.createConnectionPool(poolConfiguration);
         try (JdbcExecutor executor = pool.getExecutor()) {
             dataSource.sql("CREATE TABLE " + TABLE_NAME + "\n" +
                     "(\n" +
-                    "  test_id VARCHAR(60) PRIMARY KEY,\n" +
+                    "  test_id VARCHAR(60) NOT NULL,\n" +
                     "  t_col_1 VARCHAR(60) NULL,\n" +
-                    "  t_col_2 VARCHAR(60) NULL\n" +
-                    ")").execUpdate(executor);
+                    "  t_col_2 VARCHAR(60) NULL,\n" +
+                    "  order_num INTEGER NULL,\n" +
+                    "  PRIMARY KEY (test_id))").execUpdate(executor);
         } catch (JSQLException e) {
             // ignore
         }
@@ -162,6 +165,7 @@ public class JdbcExecutorTest extends BaseDataSourceTest {
         }
     }
 
+    @SuppressWarnings("Duplicates")
     @Test
     public void testBuilderOffsetLimit() throws Exception {
         JdbcExecutor jdbcExecutor = pool.getExecutor();
@@ -169,14 +173,16 @@ public class JdbcExecutorTest extends BaseDataSourceTest {
             for (int i = 0; i < 10; i++) {
                 insertTestRecord(jdbcExecutor);
             }
-            List<Map<String, Object>> resultMapInDialect = dataSource.select().from(TABLE_NAME).orderBy("test_id desc")
-                    .offset(1)
-                    .limit(10)
+            int offset = 1;
+            int limit = 5;
+            List<Map<String, Object>> resultMapInDialect = dataSource.select().from(TABLE_NAME).orderBy("order_num desc")
+                    .offset(offset).limit(limit)
                     .execQuery(jdbcExecutor);
 
-            List<Map<String, Object>> resultMapWithoutDialect = new SelectBuilder() {{
-                select().from(TABLE_NAME).orderBy("test_id desc").offset(1).limit(10).build();
-            }}.execQuery(jdbcExecutor);
+            List<Map<String, Object>> resultMapWithoutDialect = new SelectBuilder()
+                    .select().from(TABLE_NAME).orderBy("order_num desc")
+                    .offset(offset).limit(limit)
+                    .execQuery(jdbcExecutor);
 
             assertEquals(resultMapInDialect.size(), resultMapWithoutDialect.size());
 
@@ -185,7 +191,124 @@ public class JdbcExecutorTest extends BaseDataSourceTest {
                 Map<String, Object> mapWithoutDialect = resultMapWithoutDialect.get(i);
 
                 assertEquals(mapInDialect.get("test_id"), mapWithoutDialect.get("test_id"));
+                assertEquals(mapInDialect.get("order_num"), mapWithoutDialect.get("order_num"));
             }
+            // for update
+            if (dataSource.getDialect() != Dialects.DB2) {
+                resultMapInDialect = dataSource.select().from(TABLE_NAME).orderBy("order_num desc")
+                        .offset(offset).limit(limit)
+                        .execQuery(jdbcExecutor);
+
+                resultMapWithoutDialect = new SelectBuilder()
+                        .select().from(TABLE_NAME).orderBy("order_num desc")
+                        .offset(offset).limit(limit)
+                        .execQuery(jdbcExecutor);
+
+                assertEquals(resultMapInDialect.size(), resultMapWithoutDialect.size());
+
+                for (int i = 0; i < resultMapInDialect.size(); i++) {
+                    Map<String, Object> mapInDialect = resultMapInDialect.get(i);
+                    Map<String, Object> mapWithoutDialect = resultMapWithoutDialect.get(i);
+
+                    assertEquals(mapInDialect.get("test_id"), mapWithoutDialect.get("test_id"));
+                    assertEquals(mapInDialect.get("order_num"), mapWithoutDialect.get("order_num"));
+                }
+            }
+            // offset start from 0
+            offset = 0;
+            resultMapInDialect = dataSource.select().from(TABLE_NAME).orderBy("order_num desc")
+                    .offset(offset).limit(limit)
+                    .execQuery(jdbcExecutor);
+
+            resultMapWithoutDialect = new SelectBuilder()
+                    .select().from(TABLE_NAME).orderBy("order_num desc")
+                    .offset(offset).limit(limit)
+                    .execQuery(jdbcExecutor);
+
+            assertEquals(resultMapInDialect.size(), resultMapWithoutDialect.size());
+
+            for (int i = 0; i < resultMapInDialect.size(); i++) {
+                Map<String, Object> mapInDialect = resultMapInDialect.get(i);
+                Map<String, Object> mapWithoutDialect = resultMapWithoutDialect.get(i);
+
+                assertEquals(mapInDialect.get("test_id"), mapWithoutDialect.get("test_id"));
+                assertEquals(mapInDialect.get("order_num"), mapWithoutDialect.get("order_num"));
+            }
+            dataSource.delete().from(TABLE_NAME).execUpdate(jdbcExecutor);
+        } finally {
+            pool.returnExecutor(jdbcExecutor);
+        }
+    }
+
+    @Test
+    public void testUnionSelect() throws Exception {
+        JdbcExecutor jdbcExecutor = pool.getExecutor();
+        List<TestTable> testTableList = new LinkedList<>();
+        for (int i = 0; i < 10; i++) {
+            testTableList.add(insertTestRecord(jdbcExecutor));
+        }
+        testTableList.sort((Comparator<Object>) (o1, o2) -> {
+            TestTable t1 = (TestTable) o1;
+            TestTable t2 = (TestTable) o2;
+            int t1OrderNum = t1.getOrderNum();// != null ? t1.getOrderNum() : 0;
+            int t2OrderNum = t2.getOrderNum();// != null ? t2.getOrderNum() : 0;
+            return t2OrderNum - t1OrderNum;
+        });
+        try {
+            List<TestTable> unionResult = dataSource.unionAll(
+                    dataSource.select("test_id", "t_col_1", "t_col_2", "order_num").from(TABLE_NAME).offset(0).limit(3).orderBy("order_num desc").build(),
+                    dataSource.select("test_id", "t_col_1", "t_col_2", "order_num").from(TABLE_NAME).offset(3).limit(3).orderBy("order_num desc").build(),
+                    dataSource.select("test_id", "t_col_1", "t_col_2", "order_num").from(TABLE_NAME).offset(6).limit(4).orderBy("order_num desc").build()
+            ).orderBy("order_num desc").execQuery(jdbcExecutor, TestTable.class);
+
+            assertEquals(testTableList.size(), unionResult.size());
+
+            for (int i = 0; i < testTableList.size(); i++) {
+                TestTable testTable = testTableList.get(i);
+                assertEquals(testTable.getOrderNum(), unionResult.get(i).getOrderNum());
+                assertEquals(testTable.getTestId(), unionResult.get(i).getTestId());
+            }
+
+            Collections.reverse(testTableList);
+
+            unionResult = dataSource.unionAll(
+                    dataSource.select("test_id", "t_col_1", "t_col_2", "order_num").from(TABLE_NAME).offset(0).limit(3).orderBy("order_num asc").build(),
+                    dataSource.select("test_id", "t_col_1", "t_col_2", "order_num").from(TABLE_NAME).offset(3).limit(3).orderBy("order_num asc").build(),
+                    dataSource.select("test_id", "t_col_1", "t_col_2", "order_num").from(TABLE_NAME).offset(6).limit(4).orderBy("order_num asc").build()
+            ).orderBy("order_num asc").execQuery(jdbcExecutor, TestTable.class);
+
+            assertEquals(testTableList.size(), unionResult.size());
+
+            for (int i = 0; i < testTableList.size(); i++) {
+                TestTable testTable = testTableList.get(i);
+                assertEquals(testTable.getOrderNum(), unionResult.get(i).getOrderNum());
+                assertEquals(testTable.getTestId(), unionResult.get(i).getTestId());
+            }
+
+            int offset = 3;
+            int limit = 5;
+            unionResult = dataSource.unionAll(
+                    dataSource.select("test_id", "t_col_1", "t_col_2", "order_num").from(TABLE_NAME).offset(0).limit(3).orderBy("order_num asc").build(),
+                    dataSource.select("test_id", "t_col_1", "t_col_2", "order_num").from(TABLE_NAME).offset(3).limit(3).orderBy("order_num asc").build(),
+                    dataSource.select("test_id", "t_col_1", "t_col_2", "order_num").from(TABLE_NAME).offset(6).limit(4).orderBy("order_num asc").build()
+            ).offset(offset).limit(limit).orderBy("order_num asc").execQuery(jdbcExecutor, TestTable.class);
+            for (int i = offset; i < limit + offset; i++) {
+                TestTable testTable = testTableList.get(i);
+                assertEquals(testTable.getOrderNum(), unionResult.get(i - offset).getOrderNum());
+                assertEquals(testTable.getTestId(), unionResult.get(i - offset).getTestId());
+            }
+            offset = 0;
+            unionResult = dataSource.unionAll(
+                    dataSource.select("test_id", "t_col_1", "t_col_2", "order_num").from(TABLE_NAME).offset(0).limit(3).orderBy("order_num asc").build(),
+                    dataSource.select("test_id", "t_col_1", "t_col_2", "order_num").from(TABLE_NAME).offset(3).limit(3).orderBy("order_num asc").build(),
+                    dataSource.select("test_id", "t_col_1", "t_col_2", "order_num").from(TABLE_NAME).offset(6).limit(4).orderBy("order_num asc").build()
+            ).offset(offset).limit(limit).orderBy("order_num asc").execQuery(jdbcExecutor, TestTable.class);
+            for (int i = offset; i < limit + offset; i++) {
+                TestTable testTable = testTableList.get(i);
+                assertEquals(testTable.getOrderNum(), unionResult.get(i - offset).getOrderNum());
+                assertEquals(testTable.getTestId(), unionResult.get(i - offset).getTestId());
+            }
+
             dataSource.delete().from(TABLE_NAME).execUpdate(jdbcExecutor);
         } finally {
             pool.returnExecutor(jdbcExecutor);
@@ -199,37 +322,30 @@ public class JdbcExecutorTest extends BaseDataSourceTest {
             testTable = insertTestRecord(txExecutor);
             txExecutor.commit();
         }
-        TransactionExecutor txExecutorEnd = dataSource.createTransaction();
-        try {
+        try (TransactionExecutor txExecutorEnd = dataSource.createTransaction()) {
             int cnt = dataSource
                     .update(TABLE_NAME).set(Cond.eq("t_col_1", testTable.getCol1() + "_updated"))
                     .where().eq("test_id", testTable.getTestId())
                     .execUpdate(txExecutorEnd);
             Assert.assertEquals(cnt, 1);
             txExecutorEnd.commit();
-        } finally {
-            txExecutorEnd.close();
         }
-        TransactionExecutor txExecutorClose = dataSource.createTransaction();
-        try {
+        try (TransactionExecutor txExecutorClose = dataSource.createTransaction()) {
             int cnt = dataSource
                     .delete().from(TABLE_NAME).where().eq("test_id", testTable.getTestId())
                     .execUpdate(txExecutorClose);
             Assert.assertEquals(cnt, 1);
             txExecutorClose.commit();
-        } finally {
-            txExecutorClose.close();
         }
     }
 
     @Test
     public void testBatchUpdate() throws Exception {
-        List<Builder> batchList = new LinkedList<Builder>() {{
-            add(newInsertBuilder());
-            add(newInsertBuilder());
-            add(newInsertBuilder());
-            add(newInsertBuilder());
-        }};
+        List<Builder> batchList = new LinkedList<>();
+        batchList.add(newInsertBuilder());
+        batchList.add(newInsertBuilder());
+        batchList.add(newInsertBuilder());
+        batchList.add(newInsertBuilder());
         try (TransactionExecutor txExecutor = dataSource.createTransaction()) {
             txExecutor.execBatch(batchList);
             txExecutor.commit();
@@ -266,17 +382,15 @@ public class JdbcExecutorTest extends BaseDataSourceTest {
 
     @Test(expected = ExecutionException.class)
     public void testBatchUpdateException() throws Exception {
-        List<Builder> batchList = new LinkedList<Builder>() {{
-            add(newInsertBuilder());
-            add(newInsertBuilder());
+        List<Builder> batchList = new LinkedList<>();
+        batchList.add(newInsertBuilder());
+        batchList.add(newInsertBuilder());
 
-            TestTable testTable = createTestTableRecord();
-            testTable.setCol1("01234567890123456789012345678901234567890123456789012345678901234567891");
-            add(dataSource.insert(TABLE_NAME).values(testTable).build());
-
-            add(newInsertBuilder());
-            add(newInsertBuilder());
-        }};
+        TestTable testTable = createTestTableRecord();
+        testTable.setCol1("01234567890123456789012345678901234567890123456789012345678901234567891");
+        batchList.add(dataSource.insert(TABLE_NAME).values(testTable).build());
+        batchList.add(newInsertBuilder());
+        batchList.add(newInsertBuilder());
         TransactionExecutor txExecutor = dataSource.createTransaction();
         try {
             txExecutor.execBatch(batchList);
@@ -284,7 +398,7 @@ public class JdbcExecutorTest extends BaseDataSourceTest {
             txExecutor.rollback();
             throw e;
         } finally {
-            txExecutor.end();
+            txExecutor.close();
         }
     }
 
@@ -300,9 +414,10 @@ public class JdbcExecutorTest extends BaseDataSourceTest {
 
     @Test(expected = ExecutionException.class)
     public void testTransactionExecutorConnectionException() throws Exception {
-        JdbcExecutor txExecutor = dataSource.createTransaction();
+        TransactionExecutor txExecutor = dataSource.createTransaction();
         try {
             dataSource.select().from(TABLE_NAME).execQuery(txExecutor);
+            txExecutor.commit();
         } finally {
             txExecutor.close();
         }
@@ -376,12 +491,18 @@ public class JdbcExecutorTest extends BaseDataSourceTest {
     private void testExecutorBase(JdbcExecutor executor) throws JSQLException {
         TestTable testTable = insertTestRecord(executor);
 
-        List<Map<String, Object>> result = dataSource.select("*", "count(1) as cnt").from(TABLE_NAME)
+        List<Map<String, Object>> result = dataSource.select("count(1) as cnt")
+                .from(TABLE_NAME)
                 .where().eq("test_id", testTable.getTestId()).execQuery(executor);
         Map<String, Object> resultMap = result.get(0);
 
         Assert.assertEquals(result.size(), 1);
-        Assert.assertEquals(resultMap.get("cnt"), 1L);
+        Assert.assertEquals(String.valueOf(resultMap.get("cnt")), "1");
+
+        result = dataSource.select("test_id", "t_col_1", "t_col_2")
+                .from(TABLE_NAME)
+                .where().eq("test_id", testTable.getTestId()).execQuery(executor);
+        resultMap = result.get(0);
         Assert.assertEquals(resultMap.get("test_id"), testTable.getTestId());
         Assert.assertEquals(resultMap.get("t_col_1"), testTable.getCol1());
         Assert.assertEquals(resultMap.get("t_col_2"), testTable.getCol2());
@@ -422,6 +543,7 @@ public class JdbcExecutorTest extends BaseDataSourceTest {
         testTable.setTestId(UUID.randomUUID().toString());
         testTable.setCol1("col1");
         testTable.setCol2("col2");
+        testTable.setOrderNum(order++);
         return testTable;
     }
 

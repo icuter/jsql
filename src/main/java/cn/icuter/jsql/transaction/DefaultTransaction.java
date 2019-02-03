@@ -81,13 +81,6 @@ public class DefaultTransaction implements Transaction {
     }
 
     @Override
-    public void end() throws JSQLException {
-        if (getState() == State.ROLLBACK_SAVEPOINT || (!wasCommitted() && !wasRolledBack())) {
-            commit();
-        }
-    }
-
-    @Override
     public void addSavepoint(String savepointName) throws JSQLException {
         try {
             // check name whether unique

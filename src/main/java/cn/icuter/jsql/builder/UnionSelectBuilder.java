@@ -123,11 +123,7 @@ public class UnionSelectBuilder extends SelectBuilder {
         int limit = builder.getBuilderContext().getLimit();
         if (offset > 0) {
             if (unionDialect != Dialects.UNKNOWN) {
-                Dialect dialect = builder.getBuilderContext().getDialect();
-                if (!unionDialect.getDialectName().equals(dialect.getDialectName())) {
-                    throw new IllegalArgumentException("Dialect do NOT match for " + unionDialect.getDialectName()
-                            + " and " + dialect.getDialectName());
-                }
+                checkDialectSupportOffsetLimit(builder);
             }
             if (!PAGE_TYPE_OFFSET_LIMIT.equals(pageType)) {
                 pageType = PAGE_TYPE_OFFSET_LIMIT;
@@ -135,11 +131,7 @@ public class UnionSelectBuilder extends SelectBuilder {
             }
         } else if (limit > 0 && !PAGE_TYPE_OFFSET_LIMIT.equals(pageType)) {
             if (unionDialect != Dialects.UNKNOWN) {
-                Dialect dialect = builder.getBuilderContext().getDialect();
-                if (!unionDialect.getDialectName().equals(dialect.getDialectName())) {
-                    throw new IllegalArgumentException("Dialect do NOT match for " + unionDialect.getDialectName()
-                            + " and " + dialect.getDialectName());
-                }
+                checkDialectSupportOffsetLimit(builder);
             }
             if (!PAGE_TYPE_LIMIT.equals(pageType)) {
                 pageType = PAGE_TYPE_LIMIT;
@@ -148,27 +140,43 @@ public class UnionSelectBuilder extends SelectBuilder {
         }
     }
 
+    private void checkDialectSupportOffsetLimit(Builder builder) {
+        Dialect dialect = builder.getBuilderContext().getDialect();
+        if (!dialect.supportOffsetLimit()) {
+            throw new UnsupportedOperationException(dialect.getDialectName() + " do NOT support for offset and limit operation");
+        }
+        if (!unionDialect.getDialectName().equals(dialect.getDialectName())) {
+            throw new IllegalArgumentException("Dialect do NOT match for " + unionDialect.getDialectName()
+                    + " and " + dialect.getDialectName());
+        }
+    }
+
     @Override
     public Builder build() {
         if (unionBuilderDescriptors.size() == 0) {
             throw new IllegalArgumentException("Union SQL NOT EXISTS");
         } else {
+            SQLStringBuilder unionSQLBuilder = new SQLStringBuilder();
             boolean isMultipleSelectBuilder = unionBuilderDescriptors.size() > 1;
             UnionBuilderDescriptor firstDescriptor = unionBuilderDescriptors.get(0);
-            sqlStringBuilder.append((isMultipleSelectBuilder ? "(" : "")
+            unionSQLBuilder.append((isMultipleSelectBuilder ? "(" : "")
                     + wrapOffsetLimit(firstDescriptor.builder) + (isMultipleSelectBuilder ? ")" : ""));
             addCondition(firstDescriptor.builder.getConditionList());
             if (isMultipleSelectBuilder) {
                 for (int i = 1; i < unionBuilderDescriptors.size(); i++) {
                     UnionBuilderDescriptor descriptor = unionBuilderDescriptors.get(i);
-                    sqlStringBuilder.append(descriptor.isUnionAll ? "union all" : "union").append("(" + wrapOffsetLimit(descriptor.builder) + ")");
+                    unionSQLBuilder.append(descriptor.isUnionAll ? "union all" : "union").append("(" + wrapOffsetLimit(descriptor.builder) + ")");
                     addCondition(descriptor.builder.getConditionList());
                 }
             }
+            builderContext.sqlLevel = unionBuilderDescriptors.size();
+            // can't add alias which cause DB2 subselect compilation error
+            unionSQLBuilder.prepend("select * from (").append(")");
+            if (!unionDialect.getDialectName().equals(Dialects.DB2.getDialectName())) {
+                unionSQLBuilder.append("union_alias_");
+            }
+            sqlStringBuilder.prepend(unionSQLBuilder.serialize());
         }
-        builderContext.sqlLevel = unionBuilderDescriptors.size();
-        // can't add alias which cause DB2 subselect compilation error
-        sqlStringBuilder.prepend("select * from (").append(")");
         return super.build();
     }
 
