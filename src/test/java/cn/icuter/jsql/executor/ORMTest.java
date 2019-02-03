@@ -42,7 +42,7 @@ public class ORMTest extends BaseDataSourceTest {
                     "  f_integer INTEGER NULL,\n" +
                     "  f_double decimal(10,3) NULL,\n" +
                     "  f_decimal decimal(10,3) NULL,\n" +
-                    "  f_clob CLOB NULL,\n" + // mysql TEXT oracle CLOB
+                    "  f_clob TEXT NULL,\n" + // mysql TEXT oracle CLOB
                     "  PRIMARY KEY (orm_id))").execUpdate(executor);
         } catch (JSQLException e) {
             throw new IOException(e);

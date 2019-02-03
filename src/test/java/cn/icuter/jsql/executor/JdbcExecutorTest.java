@@ -57,7 +57,7 @@ public class JdbcExecutorTest extends BaseDataSourceTest {
                     "  order_num INTEGER NULL,\n" +
                     "  PRIMARY KEY (test_id))").execUpdate(executor);
         } catch (JSQLException e) {
-            // ignore
+            throw new IOException(e);
         }
     }
 
