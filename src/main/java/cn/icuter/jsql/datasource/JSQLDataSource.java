@@ -7,6 +7,9 @@ import cn.icuter.jsql.builder.SQLBuilder;
 import cn.icuter.jsql.builder.SelectBuilder;
 import cn.icuter.jsql.builder.UnionSelectBuilder;
 import cn.icuter.jsql.builder.UpdateBuilder;
+import cn.icuter.jsql.data.JSQLBlob;
+import cn.icuter.jsql.data.JSQLClob;
+import cn.icuter.jsql.data.JSQLNClob;
 import cn.icuter.jsql.dialect.Dialect;
 import cn.icuter.jsql.dialect.Dialects;
 import cn.icuter.jsql.dialect.UnknownDialect;
@@ -20,8 +23,11 @@ import cn.icuter.jsql.pool.DefaultObjectPool;
 import cn.icuter.jsql.pool.ObjectPool;
 import cn.icuter.jsql.pool.PooledObjectManager;
 
+import java.sql.Blob;
+import java.sql.Clob;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.NClob;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.Objects;
@@ -188,6 +194,30 @@ public class JSQLDataSource {
     }
     public Builder unionAll(Collection<Builder> builders) {
         return UnionSelectBuilder.unionAll(dialect, builders);
+    }
+
+    public Clob createClob(String initData) {
+        return new JSQLClob(initData);
+    }
+
+    public NClob createNClob(String initData) {
+        return new JSQLNClob(initData);
+    }
+
+    public Blob createBlob(byte[] initData) {
+        return new JSQLBlob(initData);
+    }
+
+    public Clob createClob() {
+        return new JSQLClob();
+    }
+
+    public NClob createNClob() {
+        return new JSQLNClob();
+    }
+
+    public Blob createBlob() {
+        return new JSQLBlob();
     }
 
     public String getUrl() {

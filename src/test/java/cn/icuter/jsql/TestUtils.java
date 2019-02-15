@@ -10,18 +10,16 @@ import java.util.Properties;
 
 /**
  * @author edward
- * @since 2018-09-20
+ * @since 2019-02-12
  */
-public class BaseDataSourceTest {
+public abstract class TestUtils {
 
-    protected static JSQLDataSource dataSource;
-
-    static {
+    public static JSQLDataSource getDataSource(String propName) {
         Properties properties = new Properties();
         String icuterHome = System.getenv("ICUTER_HOME"); // only for test
-        try (InputStream in = new FileInputStream(new File(icuterHome, "conf/jdbc.properties"))) {
+        try (InputStream in = new FileInputStream(new File(icuterHome, "conf/" + propName + ".properties"))) {
             properties.load(in);
-            dataSource = new JSQLDataSource(properties);
+            return new JSQLDataSource(properties);
         } catch (IOException e) {
             throw new IllegalArgumentException(e);
         }

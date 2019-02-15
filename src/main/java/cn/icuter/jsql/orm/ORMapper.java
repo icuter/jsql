@@ -1,59 +1,49 @@
 package cn.icuter.jsql.orm;
 
 import cn.icuter.jsql.ColumnName;
+import cn.icuter.jsql.builder.FieldInterceptor;
 import cn.icuter.jsql.exception.ORMException;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.LinkedHashMap;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
 
 /**
  * @author edward
  * @since 2018-08-26
  */
-public class ORMapper {
+public class ORMapper<T> {
 
-    private Object object;
+    private T object;
 
-    public ORMapper() {
-    }
-
-    public ORMapper(Object object) {
+    public ORMapper(T object) {
         this.object = object;
     }
 
-    public static ORMapper of(Object object) {
-        return new ORMapper(object);
-    }
-
-    public List<String> getColumns() {
-        List<String> colList = new LinkedList<>();
-        ORMapper.mapColumn(this.object.getClass(), (col, field) -> colList.add(col));
-        return colList;
+    public static <E> ORMapper<E> of(E object) {
+        return new ORMapper<>(object);
     }
 
     public Map<String, Object> toMapIgnoreNullValue() {
-        return toMap(true);
+        return toMap((object, fieldName, colName, value, resultMap) -> value != null);
     }
 
     public Map<String, Object> toMap() {
-        return toMap(false);
+        return toMap((object, fieldName, colName, value, resultMap) -> true);
     }
 
-    private Map<String, Object> toMap(boolean ignoreNullValue) {
+    public Map<String, Object> toMap(FieldInterceptor<T> interceptor) {
         Map<String, Object> resultMap = new LinkedHashMap<>();
         ORMapper.mapColumn(this.object.getClass(), (col, field) -> {
             try {
                 field.setAccessible(true);
                 Object v = field.get(this.object);
-                if (!ignoreNullValue || v != null) {
+                if (interceptor.accept(this.object, field.getName(), col, v, resultMap)) {
                     resultMap.put(col, v);
                 }
             } catch (IllegalAccessException e) {
-                throw new ORMException("mapping column and field error for col: " + col + " and filed: " + field.getName(), e);
+                throw new ORMException("mapping field and column error for col: " + col + " and filed: " + field.getName(), e);
             }
         });
         return resultMap;

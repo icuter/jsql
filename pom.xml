@@ -46,6 +46,7 @@
             <name>Edward Lee Jan</name>
             <email>edward.jhl@outlook.com</email>
             <url>https://www.icuter.cn</url>
+            <organization>icuter</organization>
         </developer>
     </developers>
     <repositories>
@@ -199,6 +200,7 @@
                         <!-- openjdk need it -->
                         <argLine>-Djdk.net.URLClassPath.disableClassPathURLCheck=true</argLine>
                         <skip>false</skip>
+                        <test>CommonTestSuite</test>
                     </configuration>
                 </plugin>
                 <plugin>

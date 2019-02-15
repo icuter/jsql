@@ -9,8 +9,11 @@ steps:
     path: /root/.m2
   commands:
   - mvn validate -B
+  when:
+    event:
+    - push
 
-- name: test
+- name: test common
   image: maven:3-jdk-8
   volumes:
   - name: maven
@@ -19,7 +22,52 @@ steps:
     path: /home/icuter/
   commands:
   - export ICUTER_HOME=/home/icuter/
-  - mvn test -B -Dcheckstyle.skip=true
+  - mvn test -B -Dcheckstyle.skip=true -Dtest=CommonTestSuite
+  when:
+    event:
+    - push
+
+- name: test mariadb
+  image: maven:3-jdk-8
+  volumes:
+  - name: maven
+    path: /root/.m2
+  - name: icuter_home
+    path: /home/icuter/
+  commands:
+  - export ICUTER_HOME=/home/icuter/
+  - mvn test -B -Dcheckstyle.skip=true -Dtest=MariaDBTestSuite
+  when:
+    event:
+    - push
+
+#- name: test oracle
+#  image: maven:3-jdk-8
+#  volumes:
+#  - name: maven
+#    path: /root/.m2
+#  - name: icuter_home
+#    path: /home/icuter/
+#  commands:
+#  - export ICUTER_HOME=/home/icuter/
+#  - mvn test -B -Dcheckstyle.skip=true -Dtest=OracleTestSuite
+#  when:
+#    event:
+#    - push
+#
+#- name: test db2
+#  image: maven:3-jdk-8
+#  volumes:
+#  - name: maven
+#    path: /root/.m2
+#  - name: icuter_home
+#    path: /home/icuter/
+#  commands:
+#  - export ICUTER_HOME=/home/icuter/
+#  - mvn test -B -Dcheckstyle.skip=true -Dtest=DB2TestSuite
+#  when:
+#    event:
+#    - push
 
 - name: release
   image: maven:3-jdk-8

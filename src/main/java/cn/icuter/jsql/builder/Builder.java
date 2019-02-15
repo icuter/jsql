@@ -59,7 +59,10 @@ public interface Builder extends ConditionBuilder, ExecutableBuilder {
     default Builder values(Eq... values) {
         throw new UnsupportedOperationException();
     }
-    default <T> Builder values(T value) {
+    default Builder values(Object value) {
+        throw new UnsupportedOperationException();
+    }
+    default <T> Builder values(T value, FieldInterceptor<T> interceptor) {
         throw new UnsupportedOperationException();
     }
     // Update Builder
@@ -69,7 +72,10 @@ public interface Builder extends ConditionBuilder, ExecutableBuilder {
     default Builder set(Eq... eqs) {
         throw new UnsupportedOperationException();
     }
-    default <T> Builder set(T value) {
+    default Builder set(Object value) {
+        throw new UnsupportedOperationException();
+    }
+    default <T> Builder set(T value, FieldInterceptor<T> interceptor) {
         throw new UnsupportedOperationException();
     }
     // Delete Builder

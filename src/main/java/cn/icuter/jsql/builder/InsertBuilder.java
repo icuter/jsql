@@ -6,7 +6,12 @@ import cn.icuter.jsql.condition.Eq;
 import cn.icuter.jsql.dialect.Dialect;
 import cn.icuter.jsql.orm.ORMapper;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -48,7 +53,7 @@ public class InsertBuilder extends AbstractBuilder implements DMLBuilder {
 
     @SuppressWarnings("unchecked")
     @Override
-    public <T> Builder values(T values) {
+    public Builder values(Object values) {
         Objects.requireNonNull(values, "values must not be null");
 
         if (values instanceof Map) {
@@ -68,5 +73,13 @@ public class InsertBuilder extends AbstractBuilder implements DMLBuilder {
                     .collect(Collectors.toList());
             return values(eqList.toArray(new Eq[eqList.size()]));
         }
+    }
+
+    @Override
+    public <T> Builder values(T value, FieldInterceptor<T> interceptor) {
+        List<Eq> eqList = ORMapper.of(value).toMap(interceptor).entrySet().stream()
+                .map(e -> Cond.eq(e.getKey(), e.getValue()))
+                .collect(Collectors.toList());
+        return values(eqList.toArray(new Eq[eqList.size()]));
     }
 }

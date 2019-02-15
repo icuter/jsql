@@ -2,6 +2,9 @@ package cn.icuter.jsql.executor;
 
 import cn.icuter.jsql.builder.Builder;
 import cn.icuter.jsql.builder.BuilderContext;
+import cn.icuter.jsql.data.JSQLBlob;
+import cn.icuter.jsql.data.JSQLClob;
+import cn.icuter.jsql.data.JSQLNClob;
 import cn.icuter.jsql.exception.ExecutionException;
 import cn.icuter.jsql.exception.JSQLException;
 import cn.icuter.jsql.log.JSQLLogger;
@@ -12,6 +15,7 @@ import java.lang.reflect.Field;
 import java.sql.Blob;
 import java.sql.Clob;
 import java.sql.Connection;
+import java.sql.NClob;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -52,7 +56,25 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
         try (PreparedStatement ps = connection.prepareStatement(builder.getSql())) {
             List<Object> preparedValues = builder.getPreparedValues();
             for (int i = 0, len = preparedValues.size(); i < len; i++) {
-                ps.setObject(i + 1, preparedValues.get(i));
+                Object value = preparedValues.get(i);
+                if (JSQLClob.class.isAssignableFrom(value.getClass())) {
+                    JSQLClob clobValue = (JSQLClob) value;
+                    Clob clobFromConnection = connection.createClob();
+                    clobFromConnection.setString(1, clobValue.getSubString(1, (int) clobValue.length()));
+                    ps.setClob(i + 1, clobFromConnection);
+                } else if (JSQLNClob.class.isAssignableFrom(value.getClass())) {
+                    JSQLNClob nclobValue = (JSQLNClob) value;
+                    NClob nclobFromConnection = connection.createNClob();
+                    nclobFromConnection.setString(1, nclobValue.getSubString(1, (int) nclobValue.length()));
+                    ps.setNClob(i + 1, nclobFromConnection);
+                } else if (JSQLBlob.class.isAssignableFrom(value.getClass())) {
+                    JSQLBlob blobValue = (JSQLBlob) value;
+                    Blob blobFromConnection = connection.createBlob();
+                    blobFromConnection.setBytes(1, blobValue.getBytes(1, (int) blobValue.length()));
+                    ps.setBlob(i + 1, blobFromConnection);
+                } else {
+                    ps.setObject(i + 1, value);
+                }
             }
             return ps.executeUpdate();
         } catch (SQLException e) {
@@ -77,32 +99,27 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
                     if (field.getType().isPrimitive()) {
                         if (field.getType() == Boolean.TYPE) {
                             field.set(record, rs.getBoolean(rsIndex));
-
                         } else if (field.getType() == Byte.TYPE) {
                             field.set(record, rs.getByte(rsIndex));
-
                         } else if (field.getType() == Short.TYPE) {
                             field.set(record, rs.getShort(rsIndex));
-
                         } else if (field.getType() == Integer.TYPE) {
                             field.set(record, rs.getInt(rsIndex));
-
                         } else if (field.getType() == Long.TYPE) {
                             field.set(record, rs.getLong(rsIndex));
-
                         } else if (field.getType() == Float.TYPE) {
                             field.set(record, rs.getFloat(rsIndex));
-
                         } else if (field.getType() == Double.TYPE) {
                             field.set(record, rs.getDouble(rsIndex));
-
                         } else {
                             field.set(record, rs.getObject(rsIndex, field.getType()));
                         }
                     } else if (Blob.class.isAssignableFrom(field.getType())) {
-                        field.set(record, rs.getBlob(rsIndex)); // compatible for mysql/mariaDB
+                        field.set(record, rs.getBlob(rsIndex));
+                    } else if (NClob.class.isAssignableFrom(field.getType())) {
+                        field.set(record, rs.getNClob(rsIndex));
                     } else if (Clob.class.isAssignableFrom(field.getType())) {
-                        field.set(record, rs.getClob(rsIndex)); // compatible for mysql
+                        field.set(record, rs.getClob(rsIndex));
                     } else {
                         field.set(record, rs.getObject(rsIndex, field.getType()));
                     }

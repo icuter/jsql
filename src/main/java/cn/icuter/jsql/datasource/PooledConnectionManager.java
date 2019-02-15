@@ -116,11 +116,7 @@ public class PooledConnectionManager implements PooledObjectManager<Connection> 
     @Override
     public boolean validate(PooledObject<Connection> pooledObject) throws JSQLException {
         try {
-            boolean validation = validateConnection(pooledObject);
-
-            LOGGER.debug("validation pooled object detail: " + pooledObject);
-
-            return validation;
+            return validateConnection(pooledObject);
         } catch (Exception e) {
             // Catch exception and return false is for pooled object removal
             LOGGER.error("Connection is invalid and return false for pooled object removal", e);

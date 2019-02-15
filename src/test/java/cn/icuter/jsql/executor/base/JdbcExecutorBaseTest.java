@@ -1,21 +1,21 @@
-package cn.icuter.jsql.executor;
+package cn.icuter.jsql.executor.base;
 
-import cn.icuter.jsql.BaseDataSourceTest;
 import cn.icuter.jsql.TestTable;
 import cn.icuter.jsql.builder.Builder;
 import cn.icuter.jsql.builder.SelectBuilder;
 import cn.icuter.jsql.condition.Cond;
 import cn.icuter.jsql.datasource.ConnectionPool;
+import cn.icuter.jsql.datasource.JSQLDataSource;
 import cn.icuter.jsql.datasource.JdbcExecutorPool;
-import cn.icuter.jsql.datasource.PoolConfiguration;
 import cn.icuter.jsql.dialect.Dialects;
 import cn.icuter.jsql.exception.ExecutionException;
 import cn.icuter.jsql.exception.JSQLException;
+import cn.icuter.jsql.executor.DefaultJdbcExecutor;
+import cn.icuter.jsql.executor.JdbcExecutor;
+import cn.icuter.jsql.executor.TransactionExecutor;
 import cn.icuter.jsql.transaction.Transaction;
 import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.FixMethodOrder;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -32,32 +32,25 @@ import static org.junit.Assert.assertEquals;
 
 /**
  * @author edward
- * @since 2018-09-22
+ * @since 2019-02-12
  */
-@FixMethodOrder
-public class JdbcExecutorTest extends BaseDataSourceTest {
-
-    private static final String TABLE_NAME = "t_jsql_test";
-    private static JdbcExecutorPool pool;
-    private static ConnectionPool poolConn;
+public abstract class JdbcExecutorBaseTest {
+    protected static final String TABLE_NAME = "t_jsql_test";
+    protected static JdbcExecutorPool pool;
+    protected static JSQLDataSource dataSource;
+    protected static ConnectionPool poolConn;
     private int order = 0;
 
-    @BeforeClass
-    public static void setup() throws IOException {
-        PoolConfiguration poolConfiguration = PoolConfiguration.defaultPoolCfg();
-        poolConfiguration.setMaxPoolSize(3);
-        pool = dataSource.createExecutorPool(poolConfiguration);
-        poolConn = dataSource.createConnectionPool(poolConfiguration);
+    @AfterClass
+    public static void tearDown() throws JSQLException, IOException {
         try (JdbcExecutor executor = pool.getExecutor()) {
-            dataSource.sql("CREATE TABLE " + TABLE_NAME + "\n" +
-                    "(\n" +
-                    "  test_id VARCHAR(60) NOT NULL,\n" +
-                    "  t_col_1 VARCHAR(60) NULL,\n" +
-                    "  t_col_2 VARCHAR(60) NULL,\n" +
-                    "  order_num INTEGER NULL,\n" +
-                    "  PRIMARY KEY (test_id))").execUpdate(executor);
-        } catch (JSQLException e) {
-            throw new IOException(e);
+            dataSource.sql("DROP TABLE " + TABLE_NAME).execUpdate(executor);
+        } finally {
+            pool.close();
+            poolConn.close();
+            dataSource = null;
+            pool = null;
+            poolConn = null;
         }
     }
 
@@ -546,14 +539,4 @@ public class JdbcExecutorTest extends BaseDataSourceTest {
         testTable.setOrderNum(order++);
         return testTable;
     }
-
-    @AfterClass
-    public static void tearDown() throws JSQLException, IOException {
-        try (JdbcExecutor executor = pool.getExecutor()) {
-            dataSource.sql("DROP TABLE " + TABLE_NAME).execUpdate(executor);
-        }
-        pool.close();
-        poolConn.close();
-    }
-
 }
