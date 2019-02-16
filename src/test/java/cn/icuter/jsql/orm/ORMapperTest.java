@@ -47,7 +47,7 @@ public class ORMapperTest {
 
         ormTable = createOrmTable();
         orMapper = ORMapper.of(ormTable);
-        map = orMapper.toMap((object, fieldName, colName, value, resultMap) -> "f_clob".equals(colName));
+        map = orMapper.toMap((object, field, colName, value, resultMap) -> "f_clob".equals(colName));
         Assert.assertTrue(map.containsKey("f_clob"));
         Assert.assertFalse(map.containsKey("f_int"));
         Assert.assertFalse(map.containsKey("f_string"));
@@ -58,11 +58,6 @@ public class ORMapperTest {
         clob = (Clob) map.get("f_clob");
         Assert.assertEquals(ormTable.getfClobObj().getSubString(1L,
                 (int) ormTable.getfClobObj().length()), clob.getSubString(1L, (int) clob.length()));
-    }
-
-    @Test
-    public void mapColumn() throws Exception {
-        // TODO
     }
 
     private ORMTable createOrmTable() {

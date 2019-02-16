@@ -26,11 +26,11 @@ public class ORMapper<T> {
     }
 
     public Map<String, Object> toMapIgnoreNullValue() {
-        return toMap((object, fieldName, colName, value, resultMap) -> value != null);
+        return toMap((object, field, colName, value, resultMap) -> value != null);
     }
 
     public Map<String, Object> toMap() {
-        return toMap((object, fieldName, colName, value, resultMap) -> true);
+        return toMap((object, field, colName, value, resultMap) -> true);
     }
 
     public Map<String, Object> toMap(FieldInterceptor<T> interceptor) {
@@ -39,7 +39,7 @@ public class ORMapper<T> {
             try {
                 field.setAccessible(true);
                 Object v = field.get(this.object);
-                if (interceptor.accept(this.object, field.getName(), col, v, resultMap)) {
+                if (interceptor.accept(this.object, field, col, v, resultMap)) {
                     resultMap.put(col, v);
                 }
             } catch (IllegalAccessException e) {
