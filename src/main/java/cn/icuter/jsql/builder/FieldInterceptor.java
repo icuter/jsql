@@ -1,5 +1,6 @@
 package cn.icuter.jsql.builder;
 
+import java.lang.reflect.Field;
 import java.util.Map;
 
 /**
@@ -8,5 +9,5 @@ import java.util.Map;
  */
 @FunctionalInterface
 public interface FieldInterceptor<T> {
-    boolean accept(T object, String fieldName, String colName, Object value, Map<String, Object> resultMap);
+    boolean accept(T object, Field field, String colName, Object value, Map<String, Object> resultMap);
 }

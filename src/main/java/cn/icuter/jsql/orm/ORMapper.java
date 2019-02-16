@@ -28,7 +28,7 @@ public class ORMapper<T> {
     public Map<String, Object> toMapIgnoreNullValue() {
         return toMap(new FieldInterceptor<T>() {
             @Override
-            public boolean accept(T object, String fieldName, String colName, Object value, Map<String, Object> resultMap) {
+            public boolean accept(T object, Field field, String colName, Object value, Map<String, Object> resultMap) {
                 return value != null;
             }
         });
@@ -37,7 +37,7 @@ public class ORMapper<T> {
     public Map<String, Object> toMap() {
         return toMap(new FieldInterceptor<T>() {
             @Override
-            public boolean accept(T object, String fieldName, String colName, Object value, Map<String, Object> resultMap) {
+            public boolean accept(T object, Field field, String colName, Object value, Map<String, Object> resultMap) {
                 return true;
             }
         });
@@ -51,7 +51,7 @@ public class ORMapper<T> {
                 try {
                     field.setAccessible(true);
                     Object v = field.get(object);
-                    if (interceptor.accept(object, field.getName(), col, v, resultMap)) {
+                    if (interceptor.accept(object, field, col, v, resultMap)) {
                         resultMap.put(col, v);
                     }
                 } catch (IllegalAccessException e) {

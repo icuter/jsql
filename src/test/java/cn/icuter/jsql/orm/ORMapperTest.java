@@ -7,6 +7,7 @@ import cn.icuter.jsql.data.JSQLClob;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.sql.Blob;
 import java.sql.Clob;
@@ -50,7 +51,7 @@ public class ORMapperTest {
         orMapper = ORMapper.of(ormTable);
         map = orMapper.toMap(new FieldInterceptor<ORMTable>() {
             @Override
-            public boolean accept(ORMTable object, String fieldName, String colName, Object value, Map<String, Object> resultMap) {
+            public boolean accept(ORMTable object, Field field, String colName, Object value, Map<String, Object> resultMap) {
                 return "f_clob".equals(colName);
             }
         });
@@ -64,11 +65,6 @@ public class ORMapperTest {
         clob = (Clob) map.get("f_clob");
         Assert.assertEquals(ormTable.getfClobObj().getSubString(1L,
                 (int) ormTable.getfClobObj().length()), clob.getSubString(1L, (int) clob.length()));
-    }
-
-    @Test
-    public void mapColumn() throws Exception {
-        // TODO
     }
 
     private ORMTable createOrmTable() {
