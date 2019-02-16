@@ -10,6 +10,7 @@ import cn.icuter.jsql.exception.JSQLException;
 import cn.icuter.jsql.log.JSQLLogger;
 import cn.icuter.jsql.log.Logs;
 import cn.icuter.jsql.orm.ORMapper;
+import cn.icuter.jsql.util.ObjectUtil;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -127,24 +128,24 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
                             field.set(record, rs.getNClob(rsIndex));
                         } else if (Clob.class.isAssignableFrom(field.getType())) {
                             field.set(record, rs.getClob(rsIndex));
-                        } else if (field.getType().isArray() && "byte".equals(field.getType().getComponentType().getName())) {
+                        } else if (ObjectUtil.isByteArray(field)) {
                             field.set(record, rs.getBytes(rsIndex));
-                        } else if (String.class.isAssignableFrom(field.getType())) {
-                            field.set(record, rs.getString(rsIndex));
-                        } else if (Integer.class.isAssignableFrom(field.getType())) {
-                            field.set(record, rs.getInt(rsIndex));
-                        } else if (Double.class.isAssignableFrom(field.getType())) {
-                            field.set(record, rs.getDouble(rsIndex));
-                        } else if (Short.class.isAssignableFrom(field.getType())) {
-                            field.set(record, rs.getShort(rsIndex));
-                        } else if (Float.class.isAssignableFrom(field.getType())) {
-                            field.set(record, rs.getFloat(rsIndex));
-                        } else if (Long.class.isAssignableFrom(field.getType())) {
-                            field.set(record, rs.getLong(rsIndex));
                         } else if (Boolean.class.isAssignableFrom(field.getType())) {
                             field.set(record, rs.getBoolean(rsIndex));
                         } else if (Byte.class.isAssignableFrom(field.getType())) {
                             field.set(record, rs.getByte(rsIndex));
+                        } else if (Short.class.isAssignableFrom(field.getType())) {
+                            field.set(record, rs.getShort(rsIndex));
+                        } else if (Integer.class.isAssignableFrom(field.getType())) {
+                            field.set(record, rs.getInt(rsIndex));
+                        } else if (Long.class.isAssignableFrom(field.getType())) {
+                            field.set(record, rs.getLong(rsIndex));
+                        } else if (Float.class.isAssignableFrom(field.getType())) {
+                            field.set(record, rs.getFloat(rsIndex));
+                        } else if (Double.class.isAssignableFrom(field.getType())) {
+                            field.set(record, rs.getDouble(rsIndex));
+                        } else if (String.class.isAssignableFrom(field.getType())) {
+                            field.set(record, rs.getString(rsIndex));
                         } else {
                             field.set(record, rs.getObject(rsIndex));
                         }

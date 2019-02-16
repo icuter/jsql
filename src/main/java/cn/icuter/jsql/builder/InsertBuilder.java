@@ -64,7 +64,7 @@ public class InsertBuilder extends AbstractBuilder implements DMLBuilder {
             Map<Object, Object> attrs = (Map<Object, Object>) values;
             Eq[] eqs = new Eq[attrs.size()];
             int i = 0;
-            for (Map.Entry entry : attrs.entrySet()) {
+            for (Map.Entry<Object, Object> entry : attrs.entrySet()) {
                 eqs[i++] = Cond.eq(String.valueOf(entry.getKey()), entry.getValue());
             }
             return values(eqs);
@@ -75,23 +75,23 @@ public class InsertBuilder extends AbstractBuilder implements DMLBuilder {
             return values(new Eq[]{(Eq) values});
         } else {
             Map<String, Object> attrs = ORMapper.of(values).toMapIgnoreNullValue();
-            Eq[] eqs = new Eq[attrs.size()];
-            int i = 0;
-            for (Map.Entry entry : attrs.entrySet()) {
-                eqs[i++] = Cond.eq(String.valueOf(entry.getKey()), entry.getValue());
-            }
-            return values(eqs);
+            return valuesMap(attrs);
         }
     }
 
     @Override
     public <T> Builder values(T value, FieldInterceptor<T> interceptor) {
         Map<String, Object> attrs = ORMapper.of(value).toMap(interceptor);
+        return valuesMap(attrs);
+    }
+
+    private Builder valuesMap(Map<String, Object> attrs) {
         Eq[] eqs = new Eq[attrs.size()];
         int i = 0;
-        for (Map.Entry entry : attrs.entrySet()) {
-            eqs[i++] = Cond.eq(String.valueOf(entry.getKey()), entry.getValue());
+        for (Map.Entry<String, Object> entry : attrs.entrySet()) {
+            eqs[i++] = Cond.eq(entry.getKey(), entry.getValue());
         }
         return values(eqs);
+
     }
 }

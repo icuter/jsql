@@ -60,19 +60,16 @@ public class UpdateBuilder extends AbstractBuilder implements DMLBuilder {
         } else if (value instanceof Eq) {
             return set(new Eq[]{(Eq) value});
         } else {
-            Map<String, Object> attrs = ORMapper.of(value).toMapIgnoreNullValue();
-            Eq[] eqs = new Eq[attrs.size()];
-            int i = 0;
-            for (Map.Entry entry : attrs.entrySet()) {
-                eqs[i++] = Cond.eq(String.valueOf(entry.getKey()), entry.getValue());
-            }
-            return set(eqs);
+            return setMapAttr(ORMapper.of(value).toMapIgnoreNullValue());
         }
     }
 
     @Override
     public <T> Builder set(T value, FieldInterceptor<T> interceptor) {
-        Map<String, Object> attrs = ORMapper.of(value).toMap(interceptor);
+        return setMapAttr(ORMapper.of(value).toMap(interceptor));
+    }
+
+    private Builder setMapAttr(Map<String, Object> attrs) {
         Eq[] eqs = new Eq[attrs.size()];
         int i = 0;
         for (Map.Entry entry : attrs.entrySet()) {
