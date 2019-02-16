@@ -11,7 +11,7 @@
     <groupId>cn.icuter</groupId>
     <artifactId>jsql</artifactId>
     <packaging>jar</packaging>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -200,7 +200,6 @@
                         <!-- openjdk need it -->
                         <argLine>-Djdk.net.URLClassPath.disableClassPathURLCheck=true</argLine>
                         <skip>false</skip>
-                        <test>CommonTestSuite</test>
                     </configuration>
                 </plugin>
                 <plugin>

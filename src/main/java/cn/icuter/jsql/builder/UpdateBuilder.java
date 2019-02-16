@@ -53,7 +53,7 @@ public class UpdateBuilder extends AbstractBuilder implements DMLBuilder {
         if (value instanceof Map) {
             Map<Object, Object> attrs = (Map<Object, Object>) value;
             List<Eq> conditionList = attrs.entrySet().stream()
-                    .map(e -> Cond.eq(e.getKey().toString(), e.getValue()))
+                    .map(e -> Cond.eq(String.valueOf(e.getKey()), e.getValue()))
                     .collect(LinkedList::new, LinkedList::add, LinkedList::addAll);
             return set(conditionList.toArray(new Eq[conditionList.size()]));
         } else if (value instanceof Collection) {
@@ -62,18 +62,19 @@ public class UpdateBuilder extends AbstractBuilder implements DMLBuilder {
         } else if (value instanceof Eq) {
             return set(new Eq[]{(Eq) value});
         } else {
-            List<Eq> eqList = ORMapper.of(value).toMapIgnoreNullValue().entrySet().stream()
-                    .map(e -> Cond.eq(e.getKey(), e.getValue()))
-                    .collect(Collectors.toList());
-            return set(eqList.toArray(new Eq[eqList.size()]));
+            return setMapAttr(ORMapper.of(value).toMapIgnoreNullValue());
         }
     }
 
     @Override
     public <T> Builder set(T value, FieldInterceptor<T> interceptor) {
-        List<Eq> eqList = ORMapper.of(value).toMap(interceptor).entrySet().stream()
+        return setMapAttr(ORMapper.of(value).toMap(interceptor));
+    }
+
+    private Builder setMapAttr(Map<String, Object> attrs) {
+        List<Eq> conditionList = attrs.entrySet().stream()
                 .map(e -> Cond.eq(e.getKey(), e.getValue()))
-                .collect(Collectors.toList());
-        return set(eqList.toArray(new Eq[eqList.size()]));
+                .collect(LinkedList::new, LinkedList::add, LinkedList::addAll);
+        return set(conditionList.toArray(new Eq[conditionList.size()]));
     }
 }

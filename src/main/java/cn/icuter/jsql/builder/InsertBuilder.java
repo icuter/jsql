@@ -68,18 +68,21 @@ public class InsertBuilder extends AbstractBuilder implements DMLBuilder {
         } else if (values instanceof Eq) {
             return values(new Eq[]{(Eq) values});
         } else {
-            List<Eq> eqList = ORMapper.of(values).toMapIgnoreNullValue().entrySet().stream()
-                    .map(entry -> Cond.eq(entry.getKey(), entry.getValue()))
-                    .collect(Collectors.toList());
-            return values(eqList.toArray(new Eq[eqList.size()]));
+            Map<String, Object> attrs = ORMapper.of(values).toMapIgnoreNullValue();
+            return valuesMap(attrs);
         }
     }
 
     @Override
     public <T> Builder values(T value, FieldInterceptor<T> interceptor) {
-        List<Eq> eqList = ORMapper.of(value).toMap(interceptor).entrySet().stream()
+        Map<String, Object> attrs = ORMapper.of(value).toMap(interceptor);
+        return valuesMap(attrs);
+    }
+
+    private Builder valuesMap(Map<String, Object> attrs) {
+        List<Eq> eqList = attrs.entrySet().stream()
                 .map(e -> Cond.eq(e.getKey(), e.getValue()))
-                .collect(Collectors.toList());
+                .collect(LinkedList::new, LinkedList::add, LinkedList::addAll);
         return values(eqList.toArray(new Eq[eqList.size()]));
     }
 }
