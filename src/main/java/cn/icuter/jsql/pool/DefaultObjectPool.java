@@ -36,6 +36,7 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
     private static final JSQLLogger LOGGER = Logs.getLogger(DefaultObjectPool.class);
 
     private static final int IDLE_NEVER_TIMEOUT = -1;
+    private static final int IDLE_ALWAYS_TIMEOUT = 0;
 
     private PoolConfiguration poolConfiguration;
     private final PooledObjectManager<T> manager;
@@ -192,7 +193,9 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
         poolStats.updateLastAccessTime();
         try {
             opLock.lock();
-            if (isPoolClosed() || !manager.validate(pooledObject)) {
+            if (isPoolClosed()
+                    || poolConfiguration.getIdleTimeout() == IDLE_ALWAYS_TIMEOUT
+                    || !manager.validate(pooledObject)) {
                 invalidPooledObject(pooledObject);
                 return;
             }

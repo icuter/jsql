@@ -147,6 +147,19 @@ public class DefaultObjectPoolTest {
         }
     }
 
+    @Test
+    public void testNoIdleTimeout() throws Exception {
+        PoolConfiguration cfg = PoolConfiguration.defaultPoolCfg();
+        cfg.setIdleTimeout(0);
+        try (DefaultObjectPool<Object> pool = new DefaultObjectPool<>(manager, cfg)) {
+            for (int i = 0; i < 10; i++) {
+                Object object = pool.borrowObject();
+                pool.returnObject(object);
+                assertTrue(pool.isPoolEmpty());
+            }
+        }
+    }
+
     @Test(expected = PooledObjectPollTimeoutException.class)
     public void testBorrowObjectTimeout() throws Exception {
         PoolConfiguration cfg = PoolConfiguration.defaultPoolCfg();
