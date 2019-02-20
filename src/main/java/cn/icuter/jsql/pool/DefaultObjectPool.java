@@ -50,7 +50,7 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
 
     private volatile boolean closed;
     private PoolStats poolStats = new PoolStats();
-    private Timer pooledObjectMaintainer;
+    Timer pooledObjectMaintainer;
 
     public DefaultObjectPool(PooledObjectManager<T> manager) {
         this(manager, PoolConfiguration.defaultPoolCfg());
@@ -73,7 +73,7 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
 
         long idleCheckInterval = this.poolConfiguration.getIdleCheckInterval();
         long idleObjectTimeout = this.poolConfiguration.getIdleTimeout();
-        if (idleObjectTimeout >= 0 && idleCheckInterval > 0) {
+        if (idleObjectTimeout > 0 && idleCheckInterval > 0) {
             pooledObjectMaintainer = new Timer(true);
             pooledObjectMaintainer.schedule(new PooledObjectMaintainerTask(), idleCheckInterval, idleCheckInterval);
         }
@@ -82,6 +82,9 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
     @Override
     public T borrowObject() throws JSQLException {
         PooledObject<T> pc = getPooledObject();
+        if (pc == null) {
+            return null;
+        }
         pc.markBorrowed();
         pc.updateLastBorrowedTime();
         poolStats.updateLastAccessTime();
@@ -138,9 +141,13 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
                     // check idle timeout just in case Pool Maintainer invalid PoolObject which has been borrowed
                     if (isPoolObjectIdleTimeout(pooledObject) || !manager.validate(pooledObject)) {
                         invalidPooledObject(pooledObject);
+                        continue;
                     } else {
                         break;
                     }
+                }
+                if (poolConfiguration.getPollTimeout() == 0) {
+                    return null;
                 }
                 LOGGER.trace("get pooled object failed, continue to get pooled object");
             } finally {

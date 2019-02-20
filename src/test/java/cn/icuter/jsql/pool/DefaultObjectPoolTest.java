@@ -4,8 +4,12 @@ import cn.icuter.jsql.datasource.PoolConfiguration;
 import cn.icuter.jsql.exception.JSQLException;
 import cn.icuter.jsql.exception.PooledObjectPollTimeoutException;
 import org.junit.AfterClass;
+import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import java.util.LinkedList;
+import java.util.List;
 
 import static org.junit.Assert.*;
 
@@ -148,11 +152,69 @@ public class DefaultObjectPoolTest {
     }
 
     @Test
+    public void testDefaultConfig() throws Exception {
+        PoolConfiguration cfg = PoolConfiguration.defaultPoolCfg();
+        try (DefaultObjectPool<Object> pool = new DefaultObjectPool<>(manager, cfg)) {
+            List<Object> pooledObjectList = new LinkedList<>();
+            for (int i = 0; i < cfg.getMaxPoolSize(); i++) {
+                pooledObjectList.add(pool.borrowObject());
+            }
+            assertEquals(cfg.getMaxPoolSize(), pool.getPoolStats().getPoolSize());
+            assertEquals(cfg.getMaxPoolSize(), pool.getPoolStats().createdCnt);
+            assertEquals(cfg.getMaxPoolSize(), pool.getPoolStats().borrowedCnt);
+            for (Object obj : pooledObjectList) {
+                pool.returnObject(obj);
+            }
+            assertEquals(cfg.getMaxPoolSize(), pool.getPoolStats().returnedCnt);
+
+            assertNull(pool.pooledObjectMaintainer);
+        }
+    }
+
+    @Test
+    public void testNoWait() throws Exception {
+        PoolConfiguration cfg = PoolConfiguration.defaultPoolCfg();
+        cfg.setPollTimeout(0);
+        cfg.setMaxPoolSize(1);
+        // no wait
+        try (DefaultObjectPool<Object> pool = new DefaultObjectPool<>(manager, cfg)) {
+            for (int i = 0; i < cfg.getMaxPoolSize(); i++) {
+                pool.borrowObject();
+            }
+            assertNull(pool.borrowObject());
+        }
+    }
+
+    @Test
+    public void testWaitNeverTimeout() throws Exception {
+        PoolConfiguration cfg = PoolConfiguration.defaultPoolCfg();
+        cfg.setPollTimeout(-1);
+        cfg.setMaxPoolSize(1);
+        // never timeout
+        try (DefaultObjectPool<Object> pool = new DefaultObjectPool<>(manager, cfg)) {
+            Object firstBorrow = pool.borrowObject();
+            new Thread() {
+                @Override
+                public void run() {
+                    try {
+                        Object secondBorrow = pool.borrowObject();
+                        assertNotNull(secondBorrow);
+                    } catch (JSQLException e) {
+                        Assume.assumeNoException(e);
+                    }
+                }
+            }.start();
+            Thread.sleep(6000L); // assume using the first borrowed object
+            pool.returnObject(firstBorrow);
+        }
+    }
+
+    @Test
     public void testNoIdleTimeout() throws Exception {
         PoolConfiguration cfg = PoolConfiguration.defaultPoolCfg();
         cfg.setIdleTimeout(0);
         try (DefaultObjectPool<Object> pool = new DefaultObjectPool<>(manager, cfg)) {
-            for (int i = 0; i < 10; i++) {
+            for (int i = 0; i < cfg.getMaxPoolSize(); i++) {
                 Object object = pool.borrowObject();
                 pool.returnObject(object);
                 assertTrue(pool.isPoolEmpty());

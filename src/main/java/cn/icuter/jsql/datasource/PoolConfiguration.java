@@ -32,8 +32,8 @@ public class PoolConfiguration {
         PoolConfiguration poolConfiguration = new PoolConfiguration();
         poolConfiguration.setMaxPoolSize(20);
         poolConfiguration.setPollTimeout(5000);
-        poolConfiguration.setIdleTimeout(TimeUnit.MILLISECONDS.convert(1, TimeUnit.HOURS));
-        poolConfiguration.setIdleCheckInterval(poolConfiguration.getIdleTimeout() / 2);
+        poolConfiguration.setIdleTimeout(TimeUnit.MILLISECONDS.convert(30, TimeUnit.MINUTES));
+        poolConfiguration.setIdleCheckInterval(0);
         return poolConfiguration;
     }
 
