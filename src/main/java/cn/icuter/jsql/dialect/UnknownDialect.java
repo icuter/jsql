@@ -14,4 +14,19 @@ public class UnknownDialect implements Dialect {
     public String getDialectName() {
         return "unknown";
     }
+
+    @Override
+    public boolean supportBlob() {
+        return false;
+    }
+
+    @Override
+    public boolean supportClob() {
+        return false;
+    }
+
+    @Override
+    public boolean supportNClob() {
+        return false;
+    }
 }

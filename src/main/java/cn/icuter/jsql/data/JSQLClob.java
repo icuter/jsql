@@ -6,6 +6,7 @@ import java.io.OutputStream;
 import java.io.Reader;
 import java.io.StringReader;
 import java.io.Writer;
+import java.sql.Clob;
 import java.sql.SQLException;
 
 /**
@@ -115,5 +116,14 @@ public class JSQLClob implements java.sql.Clob {
             throw new SQLException("Position Parameter " + position + " is out of acceptable position between 1 and "
                     + (data.length() + 1));
         }
+    }
+
+    public Clob copyTo(Clob targetClob) throws SQLException {
+        targetClob.setString(1, getClobString());
+        return targetClob;
+    }
+
+    public String getClobString() {
+        return data.toString();
     }
 }

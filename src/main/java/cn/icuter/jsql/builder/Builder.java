@@ -19,15 +19,17 @@ public interface Builder extends ConditionBuilder, ExecutableBuilder {
 
     Builder groupBy(String... columns);
 
-    Builder outerJoinOn(String tableName, Condition... conditions);
-
     Builder joinOn(String tableName, Condition... conditions);
+    Builder joinUsing(String tableName, String... columns);
 
     Builder leftJoinOn(String tableName, Condition... conditions);
+    Builder leftJoinUsing(String tableName, String... columns);
 
     Builder rightJoinOn(String tableName, Condition... conditions);
+    Builder rightJoinUsing(String tableName, String... columns);
 
     Builder fullJoinOn(String tableName, Condition... conditions);
+    Builder fullJoinUsing(String tableName, String... columns);
 
     Builder offset(int offset);
 

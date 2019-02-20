@@ -64,6 +64,8 @@ public class DefaultTransaction implements Transaction {
             setState(State.COMMIT_ERROR);
             LOGGER.error("commit transaction error", e);
             throw new TransactionException("commit transaction error", e);
+        } finally {
+            savepointMap.clear();
         }
     }
 
@@ -77,6 +79,8 @@ public class DefaultTransaction implements Transaction {
             setState(State.ROLLBACK_ERROR);
             LOGGER.error("rolling back transaction error", e);
             throw new TransactionException("rolling back transaction error", e);
+        } finally {
+            savepointMap.clear();
         }
     }
 

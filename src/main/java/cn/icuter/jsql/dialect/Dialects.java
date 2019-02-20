@@ -20,7 +20,8 @@ public abstract class Dialects {
     public static final Dialect SQLSERVER2012_PLUS = new SQLServer2012PlusDialect();
     public static final Dialect ORACLE = new OracleDialect();
     public static final Dialect H2 = new H2Dialect();
-    public static final Dialect DERBY = new DerbyDialect();
+    public static final Dialect EMBEDDED_DERBY = new EmbeddedDerbyDialect();
+    public static final Dialect NETWORK_DERBY = new NetworkDerbyDialect();
     public static final Dialect POSTGRESQL = new PostgreSQLDialect();
     public static final Dialect CUBRID = new CubridDialect();
     public static final Dialect DB2 = new DB2Dialect();
@@ -34,7 +35,8 @@ public abstract class Dialects {
         SUPPORTED_DIALECT.add(SQLSERVER2012_PLUS); // prior to SQLSERVER dialect for intelligent guess
         SUPPORTED_DIALECT.add(ORACLE);
         SUPPORTED_DIALECT.add(H2);
-        SUPPORTED_DIALECT.add(DERBY);
+        SUPPORTED_DIALECT.add(NETWORK_DERBY);
+        SUPPORTED_DIALECT.add(EMBEDDED_DERBY);
         SUPPORTED_DIALECT.add(POSTGRESQL);
         SUPPORTED_DIALECT.add(CUBRID);
         SUPPORTED_DIALECT.add(DB2);

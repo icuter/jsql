@@ -5,13 +5,16 @@ import cn.icuter.jsql.builder.BuilderContext;
 import cn.icuter.jsql.data.JSQLBlob;
 import cn.icuter.jsql.data.JSQLClob;
 import cn.icuter.jsql.data.JSQLNClob;
+import cn.icuter.jsql.dialect.Dialect;
 import cn.icuter.jsql.exception.ExecutionException;
 import cn.icuter.jsql.exception.JSQLException;
 import cn.icuter.jsql.log.JSQLLogger;
 import cn.icuter.jsql.log.Logs;
 import cn.icuter.jsql.orm.ORMapper;
+import cn.icuter.jsql.util.ObjectUtil;
 
 import java.lang.reflect.Field;
+import java.math.BigDecimal;
 import java.sql.Blob;
 import java.sql.Clob;
 import java.sql.Connection;
@@ -36,16 +39,10 @@ import java.util.stream.Collectors;
 public class DefaultJdbcExecutor implements JdbcExecutor {
     private static final JSQLLogger LOGGER = Logs.getLogger(DefaultJdbcExecutor.class);
 
-    final Connection connection;
-    private boolean columnLowerCase;
+    protected final Connection connection;
 
     public DefaultJdbcExecutor(Connection connection) {
-        this(connection, true);
-    }
-
-    public DefaultJdbcExecutor(Connection connection, boolean columnLowerCase) {
         this.connection = connection;
-        this.columnLowerCase = columnLowerCase;
     }
 
     @Override
@@ -54,28 +51,7 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
         LOGGER.info("executing sql: " + builder.getSql());
         LOGGER.info("executing values: " + builder.getPreparedValues());
         try (PreparedStatement ps = connection.prepareStatement(builder.getSql())) {
-            List<Object> preparedValues = builder.getPreparedValues();
-            for (int i = 0, len = preparedValues.size(); i < len; i++) {
-                Object value = preparedValues.get(i);
-                if (JSQLClob.class.isAssignableFrom(value.getClass())) {
-                    JSQLClob clobValue = (JSQLClob) value;
-                    Clob clobFromConnection = connection.createClob();
-                    clobFromConnection.setString(1, clobValue.getSubString(1, (int) clobValue.length()));
-                    ps.setClob(i + 1, clobFromConnection);
-                } else if (JSQLNClob.class.isAssignableFrom(value.getClass())) {
-                    JSQLNClob nclobValue = (JSQLNClob) value;
-                    NClob nclobFromConnection = connection.createNClob();
-                    nclobFromConnection.setString(1, nclobValue.getSubString(1, (int) nclobValue.length()));
-                    ps.setNClob(i + 1, nclobFromConnection);
-                } else if (JSQLBlob.class.isAssignableFrom(value.getClass())) {
-                    JSQLBlob blobValue = (JSQLBlob) value;
-                    Blob blobFromConnection = connection.createBlob();
-                    blobFromConnection.setBytes(1, blobValue.getBytes(1, (int) blobValue.length()));
-                    ps.setBlob(i + 1, blobFromConnection);
-                } else {
-                    ps.setObject(i + 1, value);
-                }
-            }
+            setPreparedStatementValues(ps, builder);
             return ps.executeUpdate();
         } catch (SQLException e) {
             LOGGER.error("executing update error builder detail: " + builder, e);
@@ -83,11 +59,44 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
         }
     }
 
+    private void setPreparedStatementValues(PreparedStatement ps, Builder builder) throws SQLException {
+        Dialect dialect = builder.getBuilderContext().getDialect();
+        List<Object> preparedValues = builder.getPreparedValues();
+        for (int i = 0, len = preparedValues.size(); i < len; i++) {
+            Object value = preparedValues.get(i);
+            int paramIndex = i + 1;
+            if (JSQLNClob.class.isAssignableFrom(value.getClass())) {
+                if (dialect.supportNClob()) {
+                    ps.setNClob(paramIndex, ((JSQLNClob) value).copyTo(connection.createNClob()));
+                } else {
+                    // usually, if driver do not support NClob, would do not support NString operation as well
+                    // NString operation like getNString or setNString
+                    ps.setString(paramIndex, ((JSQLNClob) value).getNClobString());
+                }
+            } else if (JSQLClob.class.isAssignableFrom(value.getClass())) {
+                if (dialect.supportClob()) {
+                    ps.setClob(paramIndex, ((JSQLClob) value).copyTo(connection.createClob()));
+                } else {
+                    ps.setString(paramIndex, ((JSQLClob) value).getClobString());
+                }
+            } else if (JSQLBlob.class.isAssignableFrom(value.getClass())) {
+                if (dialect.supportBlob()) {
+                    ps.setBlob(paramIndex, ((JSQLBlob) value).copyTo(connection.createBlob()));
+                } else {
+                    ps.setBytes(paramIndex, ((JSQLBlob) value).getBlobBytes());
+                }
+            } else {
+                ps.setObject(paramIndex, value);
+            }
+        }
+    }
+
     @Override
     public <T> List<T> execQuery(Builder builder, final Class<T> clazz) throws JSQLException {
         return doExecQuery(builder, (rs, meta) -> {
+            Dialect dialect = builder.getBuilderContext().getDialect();
             int fetchSize = rs.getFetchSize();
-            boolean hasLimit = fetchSize > 0;
+            boolean hasLimit = !dialect.supportOffsetLimit() && fetchSize > 0;
             Map<Field, Integer> colIndexFieldMap = mapColumnFieldAndIndex(clazz, meta);
             List<T> queriedResult = new LinkedList<>();
             while (rs.next()) {
@@ -112,16 +121,36 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
                         } else if (field.getType() == Double.TYPE) {
                             field.set(record, rs.getDouble(rsIndex));
                         } else {
-                            field.set(record, rs.getObject(rsIndex, field.getType()));
+                            field.set(record, rs.getObject(rsIndex));
                         }
                     } else if (Blob.class.isAssignableFrom(field.getType())) {
-                        field.set(record, rs.getBlob(rsIndex));
+                        field.set(record, new JSQLBlob(rs.getBytes(rsIndex)));
                     } else if (NClob.class.isAssignableFrom(field.getType())) {
-                        field.set(record, rs.getNClob(rsIndex));
+                        field.set(record, new JSQLNClob(rs.getNString(rsIndex)));
                     } else if (Clob.class.isAssignableFrom(field.getType())) {
-                        field.set(record, rs.getClob(rsIndex));
+                        field.set(record, new JSQLClob(rs.getString(rsIndex)));
+                    } else if (ObjectUtil.isByteArray(field)) {
+                        field.set(record, rs.getBytes(rsIndex));
+                    } else if (Boolean.class.isAssignableFrom(field.getType())) {
+                        field.set(record, rs.getBoolean(rsIndex));
+                    } else if (Byte.class.isAssignableFrom(field.getType())) {
+                        field.set(record, rs.getByte(rsIndex));
+                    } else if (Short.class.isAssignableFrom(field.getType())) {
+                        field.set(record, rs.getShort(rsIndex));
+                    } else if (Integer.class.isAssignableFrom(field.getType())) {
+                        field.set(record, rs.getInt(rsIndex));
+                    } else if (Long.class.isAssignableFrom(field.getType())) {
+                        field.set(record, rs.getLong(rsIndex));
+                    } else if (Float.class.isAssignableFrom(field.getType())) {
+                        field.set(record, rs.getFloat(rsIndex));
+                    } else if (Double.class.isAssignableFrom(field.getType())) {
+                        field.set(record, rs.getDouble(rsIndex));
+                    } else if (String.class.isAssignableFrom(field.getType())) {
+                        field.set(record, rs.getString(rsIndex));
+                    } else if (BigDecimal.class.isAssignableFrom(field.getType())) {
+                        field.set(record, rs.getBigDecimal(rsIndex));
                     } else {
-                        field.set(record, rs.getObject(rsIndex, field.getType()));
+                        field.set(record, rs.getObject(rsIndex));
                     }
                 }
                 queriedResult.add(record);
@@ -136,8 +165,9 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
     @Override
     public List<Map<String, Object>> execQuery(Builder builder) throws JSQLException {
         return doExecQuery(builder, (rs, meta) -> {
+            Dialect dialect = builder.getBuilderContext().getDialect();
             int fetchSize = rs.getFetchSize();
-            boolean hasLimit = fetchSize > 0;
+            boolean hasLimit = !dialect.supportOffsetLimit() && fetchSize > 0;
             List<Map<String, Object>> result = new LinkedList<>();
             while (rs.next()) {
                 Map<String, Object> record = new LinkedHashMap<>();
@@ -146,7 +176,7 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
                     if (colName.toLowerCase().startsWith("rownumber_")) {
                         continue;
                     }
-                    colName = columnLowerCase ? colName.toLowerCase() : colName;
+                    colName = colName.toLowerCase();
                     record.put(colName, rs.getObject(colName));
                 }
                 result.add(record);
@@ -222,13 +252,10 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             for (Builder builder : builderList) {
                 checkAndBuild(builder);
-                List<Object> preparedValues = builder.getPreparedValues();
 
-                LOGGER.debug("executing batch values: " + preparedValues);
+                LOGGER.debug("executing batch values: " + builder.getPreparedValues());
 
-                for (int i = 0, len = preparedValues.size(); i < len; i++) {
-                    ps.setObject(i + 1, preparedValues.get(i));
-                }
+                setPreparedStatementValues(ps, builder);
                 ps.addBatch();
             }
             ps.executeBatch();
@@ -240,10 +267,6 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
             throw new ExecutionException("executing batch update error, batch sql: " + sql
                     + ", batch values list: \n" + values, e);
         }
-    }
-
-    public void setColumnLowerCase(boolean columnLowerCase) {
-        this.columnLowerCase = columnLowerCase;
     }
 
     private Map<Field, Integer> mapColumnFieldAndIndex(Class<?> clazz, ResultSetMetaData meta) throws SQLException {

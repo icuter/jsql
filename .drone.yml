@@ -36,7 +36,21 @@ steps:
     path: /home/icuter/
   commands:
   - export ICUTER_HOME=/home/icuter/
-  - mvn test -B -Dcheckstyle.skip=true -Dtest=MariaDBTestSuite
+  - mvn test -B -Dcheckstyle.skip=true -DdbType=mariadb -Dtest=DBTypeTestSuite
+  when:
+    event:
+    - push
+
+- name: test mysql
+  image: maven:3-jdk-8
+  volumes:
+  - name: maven
+    path: /root/.m2
+  - name: icuter_home
+    path: /home/icuter/
+  commands:
+  - export ICUTER_HOME=/home/icuter/
+  - mvn test -B -Dcheckstyle.skip=true -DdbType=mysql -Dtest=DBTypeTestSuite
   when:
     event:
     - push
@@ -50,7 +64,7 @@ steps:
     path: /home/icuter/
   commands:
   - export ICUTER_HOME=/home/icuter/
-  - mvn test -B -Dcheckstyle.skip=true -Dtest=OracleTestSuite
+  - mvn test -B -Dcheckstyle.skip=true -DdbType=oracle -Dtest=DBTypeTestSuite
   when:
     event:
     - push
@@ -64,7 +78,77 @@ steps:
     path: /home/icuter/
   commands:
   - export ICUTER_HOME=/home/icuter/
-  - mvn test -B -Dcheckstyle.skip=true -Dtest=DB2TestSuite
+  - mvn test -B -Dcheckstyle.skip=true -DdbType=db2 -Dtest=DBTypeTestSuite
+  when:
+    event:
+    - push
+
+- name: test h2
+  image: maven:3-jdk-8
+  volumes:
+  - name: maven
+    path: /root/.m2
+  - name: icuter_home
+    path: /home/icuter/
+  commands:
+  - export ICUTER_HOME=/home/icuter/
+  - mvn test -B -Dcheckstyle.skip=true -DdbType=h2 -Dtest=DBTypeTestSuite
+  when:
+    event:
+    - push
+
+- name: test cubrid
+  image: maven:3-jdk-8
+  volumes:
+  - name: maven
+    path: /root/.m2
+  - name: icuter_home
+    path: /home/icuter/
+  commands:
+  - export ICUTER_HOME=/home/icuter/
+  - mvn test -B -Dcheckstyle.skip=true -DdbType=cubrid -Dtest=DBTypeTestSuite
+  when:
+    event:
+    - push
+
+- name: test postgresql
+  image: maven:3-jdk-8
+  volumes:
+  - name: maven
+    path: /root/.m2
+  - name: icuter_home
+    path: /home/icuter/
+  commands:
+  - export ICUTER_HOME=/home/icuter/
+  - mvn test -B -Dcheckstyle.skip=true -DdbType=postgresql -Dtest=DBTypeTestSuite
+  when:
+    event:
+    - push
+
+- name: test derby
+  image: maven:3-jdk-8
+  volumes:
+  - name: maven
+    path: /root/.m2
+  - name: icuter_home
+    path: /home/icuter/
+  commands:
+  - export ICUTER_HOME=/home/icuter/
+  - mvn test -B -Dcheckstyle.skip=true -DdbType=derby -Dtest=DBTypeTestSuite
+  when:
+    event:
+    - push
+
+- name: test sqlite
+  image: maven:3-jdk-8
+  volumes:
+  - name: maven
+    path: /root/.m2
+  - name: icuter_home
+    path: /home/icuter/
+  commands:
+  - export ICUTER_HOME=/home/icuter/
+  - mvn test -B -Dcheckstyle.skip=true -DdbType=sqlite -Dtest=DBTypeTestSuite
   when:
     event:
     - push

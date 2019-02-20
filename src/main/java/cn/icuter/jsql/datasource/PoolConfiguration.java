@@ -23,17 +23,40 @@ public class PoolConfiguration {
     private long idleTimeout;       // milliseconds, default 1 hour
 
     /**
-     * Setting idle object checking with pool object maintainer, default is half of {@link #idleTimeout}
+     * validate on borrowing an object from pool
+     * <br><br/>
+     * <em>default: true</em>
      */
-    private long idleCheckInterval; // milliseconds, default half of idleTimeout
+    private boolean validateOnBorrow;
+
+    /**
+     * validate on returning an object to pool
+     * <br><br/>
+     * <em>default: false</em>
+     */
+    private boolean validateOnReturn;
+
+    /**
+     * Setting idle object milliseconds time of interval checking with pool object maintainer
+     * <br></br>
+     * <em>default: 10 minutes</em>
+     */
+    private long idleCheckInterval;
     private long pollTimeout;       // milliseconds, default 5 seconds
+
+    /**
+     * retry to create pool object if exception occur, default 0
+     */
+    private int createRetryCount;
 
     public static PoolConfiguration defaultPoolCfg() {
         PoolConfiguration poolConfiguration = new PoolConfiguration();
         poolConfiguration.setMaxPoolSize(20);
         poolConfiguration.setPollTimeout(5000);
         poolConfiguration.setIdleTimeout(TimeUnit.MILLISECONDS.convert(30, TimeUnit.MINUTES));
-        poolConfiguration.setIdleCheckInterval(0);
+        poolConfiguration.setIdleCheckInterval(TimeUnit.MILLISECONDS.convert(15, TimeUnit.MINUTES));
+        poolConfiguration.setValidateOnBorrow(true);
+        poolConfiguration.setValidateOnReturn(false);
         return poolConfiguration;
     }
 
@@ -69,6 +92,30 @@ public class PoolConfiguration {
         this.idleCheckInterval = idleCheckInterval;
     }
 
+    public int getCreateRetryCount() {
+        return createRetryCount;
+    }
+
+    public void setCreateRetryCount(int createRetryCount) {
+        this.createRetryCount = createRetryCount;
+    }
+
+    public void setValidateOnBorrow(boolean validateOnBorrow) {
+        this.validateOnBorrow = validateOnBorrow;
+    }
+
+    public void setValidateOnReturn(boolean validateOnReturn) {
+        this.validateOnReturn = validateOnReturn;
+    }
+
+    public boolean isValidateOnBorrow() {
+        return validateOnBorrow;
+    }
+
+    public boolean isValidateOnReturn() {
+        return validateOnReturn;
+    }
+
     @Override
     public String toString() {
         return "PoolConfiguration{"
@@ -76,6 +123,8 @@ public class PoolConfiguration {
                 + ", idleTimeout=" + idleTimeout + "ms"
                 + ", idleCheckInterval=" + idleCheckInterval + "ms"
                 + ", pollTimeout=" + pollTimeout + "ms"
+                + ", validateOnBorrow=" + validateOnBorrow
+                + ", validateOnReturn=" + validateOnReturn
                 + "}";
     }
 }

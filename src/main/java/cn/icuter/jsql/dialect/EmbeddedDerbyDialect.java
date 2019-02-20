@@ -2,6 +2,7 @@ package cn.icuter.jsql.dialect;
 
 import cn.icuter.jsql.builder.BuilderContext;
 import cn.icuter.jsql.builder.SQLStringBuilder;
+import cn.icuter.jsql.condition.Cond;
 
 import java.util.List;
 
@@ -9,7 +10,7 @@ import java.util.List;
  * @author edward
  * @since 2018-08-30
  */
-public class DerbyDialect implements Dialect {
+public class EmbeddedDerbyDialect implements Dialect {
     @Override
     public String getDriverClassName() {
         return "org.apache.derby.jdbc.EmbeddedDriver";
@@ -37,10 +38,13 @@ public class DerbyDialect implements Dialect {
     public void injectOffsetLimit(BuilderContext builderCtx) {
         StringBuilder offsetLimitBuilder = new StringBuilder();
         boolean offsetExists = builderCtx.getOffset() > 0;
-        offsetLimitBuilder
-                .append(offsetExists ? "offset " + (builderCtx.getOffset() + " rows fetch next ") : "fetch first ")
-                .append(builderCtx.getLimit()).append(" rows only");
-
+        offsetLimitBuilder.append(offsetExists ? "offset ? rows fetch next ?" : "fetch first ?").append(" rows only");
+        if (offsetExists) {
+            builderCtx.addCondition(Cond.value(builderCtx.getOffset()));
+            builderCtx.addCondition(Cond.value(builderCtx.getLimit()));
+        } else {
+            builderCtx.addCondition(Cond.value(builderCtx.getLimit()));
+        }
         SQLStringBuilder sqlStringBuilder = builderCtx.getSqlStringBuilder();
         int forUpdatePosition = builderCtx.getForUpdatePosition();
         if (forUpdatePosition > 0) {
@@ -59,5 +63,15 @@ public class DerbyDialect implements Dialect {
     @Override
     public boolean supportOffsetLimit() {
         return true;
+    }
+
+    @Override
+    public boolean supportNClob() {
+        return false;
+    }
+
+    @Override
+    public boolean requireUserPassword() {
+        return false;
     }
 }

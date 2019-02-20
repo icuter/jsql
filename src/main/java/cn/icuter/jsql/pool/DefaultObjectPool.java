@@ -38,7 +38,7 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
     private static final int IDLE_NEVER_TIMEOUT = -1;
     private static final int IDLE_ALWAYS_TIMEOUT = 0;
 
-    private PoolConfiguration poolConfiguration;
+    private PoolConfiguration poolCfg;
     private final PooledObjectManager<T> manager;
     private BlockingDeque<PooledObject<T>> idlePooledObjects = new LinkedBlockingDeque<>();
     private Map<Integer, PooledObject<T>> allPooledObjects;
@@ -50,7 +50,7 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
 
     private volatile boolean closed;
     private PoolStats poolStats = new PoolStats();
-    Timer pooledObjectMaintainer;
+    private Timer pooledObjectMaintainer;
 
     public DefaultObjectPool(PooledObjectManager<T> manager) {
         this(manager, PoolConfiguration.defaultPoolCfg());
@@ -61,18 +61,18 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
         this.manager = manager;
         initPool(poolConfiguration);
 
-        LOGGER.debug("set up object pool with pool configuration: " + this.poolConfiguration);
+        LOGGER.debug("set up object pool with pool configuration: " + this.poolCfg);
     }
 
     private void initPool(PoolConfiguration poolConfiguration) {
-        this.poolConfiguration = poolConfiguration;
-        if (this.poolConfiguration.getMaxPoolSize() <= 0) {
+        this.poolCfg = poolConfiguration;
+        if (this.poolCfg.getMaxPoolSize() <= 0) {
             throw new IllegalArgumentException("max pool size must not be zero!");
         }
-        this.allPooledObjects = new ConcurrentHashMap<>(this.poolConfiguration.getMaxPoolSize());
+        this.allPooledObjects = new ConcurrentHashMap<>(this.poolCfg.getMaxPoolSize());
 
-        long idleCheckInterval = this.poolConfiguration.getIdleCheckInterval();
-        long idleObjectTimeout = this.poolConfiguration.getIdleTimeout();
+        long idleCheckInterval = this.poolCfg.getIdleCheckInterval();
+        long idleObjectTimeout = this.poolCfg.getIdleTimeout();
         if (idleObjectTimeout > 0 && idleCheckInterval > 0) {
             pooledObjectMaintainer = new Timer(true);
             pooledObjectMaintainer.schedule(new PooledObjectMaintainerTask(), idleCheckInterval, idleCheckInterval);
@@ -105,7 +105,7 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
                     try {
                         createLock.lock();
                         if (isPoolNotFull()) {
-                            pooledObject = manager.create();
+                            pooledObject = tryToCreate(0);
                             if (pooledObject == null) {
                                 // should never happen
                                 throw new PooledObjectCreationException("create pool object error!");
@@ -123,12 +123,12 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
                 }
                 // pool reach max size
                 if (pooledObject == null) {
-                    if (poolConfiguration.getPollTimeout() > 0) {
+                    if (poolCfg.getPollTimeout() > 0) {
                         try {
-                            pooledObject = idlePooledObjects.pollFirst(poolConfiguration.getPollTimeout(), TimeUnit.MILLISECONDS);
+                            pooledObject = idlePooledObjects.pollFirst(poolCfg.getPollTimeout(), TimeUnit.MILLISECONDS);
                             if (pooledObject == null) {
                                 throw new PooledObjectPollTimeoutException("get pool object timeout, waited for "
-                                        + poolConfiguration.getPollTimeout() + "ms");
+                                        + poolCfg.getPollTimeout() + "ms");
                             }
                         } catch (InterruptedException e) {
                             throw new PoolException("get pool object fail!", e);
@@ -139,14 +139,15 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
                 }
                 if (pooledObject != null) {
                     // check idle timeout just in case Pool Maintainer invalid PoolObject which has been borrowed
-                    if (isPoolObjectIdleTimeout(pooledObject) || !manager.validate(pooledObject)) {
+                    if (isPoolObjectIdleTimeout(pooledObject)
+                            || (poolCfg.isValidateOnBorrow() && !manager.validate(pooledObject))) {
                         invalidPooledObject(pooledObject);
                         continue;
                     } else {
                         break;
                     }
                 }
-                if (poolConfiguration.getPollTimeout() == 0) {
+                if (poolCfg.getPollTimeout() == 0) {
                     return null;
                 }
                 LOGGER.trace("get pooled object failed, continue to get pooled object");
@@ -158,8 +159,24 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
         return pooledObject;
     }
 
+    private PooledObject<T> tryToCreate(int tryCount) throws JSQLException {
+        try {
+            return manager.create();
+        } catch (JSQLException e) {
+            if (tryCount < poolCfg.getCreateRetryCount()) {
+                LOGGER.warn("retry to create pool object with try count: " + (tryCount + 1));
+                return tryToCreate(tryCount + 1);
+            }
+            if (tryCount > 0) {
+                LOGGER.error("try to create pool object fail when exceed retry count: "
+                        + poolCfg.getCreateRetryCount());
+            }
+            throw e;
+        }
+    }
+
     private boolean isPoolObjectIdleTimeout(PooledObject<T> pooledObject) {
-        long idleTimeoutInCfg = poolConfiguration.getIdleTimeout();
+        long idleTimeoutInCfg = poolCfg.getIdleTimeout();
         if (idleTimeoutInCfg == IDLE_NEVER_TIMEOUT) {
             // never timeout
             return false;
@@ -169,7 +186,7 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
     }
 
     private boolean isPoolNotFull() {
-        return poolStats.getPoolSize() < poolConfiguration.getMaxPoolSize();
+        return poolStats.getPoolSize() < poolCfg.getMaxPoolSize();
     }
 
     boolean isPoolEmpty() {
@@ -201,8 +218,8 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
         try {
             opLock.lock();
             if (isPoolClosed()
-                    || poolConfiguration.getIdleTimeout() == IDLE_ALWAYS_TIMEOUT
-                    || !manager.validate(pooledObject)) {
+                    || poolCfg.getIdleTimeout() == IDLE_ALWAYS_TIMEOUT
+                    || (poolCfg.isValidateOnReturn() && !manager.validate(pooledObject))) {
                 invalidPooledObject(pooledObject);
                 return;
             }
@@ -270,7 +287,7 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
 
     @Override
     public String debugInfo() {
-        return "pool state: " + (closed ? "closed" : "running") + ", " + poolStats + "; " + poolConfiguration
+        return "pool state: " + (closed ? "closed" : "running") + ", " + poolStats + "; " + poolCfg
                 + "; idle object size: " + idlePooledObjects.size();
     }
 
@@ -294,7 +311,7 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
         synchronized long getPoolSize() {
             return poolSize;
         }
-        synchronized void updateCreateStats() {
+        void updateCreateStats() {
             poolSize++;
             createdCnt++;
         }
@@ -345,7 +362,7 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
                 idlePooledObjects.removeIf(obj -> {
                     if (isPoolObjectIdleTimeout(obj)) {
                         try {
-                            TIMER_LOGGER.trace("pooled object was timeout after idled " +  poolConfiguration.getIdleTimeout() + "ms");
+                            TIMER_LOGGER.trace("pooled object was timeout after idled " +  poolCfg.getIdleTimeout() + "ms");
                             invalidPooledObject(obj);
                         } catch (JSQLException e) {
                             throw new PoolMaintainerException("invaliding pooled object error", e);

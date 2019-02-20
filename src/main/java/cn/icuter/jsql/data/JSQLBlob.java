@@ -4,6 +4,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.sql.Blob;
 import java.sql.SQLException;
 import java.util.Arrays;
 
@@ -123,5 +124,14 @@ public class JSQLBlob implements java.sql.Blob {
             throw new SQLException("Position Parameter " + position + " is out of acceptable position between 1 and "
                     + (data.length + 1));
         }
+    }
+
+    public Blob copyTo(Blob targetBlob) throws SQLException {
+        targetBlob.setBytes(1, getBytes(1, (int) length()));
+        return targetBlob;
+    }
+
+    public byte[] getBlobBytes() {
+        return data.clone();
     }
 }

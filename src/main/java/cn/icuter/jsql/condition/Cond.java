@@ -3,6 +3,7 @@ package cn.icuter.jsql.condition;
 import cn.icuter.jsql.builder.Builder;
 
 import java.util.Collection;
+import java.util.List;
 
 /**
  * @author edward
@@ -78,7 +79,15 @@ public abstract class Cond {
         return new Conditions(Combination.AND).addCondition(conditions);
     }
 
+    public static Conditions and(List<Condition> conditionList) {
+        return new Conditions(Combination.AND).addCondition(conditionList);
+    }
+
     public static Conditions or(Condition... conditions) {
         return new Conditions(Combination.OR).addCondition(conditions);
+    }
+
+    public static Conditions or(List<Condition> conditionList) {
+        return new Conditions(Combination.OR).addCondition(conditionList);
     }
 }

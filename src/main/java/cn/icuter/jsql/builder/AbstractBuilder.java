@@ -67,7 +67,7 @@ public abstract class AbstractBuilder implements Builder {
     public Builder select(String... columns) {
         String columnStr = "*";
         if (columns != null && columns.length > 0) {
-            columnStr = Arrays.stream(columns).collect(Collectors.joining(", "));
+            columnStr = String.join(", ", columns);
         }
         sqlStringBuilder.append("select", "top-select").append(columnStr);
         return this;
@@ -75,7 +75,7 @@ public abstract class AbstractBuilder implements Builder {
 
     @Override
     public Builder from(String... tableName) {
-        sqlStringBuilder.append("from").append(Arrays.stream(tableName).collect(Collectors.joining(",")));
+        sqlStringBuilder.append("from").append(String.join(",", tableName));
         return this;
     }
 
@@ -104,6 +104,14 @@ public abstract class AbstractBuilder implements Builder {
     }
 
     @Override
+    public Builder and(List<Condition> conditionList) {
+        Condition andConditions = Cond.and(conditionList);
+        addCondition(andConditions);
+        sqlStringBuilder.append(andConditions.toSql());
+        return this;
+    }
+
+    @Override
     public Builder or(Condition condition) {
         addCondition(condition);
         sqlStringBuilder.append("or").append(condition.toSql());
@@ -119,8 +127,16 @@ public abstract class AbstractBuilder implements Builder {
     }
 
     @Override
+    public Builder or(List<Condition> conditionList) {
+        Condition orConditions = Cond.or(conditionList);
+        addCondition(orConditions);
+        sqlStringBuilder.append(orConditions.toSql());
+        return this;
+    }
+
+    @Override
     public Builder where() {
-        sqlStringBuilder.append("where");
+        sqlStringBuilder.append("where", "where-conditions");
         return this;
     }
 
@@ -142,39 +158,63 @@ public abstract class AbstractBuilder implements Builder {
     }
 
     @Override
-    public Builder outerJoinOn(String tableName, Condition... conditions) {
-        join("outer join", tableName, conditions);
+    public Builder joinOn(String tableName, Condition... conditions) {
+        joinOn("join", tableName, conditions);
         return this;
     }
-
     @Override
-    public Builder joinOn(String tableName, Condition... conditions) {
-        join("join", tableName, conditions);
+    public Builder joinUsing(String tableName, String... columns) {
+        joinUsing("join", tableName, columns);
         return this;
     }
 
     @Override
     public Builder leftJoinOn(String tableName, Condition... conditions) {
-        join("left join", tableName, conditions);
+        joinOn("left join", tableName, conditions);
+        return this;
+    }
+    @Override
+    public Builder leftJoinUsing(String tableName, String... columns) {
+        joinUsing("left join", tableName, columns);
         return this;
     }
 
     @Override
     public Builder rightJoinOn(String tableName, Condition... conditions) {
-        join("right join", tableName, conditions);
+        joinOn("right join", tableName, conditions);
+        return this;
+    }
+    @Override
+    public Builder rightJoinUsing(String tableName, String... columns) {
+        joinUsing("right join", tableName, columns);
         return this;
     }
 
     @Override
     public Builder fullJoinOn(String tableName, Condition... conditions) {
-        join("full join", tableName, conditions);
+        joinOn("full join", tableName, conditions);
+        return this;
+    }
+    @Override
+    public Builder fullJoinUsing(String tableName, String... columns) {
+        joinUsing("full join", tableName, columns);
         return this;
     }
 
-    private void join(String keyword, String tableName, Condition... conditions) {
+    private void joinOn(String keyword, String tableName, Condition... conditions) {
         Condition condition = Cond.and(conditions);
         addCondition(condition);
         sqlStringBuilder.append(keyword).append(tableName).append("on").append(condition.toSql());
+    }
+
+    private void joinUsing(String keyword, String tableName, String... columns) {
+        if (columns == null || columns.length <= 0) {
+            throw new IllegalArgumentException("No column defined in USING condition !");
+        }
+        sqlStringBuilder.append(keyword).append(tableName)
+                .append("using (")
+                .append(String.join(",", columns))
+                .append(")");
     }
 
     @Override
@@ -202,7 +242,7 @@ public abstract class AbstractBuilder implements Builder {
         if (builderContext.isBuilt()) {
             return this;
         }
-        if (dialect.supportOffsetLimit() && ((offset > 0 && limit > 0) || limit > 0)) {
+        if (dialect.supportOffsetLimit() && limit > 0) {
             dialect.injectOffsetLimit(builderContext);
         }
         buildSql = sqlStringBuilder.serialize();

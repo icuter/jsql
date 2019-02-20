@@ -159,18 +159,19 @@ public class UnionSelectBuilder extends SelectBuilder {
             SQLStringBuilder unionSQLBuilder = new SQLStringBuilder();
             boolean isMultipleSelectBuilder = unionBuilderDescriptors.size() > 1;
             UnionBuilderDescriptor firstDescriptor = unionBuilderDescriptors.get(0);
-            unionSQLBuilder.append((isMultipleSelectBuilder ? "(" : "")
-                    + wrapOffsetLimit(firstDescriptor.builder) + (isMultipleSelectBuilder ? ")" : ""));
+            unionSQLBuilder.append((isMultipleSelectBuilder ? "select * from (" : "")
+                    + wrapOffsetLimit(firstDescriptor.builder) + (isMultipleSelectBuilder ? ") t" : ""));
             addCondition(firstDescriptor.builder.getConditionList());
             if (isMultipleSelectBuilder) {
                 for (int i = 1; i < unionBuilderDescriptors.size(); i++) {
                     UnionBuilderDescriptor descriptor = unionBuilderDescriptors.get(i);
-                    unionSQLBuilder.append(descriptor.isUnionAll ? "union all" : "union").append("(" + wrapOffsetLimit(descriptor.builder) + ")");
+                    unionSQLBuilder.append(descriptor.isUnionAll ? "union all" : "union")
+                            .append("select * from (" + wrapOffsetLimit(descriptor.builder) + ") t");
                     addCondition(descriptor.builder.getConditionList());
                 }
             }
             builderContext.sqlLevel = unionBuilderDescriptors.size();
-            // can't add alias which cause DB2 subselect compilation error
+            // without alias will cause DB2 subselect compilation error
             unionSQLBuilder.prepend("select * from (").append(")");
             if (!unionDialect.getDialectName().equals(Dialects.DB2.getDialectName())) {
                 unionSQLBuilder.append("union_alias_");

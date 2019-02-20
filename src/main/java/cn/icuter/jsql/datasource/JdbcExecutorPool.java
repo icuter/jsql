@@ -54,7 +54,7 @@ public class JdbcExecutorPool {
         try {
             if (executor instanceof ConnectionExecutor) {
                 ConnectionExecutor connExecutor = (ConnectionExecutor) executor;
-                if (connExecutor.getConnection() == null) {
+                if (connExecutor.isReleased()) {
                     throw new ReturnObjectException("executor has been returned");
                 }
                 if (connExecutor instanceof ConnectionTransactionExecutor) {
@@ -91,10 +91,9 @@ public class JdbcExecutorPool {
     }
 
     class ConnectionJdbcExecutor extends DefaultJdbcExecutor implements ConnectionExecutor {
-        private Connection connection;
+        boolean release;
         ConnectionJdbcExecutor(Connection connection) {
             super(connection);
-            this.connection = connection;
         }
         @Override
         public Connection getConnection() {
@@ -102,7 +101,11 @@ public class JdbcExecutorPool {
         }
         @Override
         public void release() {
-            connection = null;
+            release = true;
+        }
+        @Override
+        public boolean isReleased() {
+            return release;
         }
         @Override
         public boolean isTransaction() {
@@ -135,10 +138,9 @@ public class JdbcExecutorPool {
     }
 
     class ConnectionTransactionExecutor extends TransactionExecutor implements ConnectionExecutor {
-        private Connection connection;
+        boolean release;
         ConnectionTransactionExecutor(Connection connection) {
             super(connection);
-            this.connection = connection;
         }
         @Override
         public Connection getConnection() {
@@ -146,7 +148,11 @@ public class JdbcExecutorPool {
         }
         @Override
         public void release() {
-            connection = null;
+            release = true;
+        }
+        @Override
+        public boolean isReleased() {
+            return release;
         }
         @Override
         public boolean isTransaction() {
@@ -181,6 +187,7 @@ public class JdbcExecutorPool {
     interface ConnectionExecutor {
         Connection getConnection();
         void release();
+        boolean isReleased();
         boolean isTransaction();
         JdbcExecutor getExecutor();
     }

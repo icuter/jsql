@@ -166,8 +166,6 @@ public class DefaultObjectPoolTest {
                 pool.returnObject(obj);
             }
             assertEquals(cfg.getMaxPoolSize(), pool.getPoolStats().returnedCnt);
-
-            assertNull(pool.pooledObjectMaintainer);
         }
     }
 

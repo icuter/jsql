@@ -2,8 +2,12 @@ package cn.icuter.jsql.builder;
 
 import cn.icuter.jsql.TestTable;
 import cn.icuter.jsql.condition.Cond;
+import cn.icuter.jsql.condition.Condition;
 import cn.icuter.jsql.dialect.Dialects;
 import org.junit.Test;
+
+import java.util.LinkedList;
+import java.util.List;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -35,11 +39,37 @@ public class BuilderTest {
                 .in("user", "0000", "0001", "0002")
                 .forUpdate()
                 .build();
-        assertEquals("select distinct * from t_table1 left join t_table2 on (t_table1.id=t_table2.id) " +
+        String expectedSQL = "select distinct * from t_table1 left join t_table2 on (t_table1.id=t_table2.id) " +
                 "where (name = ? or age = ? or tall = ?) and (id = ? and name like ?) and birth = ? or post = ? " +
-                "and user in (?,?,?) for update", select.getSql());
-        assertArrayEquals(new Object[]{"Edward", 30, 170, "123", "%Lee",
-                "198910", "511442", "0000", "0001", "0002"}, select.getPreparedValues().toArray());
+                "and user in (?,?,?) for update";
+        Object[] values = new Object[]{"Edward", 30, 170, "123", "%Lee", "198910", "511442", "0000", "0001", "0002"};
+
+        assertEquals(expectedSQL, select.getSql());
+        assertArrayEquals(values, select.getPreparedValues().toArray());
+
+        List<Condition> orConditionList = new LinkedList<>();
+        orConditionList.add(Cond.eq("name", "Edward"));
+        orConditionList.add(Cond.eq("age", 30));
+        orConditionList.add(Cond.eq("tall", 170));
+
+        List<Condition> andConditionList = new LinkedList<>();
+        andConditionList.add(Cond.eq("id", "123"));
+        andConditionList.add(Cond.like("name", "%Lee"));
+
+        select = new SelectBuilder().select().distinct()
+                .from("t_table1").leftJoinOn("t_table2", Cond.var("t_table1.id", "t_table2.id"))
+                .where()
+                .or(orConditionList)
+                .and()
+                .and(andConditionList)
+                .and(Cond.eq("birth", "198910"))
+                .or(Cond.eq("post", "511442"))
+                .and()
+                .in("user", "0000", "0001", "0002")
+                .forUpdate()
+                .build();
+        assertEquals(expectedSQL, select.getSql());
+        assertArrayEquals(values, select.getPreparedValues().toArray());
 
         Builder existsSelect = new SelectBuilder().select("1")
                 .from("t_table1")
@@ -99,7 +129,7 @@ public class BuilderTest {
     }
 
     @Test
-    public void testBuilderJoin() throws Exception {
+    public void testBuilderJoinOn() throws Exception {
         Builder builder = new SelectBuilder() {{
             select().from("table t")
                     .joinOn("table1 t1", Cond.var("t.id", "t1.id"), Cond.eq("t.framework", "jsql"))
@@ -127,14 +157,6 @@ public class BuilderTest {
 
         builder = new SelectBuilder() {{
             select().from("table t")
-                    .outerJoinOn("table1 t1", Cond.var("t.id", "t1.id"))
-                    .outerJoinOn("table2 t2", Cond.var("t1.id", "t2.id"))
-                    .build();
-        }};
-        assertEquals("select * from table t outer join table1 t1 on (t.id=t1.id) outer join table2 t2 on (t1.id=t2.id)", builder.getSql());
-
-        builder = new SelectBuilder() {{
-            select().from("table t")
                     .fullJoinOn("table1 t1", Cond.var("t.id", "t1.id"))
                     .fullJoinOn("table2 t2", Cond.var("t1.id", "t2.id"))
                     .build();
@@ -153,6 +175,41 @@ public class BuilderTest {
         assertEquals("select * from table t full join table1 t1 on" +
                 " (t.id=t1.id and (t.group = ? and t.framework = ?)) full join table2 t2 on (t1.id=t2.id)", builder.getSql());
         assertArrayEquals(new Object[]{"java", "jsql"}, builder.getPreparedValues().toArray());
+    }
+
+    @Test
+    public void testBuilderJoinUsing() throws Exception {
+        Builder builder = new SelectBuilder() {{
+            select().from("table t")
+                    .joinUsing("table1 t1", "id")
+                    .joinUsing("table2 t2", "id")
+                    .build();
+        }};
+        assertEquals("select * from table t join table1 t1 using ( id ) join table2 t2 using ( id )", builder.getSql());
+
+        builder = new SelectBuilder() {{
+            select().from("table t")
+                    .leftJoinUsing("table1 t1", "id")
+                    .leftJoinUsing("table2 t2", "id")
+                    .build();
+        }};
+        assertEquals("select * from table t left join table1 t1 using ( id ) left join table2 t2 using ( id )", builder.getSql());
+
+        builder = new SelectBuilder() {{
+            select().from("table t")
+                    .rightJoinUsing("table1 t1", "id")
+                    .rightJoinUsing("table2 t2", "id")
+                    .build();
+        }};
+        assertEquals("select * from table t right join table1 t1 using ( id ) right join table2 t2 using ( id )", builder.getSql());
+
+        builder = new SelectBuilder() {{
+            select().from("table t")
+                    .fullJoinUsing("table1 t1", "id")
+                    .fullJoinUsing("table2 t2", "id")
+                    .build();
+        }};
+        assertEquals("select * from table t full join table1 t1 using ( id ) full join table2 t2 using ( id )", builder.getSql());
     }
 
     @Test
@@ -229,35 +286,35 @@ public class BuilderTest {
 
     @Test
     public void testSelectBuilderOffsetLimitDerby() throws Exception {
-        Builder select = new SelectBuilder(Dialects.DERBY)
+        Builder select = new SelectBuilder(Dialects.EMBEDDED_DERBY)
                 .select().from("table").where().eq("id", "0123456789").offset(5).limit(10).build();
-        assertEquals("select * from table where id = ? offset 5 rows fetch next 10 rows only", select.getSql());
-        assertArrayEquals(new Object[]{"0123456789"}, select.getPreparedValues().toArray());
+        assertEquals("select * from table where id = ? offset ? rows fetch next ? rows only", select.getSql());
+        assertArrayEquals(new Object[]{"0123456789", 5, 10}, select.getPreparedValues().toArray());
 
-        select = new SelectBuilder(Dialects.DERBY)
+        select = new SelectBuilder(Dialects.EMBEDDED_DERBY)
                 .select().from("table").where().eq("id", "0123456789").limit(10).build();
-        assertEquals("select * from table where id = ? fetch first 10 rows only", select.getSql());
-        assertArrayEquals(new Object[]{"0123456789"}, select.getPreparedValues().toArray());
+        assertEquals("select * from table where id = ? fetch first ? rows only", select.getSql());
+        assertArrayEquals(new Object[]{"0123456789", 10}, select.getPreparedValues().toArray());
 
-        select = new SelectBuilder(Dialects.DERBY)
+        select = new SelectBuilder(Dialects.EMBEDDED_DERBY)
                 .select().from("table").where().eq("id", "0123456789").forUpdate().offset(5).limit(10).build();
-        assertEquals("select * from table where id = ? offset 5 rows fetch next 10 rows only for update", select.getSql());
-        assertArrayEquals(new Object[]{"0123456789"}, select.getPreparedValues().toArray());
+        assertEquals("select * from table where id = ? offset ? rows fetch next ? rows only for update", select.getSql());
+        assertArrayEquals(new Object[]{"0123456789", 5, 10}, select.getPreparedValues().toArray());
 
-        select = new SelectBuilder(Dialects.DERBY)
+        select = new SelectBuilder(Dialects.EMBEDDED_DERBY)
                 .select().from("table").where().eq("id", "0123456789").forUpdate().limit(10).build();
-        assertEquals("select * from table where id = ? fetch first 10 rows only for update", select.getSql());
-        assertArrayEquals(new Object[]{"0123456789"}, select.getPreparedValues().toArray());
+        assertEquals("select * from table where id = ? fetch first ? rows only for update", select.getSql());
+        assertArrayEquals(new Object[]{"0123456789", 10}, select.getPreparedValues().toArray());
 
-        select = new SelectBuilder(Dialects.DERBY)
+        select = new SelectBuilder(Dialects.EMBEDDED_DERBY)
                 .select().from("table").where().eq("id", "0123456789").forUpdate().sql("WITH RS").offset(5).limit(10).build();
-        assertEquals("select * from table where id = ? offset 5 rows fetch next 10 rows only for update WITH RS", select.getSql());
-        assertArrayEquals(new Object[]{"0123456789"}, select.getPreparedValues().toArray());
+        assertEquals("select * from table where id = ? offset ? rows fetch next ? rows only for update WITH RS", select.getSql());
+        assertArrayEquals(new Object[]{"0123456789", 5, 10}, select.getPreparedValues().toArray());
 
-        select = new SelectBuilder(Dialects.DERBY)
+        select = new SelectBuilder(Dialects.EMBEDDED_DERBY)
                 .select().from("table").where().eq("id", "0123456789").sql("WITH RS").offset(5).limit(10).build();
-        assertEquals("select * from table where id = ? offset 5 rows fetch next 10 rows only WITH RS", select.getSql());
-        assertArrayEquals(new Object[]{"0123456789"}, select.getPreparedValues().toArray());
+        assertEquals("select * from table where id = ? offset ? rows fetch next ? rows only WITH RS", select.getSql());
+        assertArrayEquals(new Object[]{"0123456789", 5, 10}, select.getPreparedValues().toArray());
     }
 
     @Test
@@ -331,16 +388,16 @@ public class BuilderTest {
                 new SelectBuilder().select("t_id as id", "t_name as name").from("table").where().eq("region", "Canton").build(),
                 new SelectBuilder().select("id", "name").from("table_1").where().eq("region", "China").build()
         ).build();
-        assertEquals("select * from ( (select t_id as id, t_name as name from table where region = ?) " +
-                "union (select id, name from table_1 where region = ?) ) union_alias_", select.getSql());
+        assertEquals("select * from ( select * from (select t_id as id, t_name as name from table where region = ?) t " +
+                "union select * from (select id, name from table_1 where region = ?) t ) union_alias_", select.getSql());
         assertArrayEquals(new Object[]{"Canton", "China"}, select.getPreparedValues().toArray());
 
         select = UnionSelectBuilder.unionAll(
                 new SelectBuilder().select("t_id as id", "t_name as name").from("table").where().eq("region", "Canton").build(),
                 new SelectBuilder().select("id", "name").from("table_1").where().eq("region", "China").build()
         ).build();
-        assertEquals("select * from ( (select t_id as id, t_name as name from table where region = ?) " +
-                "union all (select id, name from table_1 where region = ?) ) union_alias_", select.getSql());
+        assertEquals("select * from ( select * from (select t_id as id, t_name as name from table where region = ?) t " +
+                "union all select * from (select id, name from table_1 where region = ?) t ) union_alias_", select.getSql());
         assertArrayEquals(new Object[]{"Canton", "China"}, select.getPreparedValues().toArray());
 
         Builder oracleUnionBuilder = new UnionSelectBuilder(Dialects.ORACLE);
@@ -350,10 +407,10 @@ public class BuilderTest {
         select2.select("col1", "col2", "col3").from("t_table").build();
         oracleUnionBuilder.union(select1).union(select2).offset(10).limit(100).build();
         assertEquals("select * from (select source_.*, rownum rownumber_2_ from" +
-                " ( select * from ( (select * from (select source_.*, rownum rownumber_0_ from" +
-                " ( select col1, col2, col3 from t_table ) source_ where rownum <= ?) where rownumber_0_ > ?)" +
+                " ( select * from ( select * from (select * from (select source_.*, rownum rownumber_0_ from" +
+                " ( select col1, col2, col3 from t_table ) source_ where rownum <= ?) where rownumber_0_ > ?) t" +
                 " union" +
-                " (select oracle_alias_.*, rownum as rownumber_0_ from (select col1, col2, col3 from t_table) oracle_alias_) ) union_alias_ )" +
+                " select * from (select oracle_alias_.*, rownum as rownumber_0_ from (select col1, col2, col3 from t_table) oracle_alias_) t ) union_alias_ )" +
                 " source_ where rownum <= ?) where rownumber_2_ > ?", oracleUnionBuilder.getSql());
         assertArrayEquals(new Object[] {30, 20, 110, 10}, oracleUnionBuilder.getPreparedValues().toArray());
 
@@ -364,10 +421,10 @@ public class BuilderTest {
         ).offset(10).limit(20).build();
         assertEquals("select * from" +
                 " (select sub2_.*, rownumber() over(order by order of sub2_) as rownumber_2_ from" +
-                " ( select * from ( (select * from (select sub2_.*, rownumber() over(order by order of sub2_) as rownumber_0_" +
+                " ( select * from ( select * from (select * from (select sub2_.*, rownumber() over(order by order of sub2_) as rownumber_0_" +
                 " from ( select t_id as id, t_name as name from table where region = ? fetch first 30 rows only) as sub2_)" +
-                " as db2_inner1_ where rownumber_0_ > 10 order by rownumber_0_)" +
-                " union (select db2_alias_.*, rownumber() OVER (ORDER BY order of db2_alias_) AS rownumber_0_ from (select id, name from table_1 where region = ?) as db2_alias_) )" +
+                " as db2_inner1_ where rownumber_0_ > 10 order by rownumber_0_) t" +
+                " union select * from (select db2_alias_.*, rownumber() OVER (ORDER BY order of db2_alias_) AS rownumber_0_ from (select id, name from table_1 where region = ?) as db2_alias_) t )" +
                 " fetch first 30 rows only) as sub2_) as db2_inner1_ where rownumber_2_ > 10 order by rownumber_2_", db2UnionBuilder.getSql());
         assertArrayEquals(new Object[] {"Canton", "China"}, db2UnionBuilder.getPreparedValues().toArray());
 
@@ -376,10 +433,10 @@ public class BuilderTest {
                         .where().eq("region", "Canton").offset(10).limit(20).build(),
                 new SelectBuilder().select("id", "name").from("table_1").where().eq("region", "China").build()
         ).build();
-        assertEquals("select * from (" +
-                " (select t_id as id, t_name as name from table where region = ? limit ?,?)" +
+        assertEquals("select * from ( select * from" +
+                " (select t_id as id, t_name as name from table where region = ? limit ?,?) t" +
                 " union" +
-                " (select id, name from table_1 where region = ?) ) union_alias_", mysqlUnionBuilder.getSql());
+                " select * from (select id, name from table_1 where region = ?) t ) union_alias_", mysqlUnionBuilder.getSql());
         assertArrayEquals(new Object[] {"Canton", 10, 20, "China"}, mysqlUnionBuilder.getPreparedValues().toArray());
     }
 

@@ -19,6 +19,11 @@ public class Conditions implements Condition {
         conditionList = new LinkedList<>();
     }
 
+    Conditions addCondition(List<Condition> conditionList) {
+        this.conditionList.addAll(conditionList);
+        return this;
+    }
+
     Conditions addCondition(Condition ...condition) {
         Collections.addAll(conditionList, condition);
         return this;

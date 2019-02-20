@@ -19,10 +19,6 @@ public class CloseableJdbcExecutor extends DefaultJdbcExecutor {
         super(connection);
     }
 
-    public CloseableJdbcExecutor(Connection connection, boolean columnLowerCase) {
-        super(connection, columnLowerCase);
-    }
-
     @Override
     public void close() throws IOException {
         try {

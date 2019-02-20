@@ -3,6 +3,7 @@ package cn.icuter.jsql.builder;
 import cn.icuter.jsql.condition.Condition;
 
 import java.util.Collection;
+import java.util.List;
 
 /**
  * @author edward
@@ -10,12 +11,12 @@ import java.util.Collection;
  */
 public interface ConditionBuilder {
     Builder and(Condition condition);
-
     Builder and(Condition... conditions);
+    Builder and(List<Condition> conditionList);
 
     Builder or(Condition condition);
-
     Builder or(Condition... conditions);
+    Builder or(List<Condition> conditionList);
 
     Builder where();
 

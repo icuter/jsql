@@ -1,17 +1,21 @@
-package cn.icuter.jsql.executor.base;
+package cn.icuter.jsql.executor;
 
 import cn.icuter.jsql.ORMTable;
+import cn.icuter.jsql.TestUtils;
 import cn.icuter.jsql.data.JSQLBlob;
 import cn.icuter.jsql.data.JSQLClob;
 import cn.icuter.jsql.datasource.JSQLDataSource;
 import cn.icuter.jsql.datasource.JdbcExecutorPool;
-import cn.icuter.jsql.executor.JdbcExecutor;
-import cn.icuter.jsql.executor.TransactionExecutor;
+import cn.icuter.jsql.datasource.PoolConfiguration;
+import cn.icuter.jsql.dialect.Dialects;
+import cn.icuter.jsql.exception.JSQLException;
 import cn.icuter.jsql.orm.ORMapper;
 import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.sql.Blob;
 import java.sql.Clob;
@@ -23,10 +27,30 @@ import java.util.UUID;
  * @author edward
  * @since 2019-02-12
  */
-public abstract class ORMBaseTest {
-    protected static final String TABLE_NAME = "t_orm_test";
-    protected static JSQLDataSource dataSource;
-    protected static JdbcExecutorPool pool;
+public class ORMTest {
+    public static final String TABLE_NAME = "t_orm_test";
+    private static JSQLDataSource dataSource;
+    private static JdbcExecutorPool pool;
+
+    @BeforeClass
+    public static void setup() throws IOException {
+        PoolConfiguration poolConfiguration = PoolConfiguration.defaultPoolCfg();
+        poolConfiguration.setMaxPoolSize(3);
+        poolConfiguration.setCreateRetryCount(3);
+        dataSource = TestUtils.getDataSource();
+        pool = dataSource.createExecutorPool(poolConfiguration);
+        try (JdbcExecutor executor = pool.getExecutor()) {
+            try {
+                dataSource.sql("DROP TABLE " + TABLE_NAME).execUpdate(executor);
+            } catch (JSQLException e) {
+                // ignore
+            }
+            dataSource.sql(TestUtils.getCreateOrmTableSql()).execUpdate(executor);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new IOException(e);
+        }
+    }
 
     @AfterClass
     public static void tearDown() throws Exception {
