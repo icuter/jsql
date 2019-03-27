@@ -26,7 +26,7 @@ public abstract class AbstractBuilder implements Builder {
     private String buildSql;
     protected BuilderContext builderContext;
 
-    SQLStringBuilder sqlStringBuilder = new SQLStringBuilder();
+    protected SQLStringBuilder sqlStringBuilder = new SQLStringBuilder();
     protected List<Condition> conditionList = new LinkedList<>();
     private List<Object> preparedValueList;
     private int offset;
@@ -214,7 +214,7 @@ public abstract class AbstractBuilder implements Builder {
         return this;
     }
 
-    private void addPreparedValue(List<Object> list, Object condValue) {
+    protected void addPreparedValue(List<Object> list, Object condValue) {
         if (condValue == null) {
             list.add(null);
         } else if (condValue.getClass().isArray() && !(condValue instanceof byte[])) {
