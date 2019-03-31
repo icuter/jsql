@@ -153,6 +153,20 @@ steps:
     event:
     - push
 
+- name: test sqlserver
+  image: maven:3-jdk-8
+  volumes:
+  - name: maven
+    path: /root/.m2
+  - name: icuter_home
+    path: /home/icuter/
+  commands:
+  - export ICUTER_HOME=/home/icuter/
+  - mvn test -B -Dcheckstyle.skip=true -DdbType=sqlserver -Dtest=DBTypeTestSuite
+  when:
+    event:
+    - push
+
 - name: release
   image: maven:3-jdk-8
   volumes:

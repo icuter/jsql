@@ -95,6 +95,18 @@ public abstract class TestUtils {
                     "  f_decimal decimal(10,3),\n" +
                     "  f_clob CLOB,\n" +
                     "  PRIMARY KEY (orm_id))";
+        } else if ("sqlserver".equalsIgnoreCase(dbType)) {
+            return "CREATE TABLE " + ORMTest.TABLE_NAME + "\n" +
+                    "(\n" +
+                    "  orm_id VARCHAR(60) NOT NULL,\n" +
+                    "  f_blob VARBINARY(1000),\n" +
+                    "  f_string VARCHAR(60),\n" +
+                    "  f_int INTEGER,\n" +
+                    "  f_integer INTEGER,\n" +
+                    "  f_double decimal(10,3),\n" +
+                    "  f_decimal decimal(10,3),\n" +
+                    "  f_clob text,\n" +
+                    "  PRIMARY KEY (orm_id))";
         }
         return "CREATE TABLE " + ORMTest.TABLE_NAME + "\n" +
                 "(\n" +
