@@ -2,7 +2,6 @@ package cn.icuter.jsql.dialect;
 
 import cn.icuter.jsql.builder.BuilderContext;
 import cn.icuter.jsql.builder.SQLStringBuilder;
-import cn.icuter.jsql.condition.Cond;
 
 import java.util.List;
 
@@ -40,10 +39,10 @@ public class EmbeddedDerbyDialect implements Dialect {
         boolean offsetExists = builderCtx.getOffset() > 0;
         offsetLimitBuilder.append(offsetExists ? "offset ? rows fetch next ?" : "fetch first ?").append(" rows only");
         if (offsetExists) {
-            builderCtx.addCondition(Cond.value(builderCtx.getOffset()));
-            builderCtx.addCondition(Cond.value(builderCtx.getLimit()));
+            builderCtx.getBuilder().value(builderCtx.getOffset());
+            builderCtx.getBuilder().value(builderCtx.getLimit());
         } else {
-            builderCtx.addCondition(Cond.value(builderCtx.getLimit()));
+            builderCtx.getBuilder().value(builderCtx.getLimit());
         }
         SQLStringBuilder sqlStringBuilder = builderCtx.getSqlStringBuilder();
         int forUpdatePosition = builderCtx.getForUpdatePosition();

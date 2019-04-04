@@ -2,7 +2,6 @@ package cn.icuter.jsql.dialect;
 
 import cn.icuter.jsql.builder.BuilderContext;
 import cn.icuter.jsql.builder.SQLStringBuilder;
-import cn.icuter.jsql.condition.Cond;
 
 /**
  * @author edward
@@ -34,12 +33,12 @@ public class SQLServer2012PlusDialect implements Dialect {
         sqlStringBuilder.append("offset");
         if (builderCtx.getOffset() > 0) {
             sqlStringBuilder.append("?");
-            builderCtx.addCondition(Cond.value(builderCtx.getOffset()));
+            builderCtx.getBuilder().value(builderCtx.getOffset());
         } else {
             sqlStringBuilder.append("0");
         }
         sqlStringBuilder.append("rows fetch next ? rows only");
-        builderCtx.addCondition(Cond.value(builderCtx.getLimit()));
+        builderCtx.getBuilder().value(builderCtx.getLimit());
     }
 
     @Override

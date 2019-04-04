@@ -50,12 +50,7 @@ public abstract class AbstractBuilder implements Builder {
     }
 
     public void init() {
-        builderContext = new BuilderContext() {
-            @Override
-            public void addCondition(Condition condition) {
-                AbstractBuilder.this.addCondition(condition);
-            }
-        };
+        builderContext = new BuilderContext();
         builderContext.sqlStringBuilder = sqlStringBuilder;
         builderContext.dialect = dialect;
         builderContext.offset = offset;
@@ -69,7 +64,8 @@ public abstract class AbstractBuilder implements Builder {
         if (columns != null && columns.length > 0) {
             columnStr = String.join(", ", columns);
         }
-        sqlStringBuilder.append("select", "top-select").append(columnStr);
+        sqlStringBuilder.append("select", "top-select")
+                        .append(columnStr, "top-columns");
         return this;
     }
 

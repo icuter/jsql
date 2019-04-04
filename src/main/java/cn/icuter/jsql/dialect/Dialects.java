@@ -2,7 +2,6 @@ package cn.icuter.jsql.dialect;
 
 import cn.icuter.jsql.builder.BuilderContext;
 import cn.icuter.jsql.builder.SQLStringBuilder;
-import cn.icuter.jsql.condition.Cond;
 
 import java.util.LinkedHashSet;
 import java.util.Objects;
@@ -65,9 +64,9 @@ public abstract class Dialects {
         boolean offsetExists = builderContext.getOffset() > 0;
         StringBuilder offsetLimitBuilder = new StringBuilder(offsetExists ? "limit ?,?" : "limit ?");
         if (offsetExists) {
-            builderContext.addCondition(Cond.value(builderContext.getOffset()));
+            builderContext.getBuilder().value(builderContext.getOffset());
         }
-        builderContext.addCondition(Cond.value(builderContext.getLimit()));
+        builderContext.getBuilder().value(builderContext.getLimit());
 
         SQLStringBuilder sqlStringBuilder = builderContext.getSqlStringBuilder();
         if (builderContext.getForUpdatePosition() > 0) {
@@ -80,9 +79,9 @@ public abstract class Dialects {
     static void injectWithLimitOffsetKey(BuilderContext builderContext) {
         boolean offsetExists = builderContext.getOffset() > 0;
         StringBuilder offsetLimitBuilder = new StringBuilder(offsetExists ? "limit ? offset ?" : "limit ?");
-        builderContext.addCondition(Cond.value(builderContext.getLimit()));
+        builderContext.getBuilder().value(builderContext.getLimit());
         if (offsetExists) {
-            builderContext.addCondition(Cond.value(builderContext.getOffset()));
+            builderContext.getBuilder().value(builderContext.getOffset());
         }
         SQLStringBuilder sqlStringBuilder = builderContext.getSqlStringBuilder();
         if (builderContext.getForUpdatePosition() > 0) {

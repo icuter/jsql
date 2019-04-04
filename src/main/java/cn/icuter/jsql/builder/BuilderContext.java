@@ -1,6 +1,5 @@
 package cn.icuter.jsql.builder;
 
-import cn.icuter.jsql.condition.Condition;
 import cn.icuter.jsql.dialect.Dialect;
 
 import java.util.List;
@@ -22,10 +21,6 @@ public class BuilderContext {
     Builder builder;
 
     BuilderContext() {
-    }
-
-    public void addCondition(Condition condition) {
-        throw new UnsupportedOperationException();
     }
 
     public Dialect getDialect() {

@@ -15,12 +15,12 @@ public class PoolConfiguration {
 
     /**
      * <pre>
-     * Setting of idle timeout with milliseconds, default is 1h
+     * Setting of idle timeout with milliseconds, default is 30 minutes
      *   -1 means never timeout
      *   0 means always timeout
      * </pre>
      */
-    private long idleTimeout;       // milliseconds, default 1 hour
+    private long idleTimeout;
 
     /**
      * validate on borrowing an object from pool
@@ -36,12 +36,6 @@ public class PoolConfiguration {
      */
     private boolean validateOnReturn;
 
-    /**
-     * Setting idle object milliseconds time of interval checking with pool object maintainer
-     * <br></br>
-     * <em>default: 10 minutes</em>
-     */
-    private long idleCheckInterval;
     private long pollTimeout;       // milliseconds, default 5 seconds
 
     /**
@@ -54,7 +48,6 @@ public class PoolConfiguration {
         poolConfiguration.setMaxPoolSize(20);
         poolConfiguration.setPollTimeout(5000);
         poolConfiguration.setIdleTimeout(TimeUnit.MILLISECONDS.convert(30, TimeUnit.MINUTES));
-        poolConfiguration.setIdleCheckInterval(TimeUnit.MILLISECONDS.convert(15, TimeUnit.MINUTES));
         poolConfiguration.setValidateOnBorrow(true);
         poolConfiguration.setValidateOnReturn(false);
         return poolConfiguration;
@@ -82,14 +75,6 @@ public class PoolConfiguration {
 
     public void setIdleTimeout(long idleTimeout) {
         this.idleTimeout = idleTimeout;
-    }
-
-    public long getIdleCheckInterval() {
-        return idleCheckInterval;
-    }
-
-    public void setIdleCheckInterval(long idleCheckInterval) {
-        this.idleCheckInterval = idleCheckInterval;
     }
 
     public int getCreateRetryCount() {
@@ -121,7 +106,6 @@ public class PoolConfiguration {
         return "PoolConfiguration{"
                 + "maxPoolSize=" + maxPoolSize
                 + ", idleTimeout=" + idleTimeout + "ms"
-                + ", idleCheckInterval=" + idleCheckInterval + "ms"
                 + ", pollTimeout=" + pollTimeout + "ms"
                 + ", validateOnBorrow=" + validateOnBorrow
                 + ", validateOnReturn=" + validateOnReturn

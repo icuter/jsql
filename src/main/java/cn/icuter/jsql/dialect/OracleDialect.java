@@ -2,7 +2,6 @@ package cn.icuter.jsql.dialect;
 
 import cn.icuter.jsql.builder.BuilderContext;
 import cn.icuter.jsql.builder.SQLStringBuilder;
-import cn.icuter.jsql.condition.Cond;
 
 /**
  * @author edward
@@ -28,11 +27,11 @@ public class OracleDialect implements Dialect {
         if (offset > 0) {
             sqlStringBuilder.prepend("select * from (select source_.*, rownum " + rowNumberAlias + " from (")
                     .append(") source_ where rownum <= ?) where " + rowNumberAlias + " > ?");
-            builderCtx.addCondition(Cond.value(limit + offset));
-            builderCtx.addCondition(Cond.value(offset));
+            builderCtx.getBuilder().value(limit + offset);
+            builderCtx.getBuilder().value(offset);
         } else {
             sqlStringBuilder.prepend("select * from (").append(") where rownum <= ?");
-            builderCtx.addCondition(Cond.value(limit));
+            builderCtx.getBuilder().value(limit);
         }
     }
 

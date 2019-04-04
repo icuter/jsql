@@ -1,7 +1,5 @@
 package cn.icuter.jsql.util;
 
-import java.lang.reflect.Field;
-
 /**
  * @author edward
  * @since 2018-12-11
@@ -18,12 +16,12 @@ public abstract class ObjectUtil {
         requireNonNull(object, null);
     }
 
-    public static boolean isByteArray(Field field) {
-        return isArray(field, "byte");
+    public static boolean isByteArray(Class<?> type) {
+        return isArray(type, "byte");
     }
 
-    public static boolean isArray(Field field, String arrayType) {
-        return field.getType().isArray() && arrayType.equalsIgnoreCase(field.getType().getComponentType().getName());
+    public static boolean isArray(Class<?> type, String arrayType) {
+        return type.isArray() && arrayType.equalsIgnoreCase(type.getComponentType().getName());
     }
 
     public static void requireNonEmpty(String src, String message) {

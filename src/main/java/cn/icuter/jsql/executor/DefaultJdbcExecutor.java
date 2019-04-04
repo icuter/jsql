@@ -105,53 +105,7 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
                     Field field = entry.getKey();
                     int rsIndex = entry.getValue();
                     field.setAccessible(true);
-                    if (field.getType().isPrimitive()) {
-                        if (field.getType() == Boolean.TYPE) {
-                            field.set(record, rs.getBoolean(rsIndex));
-                        } else if (field.getType() == Byte.TYPE) {
-                            field.set(record, rs.getByte(rsIndex));
-                        } else if (field.getType() == Short.TYPE) {
-                            field.set(record, rs.getShort(rsIndex));
-                        } else if (field.getType() == Integer.TYPE) {
-                            field.set(record, rs.getInt(rsIndex));
-                        } else if (field.getType() == Long.TYPE) {
-                            field.set(record, rs.getLong(rsIndex));
-                        } else if (field.getType() == Float.TYPE) {
-                            field.set(record, rs.getFloat(rsIndex));
-                        } else if (field.getType() == Double.TYPE) {
-                            field.set(record, rs.getDouble(rsIndex));
-                        } else {
-                            field.set(record, rs.getObject(rsIndex));
-                        }
-                    } else if (Blob.class.isAssignableFrom(field.getType())) {
-                        field.set(record, new JSQLBlob(rs.getBytes(rsIndex)));
-                    } else if (NClob.class.isAssignableFrom(field.getType())) {
-                        field.set(record, new JSQLNClob(rs.getNString(rsIndex)));
-                    } else if (Clob.class.isAssignableFrom(field.getType())) {
-                        field.set(record, new JSQLClob(rs.getString(rsIndex)));
-                    } else if (ObjectUtil.isByteArray(field)) {
-                        field.set(record, rs.getBytes(rsIndex));
-                    } else if (Boolean.class.isAssignableFrom(field.getType())) {
-                        field.set(record, rs.getBoolean(rsIndex));
-                    } else if (Byte.class.isAssignableFrom(field.getType())) {
-                        field.set(record, rs.getByte(rsIndex));
-                    } else if (Short.class.isAssignableFrom(field.getType())) {
-                        field.set(record, rs.getShort(rsIndex));
-                    } else if (Integer.class.isAssignableFrom(field.getType())) {
-                        field.set(record, rs.getInt(rsIndex));
-                    } else if (Long.class.isAssignableFrom(field.getType())) {
-                        field.set(record, rs.getLong(rsIndex));
-                    } else if (Float.class.isAssignableFrom(field.getType())) {
-                        field.set(record, rs.getFloat(rsIndex));
-                    } else if (Double.class.isAssignableFrom(field.getType())) {
-                        field.set(record, rs.getDouble(rsIndex));
-                    } else if (String.class.isAssignableFrom(field.getType())) {
-                        field.set(record, rs.getString(rsIndex));
-                    } else if (BigDecimal.class.isAssignableFrom(field.getType())) {
-                        field.set(record, rs.getBigDecimal(rsIndex));
-                    } else {
-                        field.set(record, rs.getObject(rsIndex));
-                    }
+                    field.set(record, getValueByType(field.getType(), rs, rsIndex));
                 }
                 queriedResult.add(record);
                 if (hasLimit && --fetchSize <= 0) {
@@ -160,6 +114,56 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
             }
             return queriedResult;
         });
+    }
+
+    private Object getValueByType(Class<?> type, ResultSet rs, int rsIndex) throws SQLException {
+        if (type.isPrimitive()) {
+            if (type == Boolean.TYPE) {
+                return rs.getBoolean(rsIndex);
+            } else if (type == Byte.TYPE) {
+                return rs.getByte(rsIndex);
+            } else if (type == Short.TYPE) {
+                return rs.getShort(rsIndex);
+            } else if (type == Integer.TYPE) {
+                return rs.getInt(rsIndex);
+            } else if (type == Long.TYPE) {
+                return rs.getLong(rsIndex);
+            } else if (type == Float.TYPE) {
+                return rs.getFloat(rsIndex);
+            } else if (type == Double.TYPE) {
+                return rs.getDouble(rsIndex);
+            } else {
+                return rs.getObject(rsIndex);
+            }
+        } else if (Blob.class.isAssignableFrom(type)) {
+            return new JSQLBlob(rs.getBytes(rsIndex));
+        } else if (NClob.class.isAssignableFrom(type)) {
+            return new JSQLNClob(rs.getNString(rsIndex));
+        } else if (Clob.class.isAssignableFrom(type)) {
+            return new JSQLClob(rs.getString(rsIndex));
+        } else if (ObjectUtil.isByteArray(type)) {
+            return rs.getBytes(rsIndex);
+        } else if (Boolean.class.isAssignableFrom(type)) {
+            return rs.getBoolean(rsIndex);
+        } else if (Byte.class.isAssignableFrom(type)) {
+            return rs.getByte(rsIndex);
+        } else if (Short.class.isAssignableFrom(type)) {
+            return rs.getShort(rsIndex);
+        } else if (Integer.class.isAssignableFrom(type)) {
+            return rs.getInt(rsIndex);
+        } else if (Long.class.isAssignableFrom(type)) {
+            return rs.getLong(rsIndex);
+        } else if (Float.class.isAssignableFrom(type)) {
+            return rs.getFloat(rsIndex);
+        } else if (Double.class.isAssignableFrom(type)) {
+            return rs.getDouble(rsIndex);
+        } else if (String.class.isAssignableFrom(type)) {
+            return rs.getString(rsIndex);
+        } else if (BigDecimal.class.isAssignableFrom(type)) {
+            return rs.getBigDecimal(rsIndex);
+        } else {
+            return rs.getObject(rsIndex);
+        }
     }
 
     @Override
@@ -172,11 +176,10 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
             while (rs.next()) {
                 Map<String, Object> record = new LinkedHashMap<>();
                 for (int i = 1; i <= meta.getColumnCount(); i++) {
-                    String colName = meta.getColumnLabel(i);
-                    if (colName.toLowerCase().startsWith("rownumber_")) {
+                    String colName = meta.getColumnLabel(i).toLowerCase();
+                    if (colName.startsWith("rownumber_")) {
                         continue;
                     }
-                    colName = colName.toLowerCase();
                     record.put(colName, rs.getObject(colName));
                 }
                 result.add(record);
@@ -273,10 +276,7 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
         int colLen = meta.getColumnCount();
         List<String> returnColumnList = new ArrayList<>(colLen);
         for (int i = 0; i < colLen; i++) {
-            String colLabel = meta.getColumnLabel(i + 1);
-            if (!colLabel.toLowerCase().startsWith("rownumber_")) {
-                returnColumnList.add(colLabel);
-            }
+            returnColumnList.add(meta.getColumnLabel(i + 1));
         }
         Map<Field, Integer> colFieldMap = new LinkedHashMap<>(returnColumnList.size());
         ORMapper.mapColumn(clazz, (col, field) -> {

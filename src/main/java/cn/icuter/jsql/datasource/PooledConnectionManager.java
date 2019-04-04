@@ -64,7 +64,7 @@ public class PooledConnectionManager implements PooledObjectManager<Connection> 
                         LOGGER.debug("Connection is closing after waited " + invalidTimeout + "ms");
                         break;
                     }
-                } else if (invalidTimeout <= 0) {
+                } else {
                     // set invalid immediately
                     LOGGER.debug("Connection is closing immediately");
                     break;

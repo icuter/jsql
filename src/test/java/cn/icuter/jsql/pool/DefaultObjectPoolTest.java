@@ -42,7 +42,6 @@ public class DefaultObjectPoolTest {
     @Test
     public void testPoolStat() throws Exception {
         PoolConfiguration cfg = PoolConfiguration.defaultPoolCfg();
-        cfg.setIdleCheckInterval(Integer.MAX_VALUE); // assume never check idle objects
         DefaultObjectPool<Object> pool = new DefaultObjectPool<>(manager, cfg);
         DefaultObjectPool.PoolStats poolStats = pool.getPoolStats();
         Object[] borrowedObjects = new Object[cfg.getMaxPoolSize()];
@@ -65,14 +64,35 @@ public class DefaultObjectPoolTest {
         pool.close();
 
         assertEquals(poolStats.invalidCnt, cfg.getMaxPoolSize());
+        assertTrue(pool.isPoolEmpty());
         assertTrue(pool.isPoolClosed());
     }
 
     @Test
-    public void testPoolMaintainer() throws Exception {
+    public void testClosePool() throws Exception {
+        PoolConfiguration cfg = PoolConfiguration.defaultPoolCfg();
+        DefaultObjectPool<Object> pool = new DefaultObjectPool<>(manager, cfg);
+        Object[] borrowedObjects = new Object[cfg.getMaxPoolSize()];
+        for (int i = 0; i < borrowedObjects.length; i++) {
+            Object obj = pool.borrowObject();
+            borrowedObjects[i] = obj;
+            assertNotNull(obj);
+        }
+        Thread.sleep(1000L);
+
+        pool.close();
+
+        for (Object borrowedObject : borrowedObjects) {
+            pool.returnObject(borrowedObject);
+        }
+        assertTrue(pool.isPoolClosed());
+        assertTrue(pool.isPoolEmpty());
+    }
+
+    @Test
+    public void testTimeoutPooledObject() throws Exception {
         PoolConfiguration cfg = PoolConfiguration.defaultPoolCfg();
         cfg.setIdleTimeout(500L);        // 0.5s idle timeout
-        cfg.setIdleCheckInterval(1000L); // check pre 1s
         try (DefaultObjectPool<Object> pool = new DefaultObjectPool<>(manager, cfg)) {
             Object[] borrowedObjects = new Object[cfg.getMaxPoolSize()];
             for (int i = 0; i < borrowedObjects.length; i++) {
@@ -117,7 +137,6 @@ public class DefaultObjectPoolTest {
     public void testMultiThread() throws Exception {
         PoolConfiguration cfg = PoolConfiguration.defaultPoolCfg();
         cfg.setIdleTimeout(500L);        // 0.5s idle timeout
-        cfg.setIdleCheckInterval(500L); // check pre 1s
         try (DefaultObjectPool<Object> pool = new DefaultObjectPool<>(manager, cfg)) {
             Thread[] threads = new Thread[80];
             for (int i = 0; i < threads.length; i++) {

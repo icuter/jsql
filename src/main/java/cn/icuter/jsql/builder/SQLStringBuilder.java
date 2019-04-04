@@ -94,6 +94,13 @@ public class SQLStringBuilder {
         return filterSQLItems(item -> sql == null ? item.sql == null : sql.equalsIgnoreCase(item.sql));
     }
 
+    public void replaceByType(String fragmentType, String replacement) {
+        List<SQLItem> sqlItems = findByType(fragmentType);
+        for (SQLItem sqlItem : sqlItems) {
+            sqlItem.sql = replacement;
+        }
+    }
+
     /**
      * Try to find pattern that matching sql fragment
      *

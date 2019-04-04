@@ -71,7 +71,7 @@ public class JSQLDataSource {
                     // try to create an custom dialect class
                     dialect = (Dialect) Class.forName(dialectInProp).newInstance();
                 } catch (InstantiationException | IllegalAccessException | ClassNotFoundException e) {
-                    throw new IllegalArgumentException("unsupport dialect for [" + dialectInProp + ']', e);
+                    throw new IllegalArgumentException("unsupported dialect for [" + dialectInProp + ']', e);
                 }
             }
         } else {
