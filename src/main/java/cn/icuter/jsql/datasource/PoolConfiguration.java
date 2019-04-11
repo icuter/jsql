@@ -36,7 +36,15 @@ public class PoolConfiguration {
      */
     private boolean validateOnReturn;
 
-    private long pollTimeout;       // milliseconds, default 5 seconds
+    /**
+     * <pre>
+     * Poll object waiting for milliseconds time
+     *     0 : no wait, maybe return null
+     *   0 < : wait permanently, will never return null
+     * </pre>
+     * <em>default 10 seconds</em>
+     */
+    private long pollTimeout;
 
     /**
      * retry to create pool object if exception occur, default 0
@@ -46,7 +54,7 @@ public class PoolConfiguration {
     public static PoolConfiguration defaultPoolCfg() {
         PoolConfiguration poolConfiguration = new PoolConfiguration();
         poolConfiguration.setMaxPoolSize(20);
-        poolConfiguration.setPollTimeout(5000);
+        poolConfiguration.setPollTimeout(10000);
         poolConfiguration.setIdleTimeout(TimeUnit.MILLISECONDS.convert(30, TimeUnit.MINUTES));
         poolConfiguration.setValidateOnBorrow(true);
         poolConfiguration.setValidateOnReturn(false);

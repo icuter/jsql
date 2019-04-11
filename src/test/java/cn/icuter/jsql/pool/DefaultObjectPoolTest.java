@@ -3,6 +3,7 @@ package cn.icuter.jsql.pool;
 import cn.icuter.jsql.datasource.PoolConfiguration;
 import cn.icuter.jsql.exception.JSQLException;
 import cn.icuter.jsql.exception.PooledObjectPollTimeoutException;
+import junit.framework.AssertionFailedError;
 import org.junit.AfterClass;
 import org.junit.Assume;
 import org.junit.BeforeClass;
@@ -92,7 +93,7 @@ public class DefaultObjectPoolTest {
     @Test
     public void testTimeoutPooledObject() throws Exception {
         PoolConfiguration cfg = PoolConfiguration.defaultPoolCfg();
-        cfg.setIdleTimeout(500L);        // 0.5s idle timeout
+        cfg.setIdleTimeout(50L);        // 0.5s idle timeout
         try (DefaultObjectPool<Object> pool = new DefaultObjectPool<>(manager, cfg)) {
             Object[] borrowedObjects = new Object[cfg.getMaxPoolSize()];
             for (int i = 0; i < borrowedObjects.length; i++) {
@@ -101,14 +102,14 @@ public class DefaultObjectPoolTest {
             }
             assertEquals(pool.getPoolStats().poolSize, cfg.getMaxPoolSize());
             // let pool maintainer try to purge idle object
-            Thread.sleep(1200L);
+            Thread.sleep(cfg.getIdleTimeout() * borrowedObjects.length);
             // no idle objects remove, because all pooled objects has been borrowed
             assertEquals(pool.getPoolStats().poolSize, cfg.getMaxPoolSize());
             for (Object borrowedObject : borrowedObjects) {
                 pool.returnObject(borrowedObject);
             }
             // let pool maintainer try to purge idle object again
-            Thread.sleep(1200L);
+            Thread.sleep(cfg.getIdleTimeout() * borrowedObjects.length);
             assertTrue(pool.isPoolEmpty());
         }
 
@@ -121,14 +122,14 @@ public class DefaultObjectPoolTest {
             }
             assertEquals(pool.getPoolStats().poolSize, cfg.getMaxPoolSize());
             // let pool maintainer try to purge idle object
-            Thread.sleep(1200L);
+            Thread.sleep(50 * borrowedObjects.length);
             // no idle objects remove, because all pooled objects has been borrowed
             assertEquals(pool.getPoolStats().poolSize, cfg.getMaxPoolSize());
             for (Object borrowedObject : borrowedObjects) {
                 pool.returnObject(borrowedObject);
             }
             // let pool maintainer try to purge idle object again
-            Thread.sleep(1200L);
+            Thread.sleep(50 * borrowedObjects.length);
             assertEquals(pool.getPoolStats().poolSize, cfg.getMaxPoolSize());
         }
     }
@@ -136,7 +137,7 @@ public class DefaultObjectPoolTest {
     @Test
     public void testMultiThread() throws Exception {
         PoolConfiguration cfg = PoolConfiguration.defaultPoolCfg();
-        cfg.setIdleTimeout(500L);        // 0.5s idle timeout
+        cfg.setIdleTimeout(50L);        // 50ms idle timeout
         try (DefaultObjectPool<Object> pool = new DefaultObjectPool<>(manager, cfg)) {
             Thread[] threads = new Thread[80];
             for (int i = 0; i < threads.length; i++) {
@@ -146,13 +147,13 @@ public class DefaultObjectPoolTest {
                         obj = pool.borrowObject();
                         Thread.sleep(1000L);
                     } catch (Exception e) {
-                        e.printStackTrace();
+                        Assume.assumeNoException(e);
                     } finally {
                         if (obj != null) {
                             try {
                                 pool.returnObject(obj);
                             } catch (Exception e) {
-                                e.printStackTrace();
+                                Assume.assumeNoException(e);
                             }
                         }
                     }
@@ -164,7 +165,8 @@ public class DefaultObjectPoolTest {
             }
             assertTrue(pool.getPoolStats().poolSize <= cfg.getMaxPoolSize());
 
-            Thread.sleep(2000L); // sleep enough time to purge idle objects
+            // sleep enough time for schedule service run out
+            Thread.sleep(100L);
 
             assertTrue(pool.isPoolEmpty());
         }
@@ -195,10 +197,9 @@ public class DefaultObjectPoolTest {
         cfg.setMaxPoolSize(1);
         // no wait
         try (DefaultObjectPool<Object> pool = new DefaultObjectPool<>(manager, cfg)) {
-            for (int i = 0; i < cfg.getMaxPoolSize(); i++) {
-                pool.borrowObject();
-            }
+            Object obj = pool.borrowObject();
             assertNull(pool.borrowObject());
+            pool.returnObject(obj);
         }
     }
 
@@ -213,11 +214,18 @@ public class DefaultObjectPoolTest {
             new Thread() {
                 @Override
                 public void run() {
+                    Object secondBorrow = null;
                     try {
-                        Object secondBorrow = pool.borrowObject();
+                        secondBorrow = pool.borrowObject();
                         assertNotNull(secondBorrow);
                     } catch (JSQLException e) {
                         Assume.assumeNoException(e);
+                    } finally {
+                        try {
+                            pool.returnObject(secondBorrow);
+                        } catch (JSQLException e) {
+                            Assume.assumeNoException(e);
+                        }
                     }
                 }
             }.start();
