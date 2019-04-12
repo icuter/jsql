@@ -51,11 +51,20 @@ public class PoolConfiguration {
      */
     private int createRetryCount;
 
+    /**
+     * Set the schedule thread's life time in milliseconds, but set it to negative or 0 means never timeout
+     * <br>
+     * <em>default 5 minutes</em>
+     * @since v1.0.4
+     */
+    private long scheduledThreadLifeTime;
+
     public static PoolConfiguration defaultPoolCfg() {
         PoolConfiguration poolConfiguration = new PoolConfiguration();
         poolConfiguration.setMaxPoolSize(20);
         poolConfiguration.setPollTimeout(10000);
         poolConfiguration.setIdleTimeout(TimeUnit.MILLISECONDS.convert(30, TimeUnit.MINUTES));
+        poolConfiguration.setScheduledThreadLifeTime(TimeUnit.MILLISECONDS.convert(5, TimeUnit.MINUTES));
         poolConfiguration.setValidateOnBorrow(true);
         poolConfiguration.setValidateOnReturn(false);
         return poolConfiguration;
@@ -109,12 +118,21 @@ public class PoolConfiguration {
         return validateOnReturn;
     }
 
+    public long getScheduledThreadLifeTime() {
+        return scheduledThreadLifeTime;
+    }
+
+    public void setScheduledThreadLifeTime(long scheduledThreadLifeTime) {
+        this.scheduledThreadLifeTime = scheduledThreadLifeTime;
+    }
+
     @Override
     public String toString() {
         return "PoolConfiguration{"
                 + "maxPoolSize=" + maxPoolSize
                 + ", idleTimeout=" + idleTimeout + "ms"
                 + ", pollTimeout=" + pollTimeout + "ms"
+                + ", scheduledThreadLifeTime=" + scheduledThreadLifeTime + "ms"
                 + ", validateOnBorrow=" + validateOnBorrow
                 + ", validateOnReturn=" + validateOnReturn
                 + "}";

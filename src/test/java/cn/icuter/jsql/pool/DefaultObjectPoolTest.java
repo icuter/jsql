@@ -3,7 +3,6 @@ package cn.icuter.jsql.pool;
 import cn.icuter.jsql.datasource.PoolConfiguration;
 import cn.icuter.jsql.exception.JSQLException;
 import cn.icuter.jsql.exception.PooledObjectPollTimeoutException;
-import junit.framework.AssertionFailedError;
 import org.junit.AfterClass;
 import org.junit.Assume;
 import org.junit.BeforeClass;
@@ -12,7 +11,10 @@ import org.junit.Test;
 import java.util.LinkedList;
 import java.util.List;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * @author edward
