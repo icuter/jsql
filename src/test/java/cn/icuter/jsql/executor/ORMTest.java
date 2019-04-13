@@ -5,9 +5,6 @@ import cn.icuter.jsql.TestUtils;
 import cn.icuter.jsql.data.JSQLBlob;
 import cn.icuter.jsql.data.JSQLClob;
 import cn.icuter.jsql.datasource.JSQLDataSource;
-import cn.icuter.jsql.datasource.JdbcExecutorPool;
-import cn.icuter.jsql.datasource.PoolConfiguration;
-import cn.icuter.jsql.dialect.Dialects;
 import cn.icuter.jsql.exception.JSQLException;
 import cn.icuter.jsql.orm.ORMapper;
 import org.junit.AfterClass;
@@ -30,22 +27,17 @@ import java.util.UUID;
 public class ORMTest {
     public static final String TABLE_NAME = "t_orm_test";
     private static JSQLDataSource dataSource;
-    private static JdbcExecutorPool pool;
 
     @BeforeClass
     public static void setup() throws IOException {
-        PoolConfiguration poolConfiguration = PoolConfiguration.defaultPoolCfg();
-        poolConfiguration.setMaxPoolSize(3);
-        poolConfiguration.setCreateRetryCount(3);
         dataSource = TestUtils.getDataSource();
-        pool = dataSource.createExecutorPool(poolConfiguration);
-        try (JdbcExecutor executor = pool.getExecutor()) {
-            try {
-                dataSource.sql("DROP TABLE " + TABLE_NAME).execUpdate(executor);
-            } catch (JSQLException e) {
-                // ignore
-            }
-            dataSource.sql(TestUtils.getCreateOrmTableSql()).execUpdate(executor);
+        try {
+            dataSource.sql("DROP TABLE " + TABLE_NAME).execUpdate();
+        } catch (JSQLException e) {
+            // ignore
+        }
+        try {
+            dataSource.sql(TestUtils.getCreateOrmTableSql()).execUpdate();
         } catch (Exception e) {
             e.printStackTrace();
             throw new IOException(e);
@@ -54,12 +46,11 @@ public class ORMTest {
 
     @AfterClass
     public static void tearDown() throws Exception {
-        try (JdbcExecutor jdbcExecutor = pool.getExecutor()) {
+        try (JdbcExecutor jdbcExecutor = dataSource.getJdbcExecutor()) {
             dataSource.sql("DROP table " + TABLE_NAME).execUpdate(jdbcExecutor);
         } finally {
-            pool.close();
+            dataSource.close();
             dataSource = null;
-            pool = null;
         }
     }
 
@@ -67,7 +58,7 @@ public class ORMTest {
     public void testORM() throws Exception {
         ORMTable ormTable = createOrmTable();
 
-        TransactionExecutor txExecutor = pool.getTransactionExecutor();
+        TransactionExecutor txExecutor = dataSource.getTransactionExecutor();
         try {
             dataSource.insert(TABLE_NAME).values(ormTable).execUpdate(txExecutor);
             txExecutor.commit();
@@ -78,7 +69,7 @@ public class ORMTest {
             txExecutor.close();
         }
 
-        txExecutor = pool.getTransactionExecutor();
+        txExecutor = dataSource.getTransactionExecutor();
         try {
             ormTable.setfBlob("hello blob update".getBytes());
             ormTable.setfClob("hello clob update");
@@ -93,7 +84,7 @@ public class ORMTest {
         } finally {
             txExecutor.close();
         }
-        try (JdbcExecutor jdbcExecutor = pool.getExecutor()) {
+        try (JdbcExecutor jdbcExecutor = dataSource.getJdbcExecutor()) {
             List<ORMTable> ormTableList = dataSource
                     .select()
                     .from(TABLE_NAME)
@@ -127,7 +118,7 @@ public class ORMTest {
 
     @Test
     public void testLob() throws Exception {
-        try (JdbcExecutor jdbcExecutor = pool.getExecutor()) {
+        try (JdbcExecutor jdbcExecutor = dataSource.getJdbcExecutor()) {
             ORMTable ormTable = createOrmTable();
 
             dataSource.insert(TABLE_NAME).values(ormTable).execUpdate(jdbcExecutor);

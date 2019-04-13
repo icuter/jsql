@@ -135,6 +135,7 @@ public class PoolConfiguration {
                 + ", scheduledThreadLifeTime=" + scheduledThreadLifeTime + "ms"
                 + ", validateOnBorrow=" + validateOnBorrow
                 + ", validateOnReturn=" + validateOnReturn
+                + ", createRetryCount=" + createRetryCount
                 + "}";
     }
 }

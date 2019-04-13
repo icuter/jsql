@@ -1,10 +1,12 @@
 package cn.icuter.jsql.exception;
 
+import java.sql.SQLException;
+
 /**
  * @author edward
  * @since 2018-09-16
  */
-public class JSQLException extends Exception {
+public class JSQLException extends SQLException {
     public JSQLException(String message) {
         super(message);
     }

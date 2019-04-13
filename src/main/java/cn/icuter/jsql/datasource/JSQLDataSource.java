@@ -48,6 +48,8 @@ public class JSQLDataSource {
     private String driverClassName;
     private Dialect dialect;   // parse by url or name or dialect class name
     private int loginTimeout;  // default 5s
+    private ConnectionPool connectionPool;
+    private JdbcExecutorPool executorPool;
 
     /**
      * <pre>
@@ -58,6 +60,13 @@ public class JSQLDataSource {
      * - driverClass     optional if dialect set
      * - dialect         optional if driverClass set
      * - loginTimeout    optional default 5s
+     * - pool.maxPoolSize             default 20
+     * - pool.idleTimeout             default 30 minutes
+     * - pool.validateOnBorrow        default true
+     * - pool.validateOnReturn        default false
+     * - pool.pollTimeout             default 10 seconds
+     * - pool.createRetryCount        default 0
+     * - pool.scheduledThreadLifeTime default 5 minutes
      * </pre>
      * @param jdbcProp jdbc properties in file or create by manually
      */
@@ -80,6 +89,7 @@ public class JSQLDataSource {
         int loginTimeout = Integer.valueOf(jdbcProp.getProperty("loginTimeout", "5"));
         init(jdbcProp.getProperty("url"), jdbcProp.getProperty("username"), jdbcProp.getProperty("password"),
                 jdbcProp.getProperty("driverClass"), loginTimeout, dialect);
+        initPool(jdbcProp);
     }
 
     public JSQLDataSource(String url, String username, String password) {
@@ -96,6 +106,7 @@ public class JSQLDataSource {
 
     public JSQLDataSource(String url, String username, String password, String driverClassName, Dialect dialect) {
         init(url, username, password, driverClassName, 5, dialect);
+        initPool(new Properties());
     }
 
     private void init(String url, String username, String password, String driverClassName, int loginTimeout, Dialect dialect) {
@@ -126,6 +137,34 @@ public class JSQLDataSource {
             DriverManager.setLoginTimeout(this.loginTimeout);
         }
         LOGGER.debug("set up " + toString());
+    }
+
+    private void initPool(Properties poolProp) {
+        PoolConfiguration poolConfiguration = PoolConfiguration.defaultPoolCfg();
+        if (poolProp.containsKey("pool.maxPoolSize")) {
+            poolConfiguration.setMaxPoolSize(Integer.valueOf(poolProp.getProperty("pool.maxPoolSize")));
+        }
+        if (poolProp.containsKey("pool.idleTimeout")) {
+            poolConfiguration.setIdleTimeout(Long.valueOf(poolProp.getProperty("pool.idleTimeout")));
+        }
+        if (poolProp.containsKey("pool.validateOnBorrow")) {
+            poolConfiguration.setValidateOnBorrow(Boolean.valueOf(poolProp.getProperty("pool.validateOnBorrow")));
+        }
+        if (poolProp.containsKey("pool.validateOnReturn")) {
+            poolConfiguration.setValidateOnReturn(Boolean.valueOf(poolProp.getProperty("pool.validateOnReturn")));
+        }
+        if (poolProp.containsKey("pool.pollTimeout")) {
+            poolConfiguration.setPollTimeout(Long.valueOf(poolProp.getProperty("pool.pollTimeout")));
+        }
+        if (poolProp.containsKey("pool.createRetryCount")) {
+            poolConfiguration.setCreateRetryCount(Integer.valueOf(poolProp.getProperty("pool.createRetryCount")));
+        }
+        if (poolProp.containsKey("pool.scheduledThreadLifeTime")) {
+            poolConfiguration.setScheduledThreadLifeTime(Long.valueOf(poolProp.getProperty("pool.scheduledThreadLifeTime")));
+        }
+        ObjectPool<Connection> objectPool = createConnectionObjectPool(poolConfiguration);
+        connectionPool = new ConnectionPool(objectPool);
+        executorPool = new JdbcExecutorPool(objectPool);
     }
 
     public TransactionExecutor createTransaction() {
@@ -173,34 +212,51 @@ public class JSQLDataSource {
         return new JdbcExecutorPool(createConnectionObjectPool(poolConfiguration));
     }
 
-    public Builder select(String... cols) {
-        return new SelectBuilder(dialect).select(cols);
-    }
-    public Builder update(String table) {
-        return new UpdateBuilder(dialect).update(table);
-    }
-    public Builder insert(String table) {
-        return new InsertBuilder(dialect).insert(table);
-    }
-    public Builder delete() {
-        return new DeleteBuilder(dialect).delete();
+    public Connection getConnection() {
+        return connectionPool.getConnection();
     }
 
+    public JdbcExecutor getJdbcExecutor() {
+        return executorPool.getExecutor();
+    }
+    public void close() {
+        connectionPool.close();
+    }
+    public TransactionExecutor getTransactionExecutor() {
+        return executorPool.getTransactionExecutor();
+    }
+
+    protected JdbcExecutor provideExecutor() {
+        return getJdbcExecutor();
+    }
+
+    public Builder select(String... cols) {
+        return new ExecutableSelectBuilder(dialect).select(cols);
+    }
+    public Builder update(String table) {
+        return new ExecutableUpdateBuilder(dialect).update(table);
+    }
+    public Builder insert(String table) {
+        return new ExecutableInsertBuilder(dialect).insert(table);
+    }
+    public Builder delete() {
+        return new ExecutableDeleteBuilder(dialect).delete();
+    }
     public Builder sql(String sql, Object... values) {
-        return new SQLBuilder().sql(sql).value(values);
+        return new ExecutableSQLBuilder().sql(sql).value(values);
     }
 
     public Builder union(Builder... builders) {
-        return UnionSelectBuilder.union(dialect, builders);
+        return new ExecutableUnionSelectBuilder(dialect, false, builders);
     }
     public Builder unionAll(Builder... builders) {
-        return UnionSelectBuilder.unionAll(dialect, builders);
+        return new ExecutableUnionSelectBuilder(dialect, true, builders);
     }
     public Builder union(Collection<Builder> builders) {
-        return UnionSelectBuilder.union(dialect, builders);
+        return new ExecutableUnionSelectBuilder(dialect, false, builders);
     }
     public Builder unionAll(Collection<Builder> builders) {
-        return UnionSelectBuilder.unionAll(dialect, builders);
+        return new ExecutableUnionSelectBuilder(dialect, true, builders);
     }
 
     public Clob createClob(String initData) {
@@ -249,6 +305,61 @@ public class JSQLDataSource {
 
     public int getLoginTimeout() {
         return loginTimeout;
+    }
+
+    class ExecutableSelectBuilder extends SelectBuilder {
+        ExecutableSelectBuilder(Dialect dialect) {
+            super(dialect);
+        }
+        @Override
+        protected JdbcExecutor provideClosableExecutor() {
+            return provideExecutor();
+        }
+    }
+    class ExecutableUpdateBuilder extends UpdateBuilder {
+        ExecutableUpdateBuilder(Dialect dialect) {
+            super(dialect);
+        }
+        @Override
+        protected JdbcExecutor provideClosableExecutor() {
+            return provideExecutor();
+        }
+    }
+    class ExecutableInsertBuilder extends InsertBuilder {
+        ExecutableInsertBuilder(Dialect dialect) {
+            super(dialect);
+        }
+        @Override
+        protected JdbcExecutor provideClosableExecutor() {
+            return provideExecutor();
+        }
+    }
+    class ExecutableDeleteBuilder extends DeleteBuilder {
+        ExecutableDeleteBuilder(Dialect dialect) {
+            super(dialect);
+        }
+        @Override
+        protected JdbcExecutor provideClosableExecutor() {
+            return provideExecutor();
+        }
+    }
+    class ExecutableSQLBuilder extends SQLBuilder {
+        @Override
+        protected JdbcExecutor provideClosableExecutor() {
+            return provideExecutor();
+        }
+    }
+    class ExecutableUnionSelectBuilder extends UnionSelectBuilder {
+        ExecutableUnionSelectBuilder(Dialect dialect, boolean isUnionAll, Builder... builders) {
+            super(dialect, isUnionAll, builders);
+        }
+        ExecutableUnionSelectBuilder(Dialect dialect, boolean isUnionAll, Collection<Builder> builders) {
+            super(dialect, isUnionAll, builders);
+        }
+        @Override
+        protected JdbcExecutor provideClosableExecutor() {
+            return provideExecutor();
+        }
     }
 
     @Override

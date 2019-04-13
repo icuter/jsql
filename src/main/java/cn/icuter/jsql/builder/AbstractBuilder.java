@@ -9,6 +9,7 @@ import cn.icuter.jsql.exception.ExecutionException;
 import cn.icuter.jsql.exception.JSQLException;
 import cn.icuter.jsql.executor.JdbcExecutor;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedList;
@@ -32,7 +33,6 @@ public abstract class AbstractBuilder implements Builder {
     private int offset;
     private int limit;
     private Dialect dialect;
-    private JdbcExecutor executor;
 
     public AbstractBuilder() {
         this(Dialects.UNKNOWN);
@@ -40,12 +40,6 @@ public abstract class AbstractBuilder implements Builder {
 
     public AbstractBuilder(Dialect dialect) {
         this.dialect = dialect;
-        init();
-    }
-
-    public AbstractBuilder(Dialect dialect, JdbcExecutor executor) {
-        this.dialect = dialect;
-        this.executor = executor;
         init();
     }
 
@@ -443,11 +437,6 @@ public abstract class AbstractBuilder implements Builder {
     }
 
     @Override
-    public int execUpdate() throws JSQLException {
-        return execUpdate(executor);
-    }
-
-    @Override
     public <E> List<E> execQuery(JdbcExecutor executor, Class<E> clazz) throws JSQLException {
         if (!(this instanceof DQLBuilder) && !(this instanceof SQLBuilder)) {
             throw new ExecutionException("class of " + this.getClass().getName() + " do not allow execQuery");
@@ -456,11 +445,6 @@ public abstract class AbstractBuilder implements Builder {
             build();
         }
         return executor.execQuery(this, clazz);
-    }
-
-    @Override
-    public <E> List<E> execQuery(Class<E> clazz) throws JSQLException {
-        return execQuery(executor, clazz);
     }
 
     @Override
@@ -475,8 +459,32 @@ public abstract class AbstractBuilder implements Builder {
     }
 
     @Override
+    public int execUpdate() throws JSQLException {
+        try (JdbcExecutor jdbcExecutor = provideClosableExecutor()) {
+            return execUpdate(jdbcExecutor);
+        } catch (IOException e) {
+            throw new JSQLException(e);
+        }
+    }
+    @Override
+    public <E> List<E> execQuery(Class<E> clazz) throws JSQLException {
+        try (JdbcExecutor jdbcExecutor = provideClosableExecutor()) {
+            return execQuery(jdbcExecutor, clazz);
+        } catch (IOException e) {
+            throw new JSQLException(e);
+        }
+    }
+    @Override
     public List<Map<String, Object>> execQuery() throws JSQLException {
-        return execQuery(executor);
+        try (JdbcExecutor jdbcExecutor = provideClosableExecutor()) {
+            return execQuery(jdbcExecutor);
+        } catch (IOException e) {
+            throw new JSQLException(e);
+        }
+    }
+
+    protected JdbcExecutor provideClosableExecutor() {
+        throw new UnsupportedOperationException();
     }
 
     protected void addCondition(Condition... conditions) {

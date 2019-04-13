@@ -3,11 +3,10 @@ package cn.icuter.jsql.executor;
 import cn.icuter.jsql.TestUtils;
 import cn.icuter.jsql.condition.Cond;
 import cn.icuter.jsql.datasource.JSQLDataSource;
-import cn.icuter.jsql.datasource.JdbcExecutorPool;
-import cn.icuter.jsql.datasource.PoolConfiguration;
 import cn.icuter.jsql.exception.JSQLException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -19,40 +18,36 @@ import java.util.UUID;
  * @author edward
  * @since 2019-03-16
  */
+@Ignore
 public class JoinTableTest {
     public static final String TABLE_NAME_FIRST = "t_first";
     public static final String TABLE_NAME_SECOND = "t_second";
     public static final String TABLE_NAME_THIRD = "t_third";
     private static JSQLDataSource dataSource;
-    private static JdbcExecutorPool pool;
     private static final int TOTAL_COUNT = 10;
 
     @BeforeClass
     public static void setup() throws IOException {
         dataSource = TestUtils.getDataSource();
-        PoolConfiguration poolConfiguration = PoolConfiguration.defaultPoolCfg();
-        poolConfiguration.setCreateRetryCount(3);
-        poolConfiguration.setMaxPoolSize(3);
-        pool = dataSource.createExecutorPool(poolConfiguration);
-        try (JdbcExecutor executor = pool.getExecutor()) {
-            try {
-                dataSource.sql("DROP TABLE " + TABLE_NAME_THIRD).execUpdate(executor);
-            } catch (JSQLException e) {
-                // ignore
-            }
-            try {
-                dataSource.sql("DROP TABLE " + TABLE_NAME_SECOND).execUpdate(executor);
-            } catch (JSQLException e) {
-                // ignore
-            }
-            try {
-                dataSource.sql("DROP TABLE " + TABLE_NAME_FIRST).execUpdate(executor);
-            } catch (JSQLException e) {
-                // ignore
-            }
-            dataSource.sql(createThirdTableSql()).execUpdate(executor);
-            dataSource.sql(createSecondTableSql()).execUpdate(executor);
-            dataSource.sql(createFirstTableSql()).execUpdate(executor);
+        try {
+            dataSource.sql("DROP TABLE " + TABLE_NAME_THIRD).execUpdate();
+        } catch (JSQLException e) {
+            // ignore
+        }
+        try {
+            dataSource.sql("DROP TABLE " + TABLE_NAME_SECOND).execUpdate();
+        } catch (JSQLException e) {
+            // ignore
+        }
+        try {
+            dataSource.sql("DROP TABLE " + TABLE_NAME_FIRST).execUpdate();
+        } catch (JSQLException e) {
+            // ignore
+        }
+        try {
+            dataSource.sql(createThirdTableSql()).execUpdate();
+            dataSource.sql(createSecondTableSql()).execUpdate();
+            dataSource.sql(createFirstTableSql()).execUpdate();
 
             for (int i = 0; i < TOTAL_COUNT; i++) {
                 initRecords();
@@ -64,7 +59,7 @@ public class JoinTableTest {
 
     @AfterClass
     public static void tearDown() throws IOException {
-        JdbcExecutor executor = pool.getExecutor();
+        JdbcExecutor executor = dataSource.getJdbcExecutor();
         try {
             try {
                 dataSource.sql("DROP TABLE " + TABLE_NAME_FIRST).execUpdate(executor);
@@ -84,9 +79,8 @@ public class JoinTableTest {
         } catch (Exception e) {
             // ignore
         } finally {
-            pool.returnExecutor(executor);
-            pool.close();
-            pool = null;
+            executor.close();
+            dataSource.close();
             dataSource = null;
         }
     }
@@ -123,8 +117,8 @@ public class JoinTableTest {
                 "  PRIMARY KEY (t_id))";
     }
 
-    private static void initRecords() throws JSQLException {
-        JdbcExecutor executor = pool.getTransactionExecutor();
+    private static void initRecords() throws JSQLException, IOException {
+        JdbcExecutor executor = dataSource.getTransactionExecutor();
         try {
             String tId = UUID.randomUUID().toString();
             dataSource.insert(TABLE_NAME_THIRD)
@@ -150,12 +144,12 @@ public class JoinTableTest {
                             Cond.eq("t_f_col", "col_value_" + fId)
                     ).execUpdate(executor);
         } finally {
-            pool.returnExecutor(executor);
+            executor.close();
         }
     }
     @Test
-    public void testInnerJoinOn() throws JSQLException {
-        JdbcExecutor executor = pool.getExecutor();
+    public void testInnerJoinOn() throws JSQLException, IOException {
+        JdbcExecutor executor = dataSource.getJdbcExecutor();
         try {
             List<Map<String, Object>> joinResultList = dataSource.select()
                     .from(TABLE_NAME_FIRST + " t1")
@@ -169,12 +163,12 @@ public class JoinTableTest {
                     .execQuery(executor);
             System.out.println(joinResultList);
         } finally {
-            pool.returnExecutor(executor);
+            executor.close();
         }
     }
     @Test
-    public void testInnerJoinUsing() throws JSQLException {
-        JdbcExecutor executor = pool.getExecutor();
+    public void testInnerJoinUsing() throws JSQLException, IOException {
+        JdbcExecutor executor = dataSource.getJdbcExecutor();
         try {
             List<Map<String, Object>> joinResultList = dataSource.select()
                     .from(TABLE_NAME_FIRST)
@@ -188,12 +182,12 @@ public class JoinTableTest {
                     .execQuery(executor);
             System.out.println(joinResultList);
         } finally {
-            pool.returnExecutor(executor);
+            executor.close();
         }
     }
     @Test
-    public void testFullJoinOn() throws JSQLException {
-        JdbcExecutor executor = pool.getExecutor();
+    public void testFullJoinOn() throws JSQLException, IOException {
+        JdbcExecutor executor = dataSource.getJdbcExecutor();
         try {
             List<Map<String, Object>> joinResultList = dataSource.select()
                     .from(TABLE_NAME_FIRST + " t1")
@@ -207,12 +201,12 @@ public class JoinTableTest {
                     .execQuery(executor);
             System.out.println(joinResultList);
         } finally {
-            pool.returnExecutor(executor);
+            executor.close();
         }
     }
     @Test
-    public void testFullJoinUsing() throws JSQLException {
-        JdbcExecutor executor = pool.getExecutor();
+    public void testFullJoinUsing() throws JSQLException, IOException {
+        JdbcExecutor executor = dataSource.getJdbcExecutor();
         try {
             List<Map<String, Object>> joinResultList = dataSource.select()
                     .from(TABLE_NAME_FIRST + " t1")
@@ -226,12 +220,12 @@ public class JoinTableTest {
                     .execQuery(executor);
             System.out.println(joinResultList);
         } finally {
-            pool.returnExecutor(executor);
+            executor.close();
         }
     }
     @Test
-    public void testLeftJoinOn() throws JSQLException {
-        JdbcExecutor executor = pool.getExecutor();
+    public void testLeftJoinOn() throws JSQLException, IOException {
+        JdbcExecutor executor = dataSource.getJdbcExecutor();
         try {
             List<Map<String, Object>> joinResultList = dataSource.select()
                     .from(TABLE_NAME_FIRST + " t1")
@@ -245,12 +239,12 @@ public class JoinTableTest {
                     .execQuery(executor);
             System.out.println(joinResultList);
         } finally {
-            pool.returnExecutor(executor);
+            executor.close();
         }
     }
     @Test
-    public void testLeftJoinUsing() throws JSQLException {
-        JdbcExecutor executor = pool.getExecutor();
+    public void testLeftJoinUsing() throws JSQLException, IOException {
+        JdbcExecutor executor = dataSource.getJdbcExecutor();
         try {
             List<Map<String, Object>> joinResultList = dataSource.select()
                     .from(TABLE_NAME_FIRST + " t1")
@@ -264,12 +258,12 @@ public class JoinTableTest {
                     .execQuery(executor);
             System.out.println(joinResultList);
         } finally {
-            pool.returnExecutor(executor);
+            executor.close();
         }
     }
     @Test
-    public void testRightJoinOn() throws JSQLException {
-        JdbcExecutor executor = pool.getExecutor();
+    public void testRightJoinOn() throws JSQLException, IOException {
+        JdbcExecutor executor = dataSource.getJdbcExecutor();
         try {
             List<Map<String, Object>> joinResultList = dataSource.select()
                     .from(TABLE_NAME_FIRST + " t1")
@@ -283,12 +277,12 @@ public class JoinTableTest {
                     .execQuery(executor);
             System.out.println(joinResultList);
         } finally {
-            pool.returnExecutor(executor);
+            executor.close();
         }
     }
     @Test
-    public void testRightJoinUsing() throws JSQLException {
-        JdbcExecutor executor = pool.getExecutor();
+    public void testRightJoinUsing() throws JSQLException, IOException {
+        JdbcExecutor executor = dataSource.getJdbcExecutor();
         try {
             List<Map<String, Object>> joinResultList = dataSource.select()
                     .from(TABLE_NAME_FIRST + " t1")
@@ -302,7 +296,7 @@ public class JoinTableTest {
                     .execQuery(executor);
             System.out.println(joinResultList);
         } finally {
-            pool.returnExecutor(executor);
+            executor.close();
         }
     }
 }
