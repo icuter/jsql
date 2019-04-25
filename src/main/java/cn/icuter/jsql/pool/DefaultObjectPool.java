@@ -179,7 +179,7 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
                 return tryToCreate(tryCount + 1);
             }
             if (tryCount > 0) {
-                LOGGER.error("try to create pool object fail when exceed retry count: "
+                LOGGER.error("try to create pool object fail when exceeded retrying count: "
                         + poolCfg.getCreateRetryCount());
             }
             throw e;

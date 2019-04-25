@@ -55,7 +55,10 @@ public interface Builder extends ConditionBuilder, ExecutableBuilder {
         throw new UnsupportedOperationException();
     }
     // Insert Builder
-    default Builder insert(String tableName) {
+    default Builder insert(String tableName, String... columns) {
+        throw new UnsupportedOperationException();
+    }
+    default Builder values(List<Object> values) {
         throw new UnsupportedOperationException();
     }
     default Builder values(Eq... values) {

@@ -28,9 +28,21 @@ public class InsertBuilder extends AbstractBuilder implements DMLBuilder {
     }
 
     @Override
-    public Builder insert(String tableName) {
+    public Builder insert(String tableName, String... columns) {
         sqlStringBuilder.append("insert into").append(tableName);
+        if (columns != null && columns.length > 0) {
+            sqlStringBuilder.append("(" + String.join(",", columns) + ")");
+        }
         return this;
+    }
+
+    @Override
+    public Builder values(List<Object> values) {
+        if (values == null || values.size() <= 0) {
+            throw new IllegalArgumentException("values must not be null or empty! ");
+        }
+        sqlStringBuilder.append("values(" + createPlaceHolder(values.size()) + ")");
+        return value(values.toArray());
     }
 
     @Override
@@ -55,34 +67,36 @@ public class InsertBuilder extends AbstractBuilder implements DMLBuilder {
     @Override
     public Builder values(Object values) {
         Objects.requireNonNull(values, "values must not be null");
-
         if (values instanceof Map) {
             Map<Object, Object> attrs = (Map<Object, Object>) values;
             List<Eq> conditionList = attrs.entrySet().stream()
                     .map(e -> Cond.eq(e.getKey().toString(), e.getValue()))
                     .collect(LinkedList::new, LinkedList::add, LinkedList::addAll);
-            return values(conditionList.toArray(new Eq[conditionList.size()]));
+            return values(conditionList.toArray(new Eq[0]));
         } else if (values instanceof Collection) {
-            Collection<Eq> eqs = (Collection<Eq>) values;
-            return values(eqs.toArray(new Eq[eqs.size()]));
+            return values(((Collection<Eq>) values).toArray(new Eq[0]));
         } else if (values instanceof Eq) {
             return values(new Eq[]{(Eq) values});
+        } else if (values.getClass().isArray()) {
+            if (Eq.class.isAssignableFrom(values.getClass().getComponentType())) {
+                return values((Eq[]) values); // never be here, using values(Eq...) instead, just in case
+            } else {
+                return values(Arrays.asList((Object[]) values));
+            }
         } else {
-            Map<String, Object> attrs = ORMapper.of(values).toMapIgnoreNullValue();
-            return valuesMap(attrs);
+            return valuesMap(ORMapper.of(values).toMapIgnoreNullValue());
         }
     }
 
     @Override
     public <T> Builder values(T value, FieldInterceptor<T> interceptor) {
-        Map<String, Object> attrs = ORMapper.of(value).toMap(interceptor);
-        return valuesMap(attrs);
+        return valuesMap(ORMapper.of(value).toMap(interceptor));
     }
 
     private Builder valuesMap(Map<String, Object> attrs) {
         List<Eq> eqList = attrs.entrySet().stream()
                 .map(e -> Cond.eq(e.getKey(), e.getValue()))
                 .collect(LinkedList::new, LinkedList::add, LinkedList::addAll);
-        return values(eqList.toArray(new Eq[eqList.size()]));
+        return values(eqList.toArray(new Eq[0]));
     }
 }

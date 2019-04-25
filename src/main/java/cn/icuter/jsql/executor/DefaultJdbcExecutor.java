@@ -296,7 +296,7 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
     }
 
     private void checkAndBuild(Builder builder) {
-        if (!builder.getBuilderContext().isBuilt()) {
+        if (!builder.getBuilderContext().hasBuilt()) {
             builder.build();
         }
     }

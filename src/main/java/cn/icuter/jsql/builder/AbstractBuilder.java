@@ -135,7 +135,7 @@ public abstract class AbstractBuilder implements Builder {
         if (columns == null || columns.length <= 0) {
             throw new IllegalArgumentException("columns must not be null or empty! ");
         }
-        String columnStr = Arrays.stream(columns).collect(Collectors.joining(","));
+        String columnStr = String.join(",", columns);
         sqlStringBuilder.append("group by").append(columnStr);
         return this;
     }
@@ -229,9 +229,6 @@ public abstract class AbstractBuilder implements Builder {
 
     @Override
     public Builder build() {
-        if (builderContext.isBuilt()) {
-            return this;
-        }
         if (dialect.supportOffsetLimit() && limit > 0) {
             dialect.injectOffsetLimit(builderContext);
         }
@@ -240,7 +237,6 @@ public abstract class AbstractBuilder implements Builder {
                 .filter(condition -> condition.prepareType() == PrepareType.PLACEHOLDER.getType())
                 .map(Condition::getValue)
                 .collect(LinkedList::new, this::addPreparedValue, LinkedList::addAll);
-        builderContext.built = true;
         return this;
     }
 
@@ -430,7 +426,7 @@ public abstract class AbstractBuilder implements Builder {
         if (!(this instanceof DMLBuilder) && !(this instanceof SQLBuilder)) {
             throw new ExecutionException("class of " + this.getClass().getName() + " do not allow execUpdate");
         }
-        if (!builderContext.isBuilt()) {
+        if (!builderContext.hasBuilt()) {
             build();
         }
         return executor.execUpdate(this);
@@ -441,7 +437,7 @@ public abstract class AbstractBuilder implements Builder {
         if (!(this instanceof DQLBuilder) && !(this instanceof SQLBuilder)) {
             throw new ExecutionException("class of " + this.getClass().getName() + " do not allow execQuery");
         }
-        if (!builderContext.isBuilt()) {
+        if (!builderContext.hasBuilt()) {
             build();
         }
         return executor.execQuery(this, clazz);
@@ -452,7 +448,7 @@ public abstract class AbstractBuilder implements Builder {
         if (!(this instanceof DQLBuilder) && !(this instanceof SQLBuilder)) {
             throw new ExecutionException("class of " + this.getClass().getName() + " do not allow execQuery");
         }
-        if (!builderContext.isBuilt()) {
+        if (!builderContext.hasBuilt()) {
             build();
         }
         return executor.execQuery(this);
@@ -501,6 +497,6 @@ public abstract class AbstractBuilder implements Builder {
 
     @Override
     public String toString() {
-        return builderContext.built ? ("sql: " + buildSql + ", values:" + preparedValueList) : "Builder not build yet";
+        return builderContext.hasBuilt() ? ("sql: " + buildSql + ", values:" + preparedValueList) : "Builder not build yet";
     }
 }

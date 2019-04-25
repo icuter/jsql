@@ -15,7 +15,6 @@ public class BuilderContext {
     SQLStringBuilder sqlStringBuilder;
     int offset;
     int limit;
-    boolean built;
     boolean hasOrderBy;
     int sqlLevel;
     Builder builder;
@@ -47,8 +46,8 @@ public class BuilderContext {
         return -1;
     }
 
-    public boolean isBuilt() {
-        return built;
+    public boolean hasBuilt() {
+        return builder.getSql() != null;
     }
 
     public boolean isHasOrderBy() {

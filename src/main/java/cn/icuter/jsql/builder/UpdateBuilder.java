@@ -55,10 +55,9 @@ public class UpdateBuilder extends AbstractBuilder implements DMLBuilder {
             List<Eq> conditionList = attrs.entrySet().stream()
                     .map(e -> Cond.eq(String.valueOf(e.getKey()), e.getValue()))
                     .collect(LinkedList::new, LinkedList::add, LinkedList::addAll);
-            return set(conditionList.toArray(new Eq[conditionList.size()]));
+            return set(conditionList.toArray(new Eq[0]));
         } else if (value instanceof Collection) {
-            Collection<Eq> eqs = (Collection<Eq>) value;
-            return set(eqs.toArray(new Eq[eqs.size()]));
+            return set(((Collection<Eq>) value).toArray(new Eq[0]));
         } else if (value instanceof Eq) {
             return set(new Eq[]{(Eq) value});
         } else {
@@ -75,6 +74,6 @@ public class UpdateBuilder extends AbstractBuilder implements DMLBuilder {
         List<Eq> conditionList = attrs.entrySet().stream()
                 .map(e -> Cond.eq(e.getKey(), e.getValue()))
                 .collect(LinkedList::new, LinkedList::add, LinkedList::addAll);
-        return set(conditionList.toArray(new Eq[conditionList.size()]));
+        return set(conditionList.toArray(new Eq[0]));
     }
 }

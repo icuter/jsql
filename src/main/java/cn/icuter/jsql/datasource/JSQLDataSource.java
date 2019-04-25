@@ -24,21 +24,25 @@ import cn.icuter.jsql.pool.ObjectPool;
 import cn.icuter.jsql.pool.PooledObjectManager;
 import cn.icuter.jsql.util.ObjectUtil;
 
+import javax.sql.PooledConnection;
+import java.io.PrintWriter;
 import java.sql.Blob;
 import java.sql.Clob;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.NClob;
 import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
 import java.util.Collection;
 import java.util.Objects;
 import java.util.Properties;
+import java.util.logging.Logger;
 
 /**
  * @author edward
  * @since 2018-08-10
  */
-public class JSQLDataSource {
+public class JSQLDataSource implements javax.sql.ConnectionPoolDataSource {
 
     private static final JSQLLogger LOGGER = Logs.getLogger(JSQLDataSource.class);
 
@@ -303,8 +307,37 @@ public class JSQLDataSource {
         return dialect;
     }
 
+    @Override
+    public PrintWriter getLogWriter() throws SQLException {
+        return null;
+    }
+
+    @Override
+    public void setLogWriter(PrintWriter out) throws SQLException {
+    }
+
+    @Override
+    public void setLoginTimeout(int seconds) throws SQLException {
+        this.loginTimeout = seconds;
+    }
+    @Override
     public int getLoginTimeout() {
         return loginTimeout;
+    }
+
+    @Override
+    public Logger getParentLogger() throws SQLFeatureNotSupportedException {
+        return null;
+    }
+
+    @Override
+    public PooledConnection getPooledConnection() throws SQLException {
+        return createConnectionPool();
+    }
+
+    @Override
+    public PooledConnection getPooledConnection(String user, String password) throws SQLException {
+        return null;
     }
 
     class ExecutableSelectBuilder extends SelectBuilder {

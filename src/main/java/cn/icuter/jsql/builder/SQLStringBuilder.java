@@ -90,15 +90,21 @@ public class SQLStringBuilder {
         return filterSQLItems(item -> fragmentType == null ? item.type == null : fragmentType.equalsIgnoreCase(item.type));
     }
 
+    public boolean existsType(String fragmentType) {
+        SQLItem sqlItem = findFirstSQLItem(item -> fragmentType == null ? item.type == null : fragmentType.equalsIgnoreCase(item.type));
+        return sqlItem != null;
+    }
+
     public List<SQLItem> findBySQL(String sql) {
         return filterSQLItems(item -> sql == null ? item.sql == null : sql.equalsIgnoreCase(item.sql));
     }
 
-    public void replaceByType(String fragmentType, String replacement) {
+    public SQLStringBuilder replaceByType(String fragmentType, String replacement) {
         List<SQLItem> sqlItems = findByType(fragmentType);
         for (SQLItem sqlItem : sqlItems) {
             sqlItem.sql = replacement;
         }
+        return this;
     }
 
     /**
@@ -122,6 +128,17 @@ public class SQLStringBuilder {
             }
         }
         return resultList;
+    }
+
+    private SQLItem findFirstSQLItem(Predicate<SQLItem> predicate) {
+        for (int i = 0; i < sqlItems.size(); i++) {
+            SQLItem item = sqlItems.get(i);
+            if (predicate.test(item)) {
+                item.sqlPosition = i;
+                return item;
+            }
+        }
+        return null;
     }
 
     public String serialize() {
