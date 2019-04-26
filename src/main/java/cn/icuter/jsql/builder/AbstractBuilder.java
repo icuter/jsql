@@ -58,8 +58,9 @@ public abstract class AbstractBuilder implements Builder {
         if (columns != null && columns.length > 0) {
             columnStr = String.join(", ", columns);
         }
-        sqlStringBuilder.append("select", "top-select")
-                        .append(columnStr, "top-columns");
+        boolean existsTopSelect = sqlStringBuilder.existsType("top-select");
+        sqlStringBuilder.append("select", existsTopSelect ? "sub-select" : "top-select")
+                        .append(columnStr, existsTopSelect ? "sub-columns" : "top-columns");
         return this;
     }
 
@@ -72,8 +73,8 @@ public abstract class AbstractBuilder implements Builder {
     @Override
     public Builder distinct() {
         List<SQLStringBuilder.SQLItem> itemList = sqlStringBuilder.findByType("top-select");
-        for (SQLStringBuilder.SQLItem item : itemList) {
-            sqlStringBuilder.insert(item.sqlPosition + 1, "distinct");
+        if (!itemList.isEmpty()) {
+            sqlStringBuilder.insert(itemList.get(0).sqlPosition + 1, "distinct");
         }
         return this;
     }
