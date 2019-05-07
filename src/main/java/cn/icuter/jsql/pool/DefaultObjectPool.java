@@ -35,6 +35,7 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
 
     private static final int IDLE_NEVER_TIMEOUT = -1;
     private static final int IDLE_ALWAYS_TIMEOUT = 0;
+    private static final int IDLE_SCHEDULE_OFFSET_MILLISECONDS = 100; // check idle timeout delay 100ms
 
     private PoolConfiguration poolCfg;
     private final PooledObjectManager<T> manager;
@@ -252,8 +253,8 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
 
     private void scheduleIdleTimeoutTask(PooledObject<T> pooledObject) {
         if (idleObjectExecutor != null && poolCfg.getIdleTimeout() > 0) {
-            idleObjectExecutor.schedule(new IdleObjectTimeoutTask(pooledObject), poolCfg.getIdleTimeout(),
-                    TimeUnit.MILLISECONDS);
+            idleObjectExecutor.schedule(new IdleObjectTimeoutTask(pooledObject),
+                    poolCfg.getIdleTimeout() + IDLE_SCHEDULE_OFFSET_MILLISECONDS, TimeUnit.MILLISECONDS);
         }
     }
 

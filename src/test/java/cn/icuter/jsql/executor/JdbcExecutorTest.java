@@ -6,6 +6,7 @@ import cn.icuter.jsql.builder.Builder;
 import cn.icuter.jsql.builder.SelectBuilder;
 import cn.icuter.jsql.condition.Cond;
 import cn.icuter.jsql.datasource.JSQLDataSource;
+import cn.icuter.jsql.datasource.TransactionDataSource;
 import cn.icuter.jsql.dialect.Dialect;
 import cn.icuter.jsql.dialect.Dialects;
 import cn.icuter.jsql.exception.ExecutionException;
@@ -53,7 +54,7 @@ public class JdbcExecutorTest {
     }
 
     @AfterClass
-    public static void tearDown() throws JSQLException {
+    public static void tearDown() throws JSQLException, IOException {
         try {
             dataSource.sql("DROP TABLE " + TABLE_NAME).execUpdate();
         } finally {
@@ -386,6 +387,65 @@ public class JdbcExecutorTest {
             jdbcExecutor.execBatch(batchList);
             jdbcExecutor.commit();
         }
+    }
+
+    @Test
+    public void testTransactionDataSource() throws Exception {
+        dataSource.transaction(tx -> {
+            TestTable testTable = createTestTableRecord();
+            tx.insert(TABLE_NAME).values(testTable).execUpdate();
+
+            List<TestTable> selectTestTableList = tx.select().from(TABLE_NAME)
+                                                    .where().eq("test_id", testTable.getTestId())
+                                                    .execQuery(TestTable.class);
+            Assert.assertFalse(selectTestTableList.isEmpty());
+            Assert.assertEquals(selectTestTableList.get(0).getTestId(), testTable.getTestId());
+            tx.rollback();
+        });
+        List<TestTable> selectTestTableList = dataSource.select().from(TABLE_NAME).execQuery(TestTable.class);
+        Assert.assertTrue(selectTestTableList.isEmpty());
+
+        try (TransactionDataSource tx = dataSource.transaction()) {
+            TestTable testTable = createTestTableRecord();
+            tx.insert(TABLE_NAME).values(testTable).execUpdate();
+
+            selectTestTableList = tx.select().from(TABLE_NAME)
+                                    .where().eq("test_id", testTable.getTestId())
+                                    .execQuery(TestTable.class);
+            Assert.assertFalse(selectTestTableList.isEmpty());
+            Assert.assertEquals(selectTestTableList.get(0).getTestId(), testTable.getTestId());
+            tx.rollback();
+        }
+        selectTestTableList = dataSource.select().from(TABLE_NAME).execQuery(TestTable.class);
+        Assert.assertTrue(selectTestTableList.isEmpty());
+
+        dataSource.transaction(tx -> {
+            for (int i = 0; i < 10; i++) {
+                TestTable testTable = createTestTableRecord();
+                tx.insert(TABLE_NAME).values(testTable).execUpdate();
+            }
+        });
+
+        List<TestTable> list = dataSource.select().from(TABLE_NAME).execQuery(TestTable.class);
+        Assert.assertEquals(10, list.size());
+
+        dataSource.delete().from(TABLE_NAME).execUpdate();
+        list = dataSource.select().from(TABLE_NAME).execQuery(TestTable.class);
+        Assert.assertTrue(list.isEmpty());
+
+        try {
+            dataSource.transaction(tx -> {
+                for (int i = 0; i < 10; i++) {
+                    TestTable testTable = createTestTableRecord();
+                    tx.insert(TABLE_NAME).values(testTable).execUpdate();
+                }
+                throw new Exception("Error in transaction operation");
+            });
+        } catch (Exception e) {
+            // ignore
+        }
+        list = dataSource.select().from(TABLE_NAME).execQuery(TestTable.class);
+        Assert.assertTrue(list.isEmpty());
     }
 
     @Test(expected = ExecutionException.class)

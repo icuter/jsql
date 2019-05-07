@@ -111,7 +111,7 @@ public class DefaultObjectPoolTest {
                 pool.returnObject(borrowedObject);
             }
             // let pool maintainer try to purge idle object again
-            Thread.sleep(cfg.getIdleTimeout() * borrowedObjects.length);
+            Thread.sleep((cfg.getIdleTimeout() + 100) * borrowedObjects.length);
             assertTrue(pool.isPoolEmpty());
         }
 
@@ -168,7 +168,7 @@ public class DefaultObjectPoolTest {
             assertTrue(pool.getPoolStats().poolSize <= cfg.getMaxPoolSize());
 
             // sleep enough time for schedule service run out
-            Thread.sleep(100L);
+            Thread.sleep(1150L);
 
             assertTrue(pool.isPoolEmpty());
         }

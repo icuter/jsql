@@ -1,12 +1,5 @@
 package cn.icuter.jsql.datasource;
 
-import cn.icuter.jsql.builder.Builder;
-import cn.icuter.jsql.builder.DeleteBuilder;
-import cn.icuter.jsql.builder.InsertBuilder;
-import cn.icuter.jsql.builder.SQLBuilder;
-import cn.icuter.jsql.builder.SelectBuilder;
-import cn.icuter.jsql.builder.UnionSelectBuilder;
-import cn.icuter.jsql.builder.UpdateBuilder;
 import cn.icuter.jsql.data.JSQLBlob;
 import cn.icuter.jsql.data.JSQLClob;
 import cn.icuter.jsql.data.JSQLNClob;
@@ -22,9 +15,12 @@ import cn.icuter.jsql.log.Logs;
 import cn.icuter.jsql.pool.DefaultObjectPool;
 import cn.icuter.jsql.pool.ObjectPool;
 import cn.icuter.jsql.pool.PooledObjectManager;
+import cn.icuter.jsql.transaction.TransactionOperation;
 import cn.icuter.jsql.util.ObjectUtil;
 
 import javax.sql.PooledConnection;
+import java.io.Closeable;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.sql.Blob;
 import java.sql.Clob;
@@ -33,7 +29,6 @@ import java.sql.DriverManager;
 import java.sql.NClob;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
-import java.util.Collection;
 import java.util.Objects;
 import java.util.Properties;
 import java.util.logging.Logger;
@@ -42,7 +37,7 @@ import java.util.logging.Logger;
  * @author edward
  * @since 2018-08-10
  */
-public class JSQLDataSource implements javax.sql.ConnectionPoolDataSource {
+public class JSQLDataSource extends AbstractBuilderDataSource implements javax.sql.ConnectionPoolDataSource, Closeable {
 
     private static final JSQLLogger LOGGER = Logs.getLogger(JSQLDataSource.class);
 
@@ -55,6 +50,8 @@ public class JSQLDataSource implements javax.sql.ConnectionPoolDataSource {
     private ConnectionPool connectionPool;
     private JdbcExecutorPool executorPool;
 
+    protected JSQLDataSource() {
+    }
     /**
      * <pre>
      * jdbc.properties
@@ -171,6 +168,28 @@ public class JSQLDataSource implements javax.sql.ConnectionPoolDataSource {
         executorPool = new JdbcExecutorPool(objectPool);
     }
 
+    public void transaction(TransactionOperation operation) throws Exception {
+        TransactionDataSource transactionDataSource = null;
+        try {
+            transactionDataSource = new TransactionDataSource(this);
+            operation.doTransaction(transactionDataSource);
+        } catch (Exception e) {
+            if (transactionDataSource != null) {
+                transactionDataSource.rollback();
+            }
+            LOGGER.info("error occurs while doing transaction operation and has been rolled back");
+            throw e;
+        } finally {
+            if (transactionDataSource != null) {
+                transactionDataSource.close();
+            }
+        }
+    }
+
+    public TransactionDataSource transaction() {
+        return new TransactionDataSource(this);
+    }
+
     public TransactionExecutor createTransaction() {
         return new TransactionExecutor(createConnection(false));
     }
@@ -223,44 +242,20 @@ public class JSQLDataSource implements javax.sql.ConnectionPoolDataSource {
     public JdbcExecutor getJdbcExecutor() {
         return executorPool.getExecutor();
     }
-    public void close() {
+    public void close() throws IOException {
         connectionPool.close();
     }
     public TransactionExecutor getTransactionExecutor() {
         return executorPool.getTransactionExecutor();
     }
 
-    protected JdbcExecutor provideExecutor() {
+    @Override
+    public JdbcExecutor provideExecutor() {
         return getJdbcExecutor();
     }
-
-    public Builder select(String... cols) {
-        return new ExecutableSelectBuilder(dialect).select(cols);
-    }
-    public Builder update(String table) {
-        return new ExecutableUpdateBuilder(dialect).update(table);
-    }
-    public Builder insert(String table) {
-        return new ExecutableInsertBuilder(dialect).insert(table);
-    }
-    public Builder delete() {
-        return new ExecutableDeleteBuilder(dialect).delete();
-    }
-    public Builder sql(String sql, Object... values) {
-        return new ExecutableSQLBuilder().sql(sql).value(values);
-    }
-
-    public Builder union(Builder... builders) {
-        return new ExecutableUnionSelectBuilder(dialect, false, builders);
-    }
-    public Builder unionAll(Builder... builders) {
-        return new ExecutableUnionSelectBuilder(dialect, true, builders);
-    }
-    public Builder union(Collection<Builder> builders) {
-        return new ExecutableUnionSelectBuilder(dialect, false, builders);
-    }
-    public Builder unionAll(Collection<Builder> builders) {
-        return new ExecutableUnionSelectBuilder(dialect, true, builders);
+    @Override
+    public Dialect provideDialect() {
+        return dialect;
     }
 
     public Clob createClob(String initData) {
@@ -332,67 +327,12 @@ public class JSQLDataSource implements javax.sql.ConnectionPoolDataSource {
 
     @Override
     public PooledConnection getPooledConnection() throws SQLException {
-        return createConnectionPool();
+        return connectionPool;
     }
 
     @Override
     public PooledConnection getPooledConnection(String user, String password) throws SQLException {
-        return null;
-    }
-
-    class ExecutableSelectBuilder extends SelectBuilder {
-        ExecutableSelectBuilder(Dialect dialect) {
-            super(dialect);
-        }
-        @Override
-        protected JdbcExecutor provideClosableExecutor() {
-            return provideExecutor();
-        }
-    }
-    class ExecutableUpdateBuilder extends UpdateBuilder {
-        ExecutableUpdateBuilder(Dialect dialect) {
-            super(dialect);
-        }
-        @Override
-        protected JdbcExecutor provideClosableExecutor() {
-            return provideExecutor();
-        }
-    }
-    class ExecutableInsertBuilder extends InsertBuilder {
-        ExecutableInsertBuilder(Dialect dialect) {
-            super(dialect);
-        }
-        @Override
-        protected JdbcExecutor provideClosableExecutor() {
-            return provideExecutor();
-        }
-    }
-    class ExecutableDeleteBuilder extends DeleteBuilder {
-        ExecutableDeleteBuilder(Dialect dialect) {
-            super(dialect);
-        }
-        @Override
-        protected JdbcExecutor provideClosableExecutor() {
-            return provideExecutor();
-        }
-    }
-    class ExecutableSQLBuilder extends SQLBuilder {
-        @Override
-        protected JdbcExecutor provideClosableExecutor() {
-            return provideExecutor();
-        }
-    }
-    class ExecutableUnionSelectBuilder extends UnionSelectBuilder {
-        ExecutableUnionSelectBuilder(Dialect dialect, boolean isUnionAll, Builder... builders) {
-            super(dialect, isUnionAll, builders);
-        }
-        ExecutableUnionSelectBuilder(Dialect dialect, boolean isUnionAll, Collection<Builder> builders) {
-            super(dialect, isUnionAll, builders);
-        }
-        @Override
-        protected JdbcExecutor provideClosableExecutor() {
-            return provideExecutor();
-        }
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override

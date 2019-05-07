@@ -230,6 +230,9 @@ public abstract class AbstractBuilder implements Builder {
 
     @Override
     public Builder build() {
+        if (builderContext.hasBuilt()) {
+            return this;
+        }
         if (dialect.supportOffsetLimit() && limit > 0) {
             dialect.injectOffsetLimit(builderContext);
         }
