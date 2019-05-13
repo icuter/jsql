@@ -160,11 +160,11 @@ public class JSQLDataSource extends AbstractBuilderDataSource implements javax.s
 
             DriverManager.setLoginTimeout(this.loginTimeout);
         }
-        if (!driverProps.containsKey(PROP_USER)) {
-            driverProps.put(PROP_USER, username);
+        if (!driverProps.containsKey(PROP_USER) && username != null) {
+            driverProps.setProperty(PROP_USER, username);
         }
-        if (!driverProps.containsKey(PROP_PASSWORD)) {
-            driverProps.put(PROP_PASSWORD, password);
+        if (!driverProps.containsKey(PROP_PASSWORD) && password != null) {
+            driverProps.setProperty(PROP_PASSWORD, password);
         }
         LOGGER.debug("set up " + toString());
     }

@@ -50,7 +50,11 @@ public class PooledConnectionManager implements PooledObjectManager<Connection> 
     }
 
     protected Connection newConnection() throws SQLException {
-        return dataSource.createConnection();
+        try {
+            return dataSource.createConnection();
+        } catch (Exception e) {
+            throw new SQLException(e.getMessage(), e.getCause());
+        }
     }
 
     @Override

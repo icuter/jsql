@@ -67,6 +67,8 @@ JSQL for Reasons:
 
 ### Examples
 
+### Auto Commit
+
 ```java
 JSQLDataSource dataSource = new JSQLDataSource("url", "username", "password");
 List<Map<String, Object>> list = dataSource.select()
@@ -97,7 +99,7 @@ SQL: insert into table(col1,col2,col3) values(?,?,?)
 VALUE: ["val1", 102, "val3"]
 ```
 
-Using standalone Transaction to control commit or rollback operation as favour
+Using standalone Transaction to control commit or rollback operation as your favour
 
 ```java
 JSQLDataSource dataSource = new JSQLDataSource("url", "username", "password");
@@ -119,7 +121,7 @@ VALUE: ["val1", 102, "val3"]
 ## Documents
 Find more documentation [here](https://www.icuter.cn).
 
-1. [JSQLDataSource](https://www.icuter.cn/datasource.html)
+1. [DataSource](https://www.icuter.cn/datasource.html)
 2. [JDBC Connection Pool](https://www.icuter.cn/pool.html)
 3. [Transaction](https://www.icuter.cn/transaction.html)
 4. [SQL Builder](https://www.icuter.cn/builder.html)
@@ -131,33 +133,33 @@ Find more documentation [here](https://www.icuter.cn).
 
 ## Release Notes
 ### 1.0.5
-bug fixes:
+bug fixes
 - fix top-select in `SelectBuilder.select`
 
-features:
+features
 - support transaction in JSQLDataSource
 - support `insert... select...` syntax
 - support Driver properties when getting Connection from Driver
 
 ### 1.0.4
-bug fixes:
+bug fixes
 - fix pool configuration
 
-features:
+features
 - execute builder directly in JSQLDataSource
 - refactor Connection object idle timeout validation
 
 > jsql-jdk1.6 missing this version
 
 ### 1.0.3
-breaks:
+breaks
 - Remove `Builder.union` and `Builder.unionAll` operation
 
-bug fixes:
+bug fixes
 - fix `OracleDialect` invalid table alias name format
 - fix `DB2Dialect` invalid table alias name format
 
-features:
+features
 - Add builder as Condition value
 - Add `UnionSelectBuilder` for union/unionAll operation
 
