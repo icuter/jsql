@@ -31,6 +31,7 @@ import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.util.Objects;
 import java.util.Properties;
+import java.util.Set;
 import java.util.logging.Logger;
 
 /**
@@ -41,12 +42,15 @@ public class JSQLDataSource extends AbstractBuilderDataSource implements javax.s
 
     private static final JSQLLogger LOGGER = Logs.getLogger(JSQLDataSource.class);
 
+    private static final String PROP_PREFIX = "driver.";
+    private static final String PROP_USER = "user";
+    private static final String PROP_PASSWORD = "password";
+
     private String url;
-    private String username;
-    private String password;
     private String driverClassName;
-    private Dialect dialect;   // parse by url or name or dialect class name
-    private int loginTimeout;  // default 5s
+    private Dialect dialect;        // parse by url or name or dialect class name
+    private int loginTimeout;       // default 5s
+    private Properties driverProps = new Properties(); // driver get connection properties
     private ConnectionPool connectionPool;
     private JdbcExecutorPool executorPool;
 
@@ -68,6 +72,10 @@ public class JSQLDataSource extends AbstractBuilderDataSource implements javax.s
      * - pool.pollTimeout             default 10 seconds
      * - pool.createRetryCount        default 0
      * - pool.scheduledThreadLifeTime default 5 minutes
+     *
+     * - driver.user       jdbc username (prior to username)
+     * - driver.password   jdbc password (prior to password)
+     * - driver.anyThings  jdbc customizing properties for Driver(such as SocketFactory for proxy request)
      * </pre>
      * @param jdbcProp jdbc properties in file or create by manually
      */
@@ -88,9 +96,20 @@ public class JSQLDataSource extends AbstractBuilderDataSource implements javax.s
             dialect = Dialects.parseUrl(jdbcProp.getProperty("url"));
         }
         int loginTimeout = Integer.valueOf(jdbcProp.getProperty("loginTimeout", "5"));
+        setDriverProps(jdbcProp);
         init(jdbcProp.getProperty("url"), jdbcProp.getProperty("username"), jdbcProp.getProperty("password"),
                 jdbcProp.getProperty("driverClass"), loginTimeout, dialect);
         initPool(jdbcProp);
+    }
+
+    private void setDriverProps(Properties jdbcProp) {
+        Set<Object> keySet = jdbcProp.keySet();
+        for (Object keyObj : keySet) {
+            String key = (String) keyObj;
+            if (key.startsWith(PROP_PREFIX)) {
+                driverProps.put(key.substring(PROP_PREFIX.length()), jdbcProp.getProperty(key));
+            }
+        }
     }
 
     public JSQLDataSource(String url, String username, String password) {
@@ -106,7 +125,11 @@ public class JSQLDataSource extends AbstractBuilderDataSource implements javax.s
     }
 
     public JSQLDataSource(String url, String username, String password, String driverClassName, Dialect dialect) {
-        init(url, username, password, driverClassName, 5, dialect);
+        this(url, username, password, driverClassName, 5, dialect);
+    }
+
+    public JSQLDataSource(String url, String username, String password, String driverClassName, int loginTimeout, Dialect dialect) {
+        init(url, username, password, driverClassName, loginTimeout, dialect);
         initPool(new Properties());
     }
 
@@ -114,11 +137,11 @@ public class JSQLDataSource extends AbstractBuilderDataSource implements javax.s
         ObjectUtil.requireNonEmpty(url, "url must not be empty");
 
         this.url = url;
-        this.username = username;
-        this.password = password;
         this.driverClassName = driverClassName;
         this.dialect = dialect;
-        if (dialect.requireUserPassword()) {
+        if (dialect.requireUserPassword()
+                && !driverProps.containsKey(PROP_USER)
+                && !driverProps.containsKey(PROP_PASSWORD)) {
             ObjectUtil.requireNonEmpty(username, "username must not be empty");
             ObjectUtil.requireNonNull(password, "password must not be null");
         }
@@ -136,6 +159,12 @@ public class JSQLDataSource extends AbstractBuilderDataSource implements javax.s
             LOGGER.debug("Connection login timeout has set globally with " + this.loginTimeout + "s");
 
             DriverManager.setLoginTimeout(this.loginTimeout);
+        }
+        if (!driverProps.containsKey(PROP_USER)) {
+            driverProps.put(PROP_USER, username);
+        }
+        if (!driverProps.containsKey(PROP_PASSWORD)) {
+            driverProps.put(PROP_PASSWORD, password);
         }
         LOGGER.debug("set up " + toString());
     }
@@ -194,6 +223,10 @@ public class JSQLDataSource extends AbstractBuilderDataSource implements javax.s
         return new TransactionExecutor(createConnection(false));
     }
 
+    public JdbcExecutorPool getExecutorPool() {
+        return executorPool;
+    }
+
     public JdbcExecutor createJdbcExecutor() {
         return new CloseableJdbcExecutor(createConnection());
     }
@@ -204,7 +237,7 @@ public class JSQLDataSource extends AbstractBuilderDataSource implements javax.s
 
     public Connection createConnection(boolean autoCommit) {
         try {
-            Connection connection = DriverManager.getConnection(url, username, password);
+            Connection connection = DriverManager.getConnection(url, driverProps);
             connection.setAutoCommit(autoCommit);
             return connection;
         } catch (SQLException e) {
@@ -286,14 +319,6 @@ public class JSQLDataSource extends AbstractBuilderDataSource implements javax.s
         return url;
     }
 
-    public String getUsername() {
-        return username;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
     public String getDriverClassName() {
         return driverClassName;
     }
@@ -335,15 +360,32 @@ public class JSQLDataSource extends AbstractBuilderDataSource implements javax.s
         throw new SQLFeatureNotSupportedException();
     }
 
+    public Properties getDriverProperties() {
+        return driverProps;
+    }
+
     @Override
     public String toString() {
         return new StringBuilder("JSQLDataSource{")
                 .append("url='").append(url).append('\'')
-                .append(", username='").append(username).append('\'')
-                .append(", password='***'")
+                .append(", driverProps='").append(displayDriverProps()).append('\'')
                 .append(", driverClassName='").append(driverClassName).append('\'')
-                .append(", dialect=").append(dialect.getDialectName())
+                .append(", dialect='").append(dialect.getDialectName()).append('\'')
                 .append(", loginTimeout=").append(loginTimeout).append("s")
                 .append('}').toString();
+    }
+
+    private String displayDriverProps() {
+        StringBuilder driverDebugInfo = new StringBuilder();
+        for (Object keyObj : driverProps.keySet()) {
+            String key = (String) keyObj;
+            driverDebugInfo.append(key).append("=");
+            if (PROP_PASSWORD.equals(key)) {
+                driverDebugInfo.append("******, ");
+            } else {
+                driverDebugInfo.append(driverProps.getProperty(key)).append(", ");
+            }
+        }
+        return driverDebugInfo.toString().replaceFirst(",\\s*$", "");
     }
 }

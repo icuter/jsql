@@ -4,6 +4,7 @@ import cn.icuter.jsql.builder.BuilderTest;
 import cn.icuter.jsql.condition.ConditionTest;
 import cn.icuter.jsql.data.JSQLBlobTest;
 import cn.icuter.jsql.data.JSQLClobTest;
+import cn.icuter.jsql.datasource.JSQLDataSourceTest;
 import cn.icuter.jsql.orm.ORMapperTest;
 import cn.icuter.jsql.pool.DefaultObjectPoolTest;
 import org.junit.runner.RunWith;
@@ -15,6 +16,7 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
+    JSQLDataSourceTest.class,
     BuilderTest.class,
     ORMapperTest.class,
     ConditionTest.class,
