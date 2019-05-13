@@ -28,12 +28,18 @@ public abstract class Logs {
             JSQLLogger jsqlLogger = loggerClass.newInstance();
             jsqlLogger.init(clazz);
             return jsqlLogger;
-        } catch (InstantiationException | IllegalAccessException e) {
-            JDKLogger jdkLogger = new JDKLogger();
-            jdkLogger.init(clazz);
-            jdkLogger.warn("no logger for " + loggerClass.getName() + ", using JDKLogger instead", e);
-            return jdkLogger;
+        } catch (InstantiationException e) {
+            return createJDKLogger(clazz, e);
+        } catch (IllegalAccessException e) {
+            return createJDKLogger(clazz, e);
         }
+    }
+
+    private static JSQLLogger createJDKLogger(Class<?> clazz, Throwable e) {
+        JDKLogger jdkLogger = new JDKLogger();
+        jdkLogger.init(clazz);
+        jdkLogger.warn("no logger for " + loggerClass.getName() + ", using JDKLogger instead", e);
+        return jdkLogger;
     }
 
     public static void setLogger(Class<? extends JSQLLogger> loggerClass) {

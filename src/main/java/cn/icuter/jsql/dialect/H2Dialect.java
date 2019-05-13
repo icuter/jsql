@@ -6,7 +6,7 @@ import cn.icuter.jsql.builder.BuilderContext;
  * @author edward
  * @since 2018-08-30
  */
-public class H2Dialect implements Dialect {
+public class H2Dialect extends AbstractDialect {
     @Override
     public String getDriverClassName() {
         return "org.h2.Driver";

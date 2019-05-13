@@ -107,10 +107,19 @@ public class PooledConnectionManager implements PooledObjectManager<Connection> 
         if (dialect.supportConnectionIsValid()) {
             return connection.isValid(checkValidTimeout);
         } else if (dialect.validationSql() != null && dialect.validationSql().length() > 0) {
-            try (Statement s = connection.createStatement()) {
+            Statement s = null;
+            try {
+                s = connection.createStatement();
                 s.setQueryTimeout(checkValidTimeout); // doesn't work while network error
-                try (ResultSet resultSet = s.executeQuery(dialect.validationSql())) {
+                ResultSet resultSet = s.executeQuery(dialect.validationSql());
+                try {
                     return resultSet.next();
+                } finally {
+                    resultSet.close();
+                }
+            } finally {
+                if (s != null) {
+                    s.close();
                 }
             }
         }

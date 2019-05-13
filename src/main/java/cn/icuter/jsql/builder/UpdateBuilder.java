@@ -1,18 +1,13 @@
 package cn.icuter.jsql.builder;
 
 import cn.icuter.jsql.condition.Cond;
-import cn.icuter.jsql.condition.Condition;
 import cn.icuter.jsql.condition.Eq;
 import cn.icuter.jsql.dialect.Dialect;
 import cn.icuter.jsql.orm.ORMapper;
+import cn.icuter.jsql.util.ObjectUtil;
 
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.stream.Collectors;
 
 /**
  * @author edward
@@ -39,23 +34,26 @@ public class UpdateBuilder extends AbstractBuilder implements DMLBuilder {
             throw new IllegalArgumentException("parameters must not be null or empty! ");
         }
         addCondition(eqs);
-        String sql = Arrays.stream(eqs)
-                .map(Condition::toSql)
-                .collect(Collectors.joining(","));
-        sqlStringBuilder.append("set").append(sql);
+        StringBuilder builder = new StringBuilder();
+        for (Eq eq : eqs) {
+            builder.append(eq.toSql()).append(",");
+        }
+        sqlStringBuilder.append("set").append(builder.toString().replaceFirst(",\\s*$", ""));
         return this;
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public Builder set(Object value) {
-        Objects.requireNonNull(value, "parameters must not be null");
+        ObjectUtil.requireNonNull(value, "parameters must not be null");
         if (value instanceof Map) {
             Map<Object, Object> attrs = (Map<Object, Object>) value;
-            List<Eq> conditionList = attrs.entrySet().stream()
-                    .map(e -> Cond.eq(String.valueOf(e.getKey()), e.getValue()))
-                    .collect(LinkedList::new, LinkedList::add, LinkedList::addAll);
-            return set(conditionList.toArray(new Eq[0]));
+            Eq[] eqs = new Eq[attrs.size()];
+            int i = 0;
+            for (Map.Entry<Object, Object> entry : attrs.entrySet()) {
+                eqs[i++] = Cond.eq(String.valueOf(entry.getKey()), entry.getValue());
+            }
+            return set(eqs);
         } else if (value instanceof Collection) {
             return set(((Collection<Eq>) value).toArray(new Eq[0]));
         } else if (value instanceof Eq) {
@@ -71,9 +69,11 @@ public class UpdateBuilder extends AbstractBuilder implements DMLBuilder {
     }
 
     private Builder setMapAttr(Map<String, Object> attrs) {
-        List<Eq> conditionList = attrs.entrySet().stream()
-                .map(e -> Cond.eq(e.getKey(), e.getValue()))
-                .collect(LinkedList::new, LinkedList::add, LinkedList::addAll);
-        return set(conditionList.toArray(new Eq[0]));
+        Eq[] eqs = new Eq[attrs.size()];
+        int i = 0;
+        for (Map.Entry<String, Object> entry : attrs.entrySet()) {
+            eqs[i++] = Cond.eq(entry.getKey(), entry.getValue());
+        }
+        return set(eqs);
     }
 }

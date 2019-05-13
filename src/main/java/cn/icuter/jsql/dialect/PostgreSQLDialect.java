@@ -6,7 +6,7 @@ import cn.icuter.jsql.builder.BuilderContext;
  * @author edward
  * @since 2018-08-30
  */
-public class PostgreSQLDialect implements Dialect {
+public class PostgreSQLDialect extends AbstractDialect {
     @Override
     public String getDriverClassName() {
         return "org.postgresql.Driver";

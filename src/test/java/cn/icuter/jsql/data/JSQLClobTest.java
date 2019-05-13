@@ -46,16 +46,22 @@ public class JSQLClobTest {
     public void getCharacterStream() throws Exception {
         JSQLClob clob = new JSQLClob(SRC);
         char[] chars = new char[(int) clob.length()];
-        try (Reader reader = clob.getCharacterStream()) {
+        Reader reader = clob.getCharacterStream();
+        try {
             Assert.assertEquals(clob.length(), reader.read(chars));
+        } finally {
+            reader.close();
         }
         assertArrayEquals(chars, SRC.toCharArray());
 
         int position = 6;
         int len = 4;
         chars = new char[4];
-        try (Reader reader = clob.getCharacterStream(position, len)) {
+        reader = clob.getCharacterStream(position, len);
+        try {
             Assert.assertEquals(len, reader.read(chars));
+        } finally {
+            reader.close();
         }
         assertArrayEquals(chars, SRC.substring(position - 1, position - 1 + len).toCharArray());
     }
@@ -65,8 +71,11 @@ public class JSQLClobTest {
         JSQLClob clob = new JSQLClob(SRC);
         byte[] srcBytes = SRC.getBytes();
         byte[] readBytes = new byte[srcBytes.length];
-        try (InputStream in = clob.getAsciiStream()) {
+        InputStream in = clob.getAsciiStream();
+        try {
             assertEquals(srcBytes.length, in.read(readBytes));
+        } finally {
+            in.close();
         }
         assertArrayEquals(srcBytes, readBytes);
     }
@@ -100,8 +109,11 @@ public class JSQLClobTest {
     public void setAsciiStream() throws Exception {
         JSQLClob clob = new JSQLClob(SRC);
         String setStr = "icuter";
-        try (OutputStream out = clob.setAsciiStream(1L)) {
+        OutputStream out = clob.setAsciiStream(1L);
+        try {
             out.write(setStr.getBytes());
+        } finally {
+            out.close();
         }
         Assert.assertEquals(SRC.length(), clob.length());
         Assert.assertEquals(SRC.replaceFirst("^.{" + setStr.length() + "}", setStr),
@@ -109,16 +121,22 @@ public class JSQLClobTest {
 
         int pos = 6;
         clob = new JSQLClob(SRC);
-        try (OutputStream out = clob.setAsciiStream(pos)) {
+        out = clob.setAsciiStream(pos);
+        try {
             out.write(setStr.getBytes());
+        } finally {
+            out.close();
         }
         Assert.assertEquals(SRC.length(), clob.length());
         Assert.assertEquals("test " + setStr + "lob", clob.getSubString(1L, (int) clob.length()));
 
         pos = SRC.getBytes().length + 1;
         clob = new JSQLClob(SRC);
-        try (OutputStream out = clob.setAsciiStream(pos)) {
+        out = clob.setAsciiStream(pos);
+        try {
             out.write(setStr.getBytes());
+        } finally {
+            out.close();
         }
         Assert.assertEquals(SRC.length() + setStr.length(), clob.length());
         Assert.assertEquals((SRC + setStr), clob.getSubString(1L, (int) clob.length()));
@@ -128,16 +146,22 @@ public class JSQLClobTest {
     public void setCharacterStream() throws Exception {
         JSQLClob clob = new JSQLClob(SRC);
         String setStr = "icuter";
-        try (Writer writer = clob.setCharacterStream(1L)) {
+        Writer writer = clob.setCharacterStream(1L);
+        try {
             writer.write(setStr);
+        } finally {
+            writer.close();
         }
         Assert.assertEquals(SRC.length(), clob.length());
         Assert.assertEquals(SRC.replaceFirst("^.{" + setStr.length() + "}", setStr),
                 clob.getSubString(1L, (int) clob.length()));
 
         clob = new JSQLClob(SRC);
-        try (Writer writer = clob.setCharacterStream(clob.length() + 1)) {
+        writer = clob.setCharacterStream(clob.length() + 1);
+        try {
             writer.write(setStr);
+        } finally {
+            writer.close();
         }
         Assert.assertEquals(SRC.length() + setStr.length(), clob.length());
         Assert.assertEquals((SRC + setStr), clob.getSubString(1L, (int) clob.length()));

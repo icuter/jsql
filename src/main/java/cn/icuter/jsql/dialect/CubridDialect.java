@@ -6,7 +6,7 @@ import cn.icuter.jsql.builder.BuilderContext;
  * @author edward
  * @since 2018-08-30
  */
-public class CubridDialect implements Dialect {
+public class CubridDialect extends AbstractDialect {
     @Override
     public String getDriverClassName() {
         return "cubrid.jdbc.driver.CUBRIDDriver";

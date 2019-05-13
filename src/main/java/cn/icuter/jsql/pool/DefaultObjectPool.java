@@ -8,12 +8,13 @@ import cn.icuter.jsql.exception.PooledObjectPollTimeoutException;
 import cn.icuter.jsql.exception.PooledObjectReturnException;
 import cn.icuter.jsql.log.JSQLLogger;
 import cn.icuter.jsql.log.Logs;
+import cn.icuter.jsql.util.CollectionUtil;
+import cn.icuter.jsql.util.ObjectUtil;
+import cn.icuter.jsql.util.RemoveFilter;
 
-import java.sql.Timestamp;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.ConcurrentHashMap;
@@ -39,7 +40,7 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
 
     private PoolConfiguration poolCfg;
     private final PooledObjectManager<T> manager;
-    private BlockingDeque<PooledObject<T>> idlePooledObjects = new LinkedBlockingDeque<>();
+    private BlockingDeque<PooledObject<T>> idlePooledObjects = new LinkedBlockingDeque<PooledObject<T>>();
     private Map<Integer, PooledObject<T>> allPooledObjects;
 
     private ReentrantLock createLock = new ReentrantLock();
@@ -68,7 +69,7 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
         if (poolCfg.getMaxPoolSize() <= 0) {
             throw new IllegalArgumentException("max pool size must not be zero!");
         }
-        this.allPooledObjects = new ConcurrentHashMap<>(this.poolCfg.getMaxPoolSize());
+        this.allPooledObjects = new ConcurrentHashMap<Integer, PooledObject<T>>(this.poolCfg.getMaxPoolSize());
 
         long idleObjectTimeout = poolCfg.getIdleTimeout();
         if (idleObjectTimeout > 0) {
@@ -225,7 +226,7 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
         }
         PooledObject<T> pooledObject = getPooledObject(object);
 
-        Objects.requireNonNull(pooledObject, "no such object in pool!");
+        ObjectUtil.requireNonNull(pooledObject, "no such object in pool!");
 
         if (!pooledObject.isBorrowed()) {
             throw new PooledObjectReturnException("Object has been returned!");
@@ -352,8 +353,8 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
         }
         synchronized void updateLastAccessTime() {
             lastAccessTime = System.currentTimeMillis();
-            LocalDateTime localDateTime = new Timestamp(lastAccessTime).toLocalDateTime();
-            formattedLastAccessTime = localDateTime.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            formattedLastAccessTime = dateFormat.format(new Date(lastAccessTime));
         }
 
         @Override
@@ -380,13 +381,20 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
         public void run() {
             // actually, while object pool has been closed, that would never run its' scheduled task
             if (!pooledObject.isBorrowed() && !isPoolClosed() && isPoolObjectIdleTimeout(pooledObject)) {
-                try {
-                    if (idlePooledObjects.removeIf(p -> p == pooledObject)) {
-                        invalidPooledObject(pooledObject);
+                CollectionUtil.iterate(idlePooledObjects, new RemoveFilter<PooledObject<T>>() {
+                    @Override
+                    public boolean removeIf(PooledObject<T> p) {
+                        if (p == pooledObject) {
+                            try {
+                                invalidPooledObject(pooledObject);
+                            } catch (JSQLException e) {
+                                TASK_LOGGER.error("invaliding pooled object error", e);
+                            }
+                            return true;
+                        }
+                        return false;
                     }
-                } catch (JSQLException e) {
-                    TASK_LOGGER.error("invaliding pooled object error", e);
-                }
+                });
             }
         }
     }

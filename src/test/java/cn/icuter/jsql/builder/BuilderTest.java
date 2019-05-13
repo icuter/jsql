@@ -8,6 +8,7 @@ import cn.icuter.jsql.dialect.Dialects;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -49,12 +50,12 @@ public class BuilderTest {
         assertEquals(expectedSQL, select.getSql());
         assertArrayEquals(values, select.getPreparedValues().toArray());
 
-        List<Condition> orConditionList = new LinkedList<>();
+        List<Condition> orConditionList = new LinkedList<Condition>();
         orConditionList.add(Cond.eq("name", "Edward"));
         orConditionList.add(Cond.eq("age", 30));
         orConditionList.add(Cond.eq("tall", 170));
 
-        List<Condition> andConditionList = new LinkedList<>();
+        List<Condition> andConditionList = new LinkedList<Condition>();
         andConditionList.add(Cond.eq("id", "123"));
         andConditionList.add(Cond.like("name", "%Lee"));
 
@@ -375,7 +376,7 @@ public class BuilderTest {
 
     @Test
     public void testSelectWithInBuilder() throws Exception {
-        Builder selectCondIn = new SelectBuilder()
+        final Builder selectCondIn = new SelectBuilder()
                 .select("name").from("table_1").where().like("name", "%Edward%").build();
         Builder select = new SelectBuilder() {{
             select().from("table").where().in("name", selectCondIn).build();
@@ -499,20 +500,6 @@ public class BuilderTest {
         assertArrayEquals(new Object[]{"test01", "test00", "123", 0}, insert.getPreparedValues().toArray());
 
         insert = new InsertBuilder()
-                .insert("t_jsql_test", "col1")
-                .values(Arrays.asList("col1_value"))
-                .build();
-        assertEquals("insert into t_jsql_test (col1) values(?)", insert.getSql());
-        assertArrayEquals(new Object[]{"col1_value"}, insert.getPreparedValues().toArray());
-
-        insert = new InsertBuilder()
-                .insert("t_jsql_test", "col1", "col2")
-                .values(Arrays.asList("col1_value", "col2_value"))
-                .build();
-        assertEquals("insert into t_jsql_test (col1,col2) values(?,?)", insert.getSql());
-        assertArrayEquals(new Object[]{"col1_value", "col2_value"}, insert.getPreparedValues().toArray());
-
-        insert = new InsertBuilder()
                 .insert("t_jsql_test", "col1", "col2")
                 .values(new Object[] {"col1_value", "col2_value"})
                 .build();
@@ -526,7 +513,7 @@ public class BuilderTest {
         assertEquals("insert into t_jsql_test (col1,col2) values(?,?)", insert.getSql());
         assertArrayEquals(new Object[]{"col1_value", "col2_value"}, insert.getPreparedValues().toArray());
 
-        List<Eq> list = new LinkedList<>();
+        List<Eq> list = new LinkedList<Eq>();
         list.add(Cond.eq("col1", "col1_value"));
         list.add(Cond.eq("col2", "col2_value"));
         insert = new InsertBuilder()

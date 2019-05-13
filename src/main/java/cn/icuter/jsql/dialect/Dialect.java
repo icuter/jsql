@@ -8,43 +8,19 @@ import cn.icuter.jsql.builder.BuilderContext;
  */
 public interface Dialect {
     String getDriverClassName();
-    default String getDialectName() {
-        return null;
-    }
+    String getDialectName();
 
-    default void injectOffsetLimit(BuilderContext builderCtx) {
-        throw new UnsupportedOperationException();
-    }
+    void injectOffsetLimit(BuilderContext builderCtx);
 
-    default boolean supportOffsetLimit() {
-        return false;
-    }
+    boolean supportOffsetLimit();
 
-    default String wrapOffsetLimit(BuilderContext builderContext, String sql) {
-        return sql;
-    }
-    default String wrapLimit(BuilderContext builderContext, String sql) {
-        return sql;
-    }
-    default boolean supportConnectionIsValid() {
-        return true;
-    }
-    default String validationSql() {
-        return null;
-    }
-    default boolean supportSavepoint() {
-        return true;
-    }
-    default boolean supportBlob() {
-        return true;
-    }
-    default boolean supportClob() {
-        return true;
-    }
-    default boolean supportNClob() {
-        return true;
-    }
-    default boolean requireUserPassword() {
-        return true;
-    }
+    String wrapOffsetLimit(BuilderContext builderContext, String sql);
+    String wrapLimit(BuilderContext builderContext, String sql);
+    boolean supportConnectionIsValid();
+    String validationSql();
+    boolean supportSavepoint();
+    boolean supportBlob();
+    boolean supportClob();
+    boolean supportNClob();
+    boolean requireUserPassword();
 }

@@ -23,9 +23,17 @@ public abstract class TestUtils {
         String dbType = System.getProperty(TestUtils.DB_TYPE_KEY, DEFAULT_DB_TYPE);
         String icuterHome = System.getenv("ICUTER_HOME"); // only for test
         File jdbcPropFile = new File(icuterHome, String.format("conf/%s.properties", dbType.toLowerCase()));
-        try (InputStream in = new FileInputStream(jdbcPropFile)) {
-            properties.load(in);
-            return new JSQLDataSource(properties);
+        InputStream in = null;
+        try {
+            try {
+                in = new FileInputStream(jdbcPropFile);
+                properties.load(in);
+                return new JSQLDataSource(properties);
+            } finally {
+                if (in != null) {
+                    in.close();
+                }
+            }
         } catch (IOException e) {
             throw new IllegalArgumentException(e);
         }

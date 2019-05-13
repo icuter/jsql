@@ -6,7 +6,7 @@ import cn.icuter.jsql.builder.BuilderContext;
  * @author edward
  * @since 2018-09-10
  */
-public class SQLiteDialect implements Dialect {
+public class SQLiteDialect extends AbstractDialect {
     @Override
     public String getDriverClassName() {
         return "org.sqlite.JDBC";

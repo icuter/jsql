@@ -12,6 +12,7 @@ import cn.icuter.jsql.dialect.Dialects;
 import cn.icuter.jsql.exception.ExecutionException;
 import cn.icuter.jsql.exception.JSQLException;
 import cn.icuter.jsql.transaction.Transaction;
+import cn.icuter.jsql.transaction.TransactionOperation;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -65,8 +66,11 @@ public class JdbcExecutorTest {
 
     @Test
     public void testDefaultExecutor() throws Exception {
-        try (JdbcExecutor executor = dataSource.getJdbcExecutor()) {
+        JdbcExecutor executor = dataSource.getJdbcExecutor();
+        try {
             testExecutorBase(executor);
+        } finally {
+            executor.close();
         }
     }
 
@@ -97,12 +101,15 @@ public class JdbcExecutorTest {
         Assert.assertTrue(executor.wasCommitted());
         Assert.assertFalse(executor.wasRolledBack());
 
-        try (JdbcExecutor jdbcExecutor = dataSource.getJdbcExecutor()) {
+        JdbcExecutor jdbcExecutor = dataSource.getJdbcExecutor();
+        try {
             List<Map<String, Object>> list = dataSource.select().from(TABLE_NAME).execQuery(jdbcExecutor);
             Assert.assertEquals(list.size(), 2);
 
             int delCnt = dataSource.delete().from(TABLE_NAME).execUpdate(jdbcExecutor);
             Assert.assertEquals(delCnt, 2);
+        } finally {
+            jdbcExecutor.close();
         }
     }
 
@@ -120,10 +127,13 @@ public class JdbcExecutorTest {
         Assert.assertFalse(executor.wasCommitted());
         Assert.assertTrue(executor.wasRolledBack());
 
-        try (JdbcExecutor jdbcExecutor = dataSource.getJdbcExecutor()) {
+        JdbcExecutor jdbcExecutor = dataSource.getJdbcExecutor();
+        try {
             List<Map<String, Object>> list = dataSource.select().from(TABLE_NAME).execQuery(jdbcExecutor);
             System.out.println(list);
             Assert.assertTrue(list.isEmpty());
+        } finally {
+            jdbcExecutor.close();
         }
     }
 
@@ -253,7 +263,7 @@ public class JdbcExecutorTest {
     @Test
     public void testUnionSelect() throws Exception {
         JdbcExecutor jdbcExecutor = dataSource.getJdbcExecutor();
-        List<TestTable> testTableList = new LinkedList<>();
+        List<TestTable> testTableList = new LinkedList<TestTable>();
         try {
             for (int i = 0; i < 10; i++) {
                 testTableList.add(insertTestRecord(jdbcExecutor));
@@ -261,12 +271,13 @@ public class JdbcExecutorTest {
         } finally {
             jdbcExecutor.close();
         }
-        testTableList.sort((Comparator<Object>) (o1, o2) -> {
-            TestTable t1 = (TestTable) o1;
-            TestTable t2 = (TestTable) o2;
-            int t1OrderNum = t1.getOrderNum();// != null ? t1.getOrderNum() : 0;
-            int t2OrderNum = t2.getOrderNum();// != null ? t2.getOrderNum() : 0;
-            return t2OrderNum - t1OrderNum;
+        Collections.sort(testTableList, new Comparator<TestTable>() {
+            @Override
+            public int compare(TestTable o1, TestTable o2) {
+                int t1OrderNum = o1.getOrderNum();// != null ? t1.getOrderNum() : 0;
+                int t2OrderNum = o2.getOrderNum();// != null ? t2.getOrderNum() : 0;
+                return t2OrderNum - t1OrderNum;
+            }
         });
         List<TestTable> unionResult = dataSource.unionAll(
                 dataSource.select("test_id", "t_col_1", "t_col_2", "order_num").from(TABLE_NAME).offset(0).limit(3).orderBy("order_num desc").build(),
@@ -327,47 +338,62 @@ public class JdbcExecutorTest {
     @Test
     public void testCreateTransaction() throws Exception {
         TestTable testTable;
-        try (TransactionExecutor txExecutor = dataSource.createTransaction()) {
+        TransactionExecutor txExecutor = dataSource.createTransaction();
+        try {
             testTable = insertTestRecord(txExecutor);
             txExecutor.commit();
+        } finally {
+            txExecutor.close();
         }
-        try (TransactionExecutor txExecutorEnd = dataSource.createTransaction()) {
+        TransactionExecutor txExecutorEnd = dataSource.createTransaction();
+        try {
             int cnt = dataSource
                     .update(TABLE_NAME).set(Cond.eq("t_col_1", testTable.getCol1() + "_updated"))
                     .where().eq("test_id", testTable.getTestId())
                     .execUpdate(txExecutorEnd);
             Assert.assertEquals(cnt, 1);
             txExecutorEnd.commit();
+        } finally {
+            txExecutorEnd.close();
         }
-        try (TransactionExecutor txExecutorClose = dataSource.createTransaction()) {
+        TransactionExecutor txExecutorClose = dataSource.createTransaction();
+        try {
             int cnt = dataSource
                     .delete().from(TABLE_NAME).where().eq("test_id", testTable.getTestId())
                     .execUpdate(txExecutorClose);
             Assert.assertEquals(cnt, 1);
             txExecutorClose.commit();
+        } finally {
+            txExecutorClose.close();
         }
     }
 
     @Test
     public void testBatchUpdate() throws Exception {
-        List<Builder> batchList = new LinkedList<>();
+        List<Builder> batchList = new LinkedList<Builder>();
         batchList.add(newInsertBuilder());
         batchList.add(newInsertBuilder());
         batchList.add(newInsertBuilder());
         batchList.add(newInsertBuilder());
-        try (TransactionExecutor txExecutor = dataSource.createTransaction()) {
+        TransactionExecutor txExecutor = dataSource.createTransaction();
+        try {
             txExecutor.execBatch(batchList);
             txExecutor.commit();
+        } finally {
+            txExecutor.close();
         }
-        try (JdbcExecutor jdbcExecutor = dataSource.createJdbcExecutor()) {
+        JdbcExecutor jdbcExecutor = dataSource.createJdbcExecutor();
+        try {
             int cnt = dataSource.delete().from(TABLE_NAME).execUpdate(jdbcExecutor);
             Assert.assertEquals(cnt, batchList.size());
+        } finally {
+            jdbcExecutor.close();
         }
     }
 
     @Test
     public void testMultipleBatchUpdate() throws Exception {
-        List<Builder> batchList = new LinkedList<>();
+        List<Builder> batchList = new LinkedList<Builder>();
         int size = 10;
         for (int i = 0; i < size; i++) {
             TestTable testTable = createTestTableRecord();
@@ -383,29 +409,36 @@ public class JdbcExecutorTest {
                     .where().eq("test_id", testTable.getTestId()).build();
             batchList.add(deleteBuilder);
         }
-        try (TransactionExecutor jdbcExecutor = dataSource.createTransaction()) {
+        TransactionExecutor jdbcExecutor = dataSource.createTransaction();
+        try {
             jdbcExecutor.execBatch(batchList);
             jdbcExecutor.commit();
+        } finally {
+            jdbcExecutor.close();
         }
     }
 
     @Test
     public void testTransactionDataSource() throws Exception {
-        dataSource.transaction(tx -> {
-            TestTable testTable = createTestTableRecord();
-            tx.insert(TABLE_NAME).values(testTable).execUpdate();
+        dataSource.transaction(new TransactionOperation() {
+            @Override
+            public void doTransaction(TransactionDataSource tx) throws Exception {
+                TestTable testTable = createTestTableRecord();
+                tx.insert(TABLE_NAME).values(testTable).execUpdate();
 
-            List<TestTable> selectTestTableList = tx.select().from(TABLE_NAME)
-                                                    .where().eq("test_id", testTable.getTestId())
-                                                    .execQuery(TestTable.class);
-            Assert.assertFalse(selectTestTableList.isEmpty());
-            Assert.assertEquals(selectTestTableList.get(0).getTestId(), testTable.getTestId());
-            tx.rollback();
+                List<TestTable> selectTestTableList = tx.select().from(TABLE_NAME)
+                        .where().eq("test_id", testTable.getTestId())
+                        .execQuery(TestTable.class);
+                Assert.assertFalse(selectTestTableList.isEmpty());
+                Assert.assertEquals(selectTestTableList.get(0).getTestId(), testTable.getTestId());
+                tx.rollback();
+            }
         });
         List<TestTable> selectTestTableList = dataSource.select().from(TABLE_NAME).execQuery(TestTable.class);
         Assert.assertTrue(selectTestTableList.isEmpty());
 
-        try (TransactionDataSource tx = dataSource.transaction()) {
+        TransactionDataSource tx = dataSource.transaction();
+        try {
             TestTable testTable = createTestTableRecord();
             tx.insert(TABLE_NAME).values(testTable).execUpdate();
 
@@ -415,14 +448,20 @@ public class JdbcExecutorTest {
             Assert.assertFalse(selectTestTableList.isEmpty());
             Assert.assertEquals(selectTestTableList.get(0).getTestId(), testTable.getTestId());
             tx.rollback();
+        } finally {
+            tx.close();
         }
         selectTestTableList = dataSource.select().from(TABLE_NAME).execQuery(TestTable.class);
         Assert.assertTrue(selectTestTableList.isEmpty());
 
-        dataSource.transaction(tx -> {
-            for (int i = 0; i < 10; i++) {
-                TestTable testTable = createTestTableRecord();
-                tx.insert(TABLE_NAME).values(testTable).execUpdate();
+        dataSource.transaction(new TransactionOperation() {
+            @Override
+            public void doTransaction(TransactionDataSource tx) throws Exception {
+                for (int i = 0; i < 10; i++) {
+                    TestTable testTable = createTestTableRecord();
+                    tx.insert(TABLE_NAME).values(testTable).execUpdate();
+                }
+
             }
         });
 
@@ -434,12 +473,15 @@ public class JdbcExecutorTest {
         Assert.assertTrue(list.isEmpty());
 
         try {
-            dataSource.transaction(tx -> {
-                for (int i = 0; i < 10; i++) {
-                    TestTable testTable = createTestTableRecord();
-                    tx.insert(TABLE_NAME).values(testTable).execUpdate();
+            dataSource.transaction(new TransactionOperation() {
+                @Override
+                public void doTransaction(TransactionDataSource tx) throws Exception {
+                    for (int i = 0; i < 10; i++) {
+                        TestTable testTable = createTestTableRecord();
+                        tx.insert(TABLE_NAME).values(testTable).execUpdate();
+                    }
+                    throw new Exception("Error in transaction operation");
                 }
-                throw new Exception("Error in transaction operation");
             });
         } catch (Exception e) {
             // ignore
@@ -450,7 +492,7 @@ public class JdbcExecutorTest {
 
     @Test(expected = ExecutionException.class)
     public void testBatchUpdateException() throws Exception {
-        List<Builder> batchList = new LinkedList<>();
+        List<Builder> batchList = new LinkedList<Builder>();
         batchList.add(newInsertBuilder());
         batchList.add(newInsertBuilder());
 
@@ -474,9 +516,12 @@ public class JdbcExecutorTest {
     @Test
     public void testPooledConnectionSelect() throws SQLException, JSQLException {
         for (int i = 0; i < 5; i++) {
-            try (Connection connection = dataSource.getConnection()) {
+            Connection connection = dataSource.getConnection();
+            try {
                 JdbcExecutor jdbcExecutor = new DefaultJdbcExecutor(connection);
                 dataSource.select().from(TABLE_NAME).execQuery(jdbcExecutor);
+            } finally {
+                connection.close();
             }
         }
     }

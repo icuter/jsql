@@ -2,12 +2,12 @@ package cn.icuter.jsql.builder;
 
 import cn.icuter.jsql.dialect.Dialect;
 import cn.icuter.jsql.dialect.Dialects;
+import cn.icuter.jsql.util.ObjectUtil;
 
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Objects;
 
 /**
  * @author edward
@@ -18,7 +18,7 @@ public class UnionSelectBuilder extends SelectBuilder {
     private static final String PAGE_TYPE_OFFSET_LIMIT = "offsetLimit";
     private String pageType;
     private Dialect unionDialect;
-    private List<UnionBuilderDescriptor> unionBuilderDescriptors = new LinkedList<>();
+    private List<UnionBuilderDescriptor> unionBuilderDescriptors = new LinkedList<UnionBuilderDescriptor>();
 
     public UnionSelectBuilder() {
         initUnionDialect();
@@ -33,7 +33,7 @@ public class UnionSelectBuilder extends SelectBuilder {
     }
     public UnionSelectBuilder(Dialect dialect, boolean isUnionAll, Collection<Builder> builders) {
         this(dialect);
-        Objects.requireNonNull(builders);
+        ObjectUtil.requireNonNull(builders);
         for (Builder builder : builders) {
             UnionBuilderDescriptor descriptor = new UnionBuilderDescriptor();
             descriptor.isUnionAll = isUnionAll;
@@ -77,7 +77,7 @@ public class UnionSelectBuilder extends SelectBuilder {
 
     @Override
     public Builder union(Builder builder) {
-        Objects.requireNonNull(builder);
+        ObjectUtil.requireNonNull(builder);
         UnionBuilderDescriptor descriptor = new UnionBuilderDescriptor();
         descriptor.builder = builder;
         checkAndSetUnionDialect(builder);
@@ -87,7 +87,7 @@ public class UnionSelectBuilder extends SelectBuilder {
 
     @Override
     public Builder unionAll(Builder builder) {
-        Objects.requireNonNull(builder);
+        ObjectUtil.requireNonNull(builder);
         UnionBuilderDescriptor descriptor = new UnionBuilderDescriptor();
         descriptor.isUnionAll = true;
         descriptor.builder = builder;

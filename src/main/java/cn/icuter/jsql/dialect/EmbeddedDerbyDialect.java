@@ -9,7 +9,7 @@ import java.util.List;
  * @author edward
  * @since 2018-08-30
  */
-public class EmbeddedDerbyDialect implements Dialect {
+public class EmbeddedDerbyDialect extends AbstractDialect {
     @Override
     public String getDriverClassName() {
         return "org.apache.derby.jdbc.EmbeddedDriver";

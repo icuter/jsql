@@ -29,7 +29,6 @@ import java.sql.DriverManager;
 import java.sql.NClob;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
-import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
 import java.util.logging.Logger;
@@ -88,7 +87,11 @@ public class JSQLDataSource extends AbstractBuilderDataSource implements javax.s
                 try {
                     // try to create an custom dialect class
                     dialect = (Dialect) Class.forName(dialectInProp).newInstance();
-                } catch (InstantiationException | IllegalAccessException | ClassNotFoundException e) {
+                } catch (InstantiationException e) {
+                    throw new IllegalArgumentException("unsupported dialect for [" + dialectInProp + ']', e);
+                } catch (IllegalAccessException e) {
+                    throw new IllegalArgumentException("unsupported dialect for [" + dialectInProp + ']', e);
+                } catch (ClassNotFoundException e) {
                     throw new IllegalArgumentException("unsupported dialect for [" + dialectInProp + ']', e);
                 }
             }
@@ -149,7 +152,7 @@ public class JSQLDataSource extends AbstractBuilderDataSource implements javax.s
             this.driverClassName = this.dialect.getDriverClassName();
         }
         try {
-            Objects.requireNonNull(this.driverClassName, "Driver Class Name must not be null!");
+            ObjectUtil.requireNonNull(this.driverClassName, "Driver Class Name must not be null!");
             Class.forName(this.driverClassName);
         } catch (ClassNotFoundException e) {
             throw new DataSourceException("initializing driver class error", e);
@@ -256,8 +259,8 @@ public class JSQLDataSource extends AbstractBuilderDataSource implements javax.s
 
     private ObjectPool<Connection> createConnectionObjectPool(PoolConfiguration poolConfiguration) {
         PooledObjectManager<Connection> manager = new PooledConnectionManager(this);
-        return poolConfiguration == null ? new DefaultObjectPool<>(manager)
-                : new DefaultObjectPool<>(manager, poolConfiguration);
+        return poolConfiguration == null ? new DefaultObjectPool<Connection>(manager)
+                : new DefaultObjectPool<Connection>(manager, poolConfiguration);
     }
 
     public JdbcExecutorPool createExecutorPool() {
@@ -345,7 +348,6 @@ public class JSQLDataSource extends AbstractBuilderDataSource implements javax.s
         return loginTimeout;
     }
 
-    @Override
     public Logger getParentLogger() throws SQLFeatureNotSupportedException {
         return null;
     }

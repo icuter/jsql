@@ -48,50 +48,22 @@ public interface Builder extends ConditionBuilder, ExecutableBuilder {
     BuilderContext getBuilderContext();
 
     // Select Builder
-    default Builder orderBy(String... columns) {
-        throw new UnsupportedOperationException();
-    }
-    default Builder forUpdate(String... columns) {
-        throw new UnsupportedOperationException();
-    }
+    Builder orderBy(String... columns);
+    Builder forUpdate(String... columns);
     // Insert Builder
-    default Builder insert(String tableName, String... columns) {
-        throw new UnsupportedOperationException();
-    }
-    default Builder values(List<Object> values) {
-        throw new UnsupportedOperationException();
-    }
-    default Builder values(Eq... values) {
-        throw new UnsupportedOperationException();
-    }
-    default Builder values(Object value) {
-        throw new UnsupportedOperationException();
-    }
-    default <T> Builder values(T value, FieldInterceptor<T> interceptor) {
-        throw new UnsupportedOperationException();
-    }
+    Builder insert(String tableName, String... columns);
+    Builder values(List<Object> values);
+    Builder values(Eq... values);
+    Builder values(Object value);
+    <T> Builder values(T value, FieldInterceptor<T> interceptor);
     // Update Builder
-    default Builder update(String tableName) {
-        throw new UnsupportedOperationException();
-    }
-    default Builder set(Eq... eqs) {
-        throw new UnsupportedOperationException();
-    }
-    default Builder set(Object value) {
-        throw new UnsupportedOperationException();
-    }
-    default <T> Builder set(T value, FieldInterceptor<T> interceptor) {
-        throw new UnsupportedOperationException();
-    }
+    Builder update(String tableName);
+    Builder set(Eq... eqs);
+    Builder set(Object value);
+    <T> Builder set(T value, FieldInterceptor<T> interceptor);
     // Delete Builder
-    default Builder delete() {
-        throw new UnsupportedOperationException();
-    }
+    Builder delete();
     // Union Select Builder
-    default Builder union(Builder builder) {
-        throw new UnsupportedOperationException();
-    }
-    default Builder unionAll(Builder builder) {
-        throw new UnsupportedOperationException();
-    }
+    Builder union(Builder builder);
+    Builder unionAll(Builder builder);
 }

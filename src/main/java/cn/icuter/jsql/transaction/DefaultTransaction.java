@@ -26,7 +26,7 @@ public class DefaultTransaction implements Transaction {
     public DefaultTransaction(Connection connection) {
         checkConnection(connection);
         this.connection = connection;
-        savepointMap = new LinkedHashMap<>();
+        savepointMap = new LinkedHashMap<String, Savepoint>();
     }
 
     private void checkConnection(Connection connection) {

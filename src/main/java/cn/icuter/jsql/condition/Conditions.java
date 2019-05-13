@@ -3,7 +3,6 @@ package cn.icuter.jsql.condition;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * @author edward
@@ -16,7 +15,7 @@ public class Conditions implements Condition {
 
     Conditions(Combination combination) {
         this.combination = combination;
-        conditionList = new LinkedList<>();
+        conditionList = new LinkedList<Condition>();
     }
 
     Conditions addCondition(List<Condition> conditionList) {
@@ -30,9 +29,15 @@ public class Conditions implements Condition {
     }
 
     public String toSql() {
-        return "(" + conditionList.stream()
-                .map(Condition::toSql)
-                .collect(Collectors.joining(" " + combination.getSymbol() + " ")) + ")";
+        StringBuilder builder = new StringBuilder();
+        builder.append("(");
+        for (int i = 0; i < conditionList.size(); i++) {
+            builder.append(conditionList.get(i).toSql());
+            if (i != conditionList.size() - 1) {
+                builder.append(" ").append(combination.getSymbol()).append(" ");
+            }
+        }
+        return builder.append(")").toString();
     }
 
     @Override
@@ -42,8 +47,13 @@ public class Conditions implements Condition {
 
     @Override
     public Object getValue() {
-        return conditionList.stream().filter(condition -> condition.prepareType() == PrepareType.PLACEHOLDER.getType())
-                .map(Condition::getValue).collect(Collectors.toList());
+        List<Object> values = new LinkedList<Object>();
+        for (Condition condition : conditionList) {
+            if (condition.prepareType() == PrepareType.PLACEHOLDER.getType()) {
+                values.add(condition.getValue());
+            }
+        }
+        return values;
     }
 
     @Override

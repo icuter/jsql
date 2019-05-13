@@ -22,28 +22,41 @@ public class ORMapper<T> {
     }
 
     public static <E> ORMapper<E> of(E object) {
-        return new ORMapper<>(object);
+        return new ORMapper<E>(object);
     }
 
     public Map<String, Object> toMapIgnoreNullValue() {
-        return toMap((object, field, colName, value, resultMap) -> value != null);
+        return toMap(new FieldInterceptor<T>() {
+            @Override
+            public boolean accept(T object, Field field, String colName, Object value, Map<String, Object> resultMap) {
+                return value != null;
+            }
+        });
     }
 
     public Map<String, Object> toMap() {
-        return toMap((object, field, colName, value, resultMap) -> true);
+        return toMap(new FieldInterceptor<T>() {
+            @Override
+            public boolean accept(T object, Field field, String colName, Object value, Map<String, Object> resultMap) {
+                return true;
+            }
+        });
     }
 
-    public Map<String, Object> toMap(FieldInterceptor<T> interceptor) {
-        Map<String, Object> resultMap = new LinkedHashMap<>();
-        ORMapper.mapColumn(this.object.getClass(), (col, field) -> {
-            try {
-                field.setAccessible(true);
-                Object v = field.get(this.object);
-                if (interceptor.accept(this.object, field, col, v, resultMap)) {
-                    resultMap.put(col, v);
+    public Map<String, Object> toMap(final FieldInterceptor<T> interceptor) {
+        final Map<String, Object> resultMap = new LinkedHashMap<String, Object>();
+        ORMapper.mapColumn(object.getClass(), new DBColumnMapper() {
+            @Override
+            public void map(String col, Field field) {
+                try {
+                    field.setAccessible(true);
+                    Object v = field.get(object);
+                    if (interceptor.accept(object, field, col, v, resultMap)) {
+                        resultMap.put(col, v);
+                    }
+                } catch (IllegalAccessException e) {
+                    throw new ORMException("mapping field and column error for col: " + col + " and filed: " + field.getName(), e);
                 }
-            } catch (IllegalAccessException e) {
-                throw new ORMException("mapping field and column error for col: " + col + " and filed: " + field.getName(), e);
             }
         });
         return resultMap;
@@ -73,7 +86,6 @@ public class ORMapper<T> {
         }
     }
 
-    @FunctionalInterface
     public interface DBColumnMapper {
         void map(String column, Field field);
     }

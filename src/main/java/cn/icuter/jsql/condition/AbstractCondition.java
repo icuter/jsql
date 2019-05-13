@@ -2,9 +2,7 @@ package cn.icuter.jsql.condition;
 
 import cn.icuter.jsql.builder.Builder;
 
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.stream.Collectors;
 
 /**
  * @author edward
@@ -67,10 +65,11 @@ public abstract class AbstractCondition implements Condition {
         } else if (value.getClass().isArray() && !(value instanceof byte[])) {
             placeHolderCnt = ((Object[]) value).length;
         }
-        String placeHolder = Arrays.stream(new String[placeHolderCnt])
-                .map(nvl -> "?")
-                .collect(Collectors.joining(","));
-        return field + " " + op.getSymbol() + " (" + placeHolder + ")";
+        StringBuilder placeHolderBuilder = new StringBuilder();
+        for (int i = 0; i < placeHolderCnt; i++) {
+            placeHolderBuilder.append("?,");
+        }
+        return field + " " + op.getSymbol() + " (" + placeHolderBuilder.toString().replaceFirst(",\\s*$", "") + ")";
     }
 
     @Override

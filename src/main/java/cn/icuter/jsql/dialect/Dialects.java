@@ -2,9 +2,9 @@ package cn.icuter.jsql.dialect;
 
 import cn.icuter.jsql.builder.BuilderContext;
 import cn.icuter.jsql.builder.SQLStringBuilder;
+import cn.icuter.jsql.util.ObjectUtil;
 
 import java.util.LinkedHashSet;
-import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -27,7 +27,7 @@ public abstract class Dialects {
     public static final Dialect SQLITE = new SQLiteDialect();
     public static final Dialect UNKNOWN = new UnknownDialect();
 
-    public static final Set<Dialect> SUPPORTED_DIALECT = new LinkedHashSet<>();
+    public static final Set<Dialect> SUPPORTED_DIALECT = new LinkedHashSet<Dialect>();
     static {
         SUPPORTED_DIALECT.add(MYSQL);
         SUPPORTED_DIALECT.add(MARIADB);
@@ -45,19 +45,25 @@ public abstract class Dialects {
     }
 
     public static Dialect parseUrl(String url) {
-        Objects.requireNonNull(url, "Url must not be null");
+        ObjectUtil.requireNonNull(url, "Url must not be null");
         final String lowerCaseUrl = url.toLowerCase();
-        return SUPPORTED_DIALECT.stream()
-                .filter(dialect -> lowerCaseUrl.startsWith("jdbc:" + dialect.getDialectName().toLowerCase()))
-                .findFirst().orElse(Dialects.UNKNOWN);
+        for (Dialect dialect : SUPPORTED_DIALECT) {
+            if (lowerCaseUrl.startsWith("jdbc:" + dialect.getDialectName().toLowerCase())) {
+                return dialect;
+            }
+        }
+        return Dialects.UNKNOWN;
     }
 
     public static Dialect parseName(String nameOrDialectClass) {
-        Objects.requireNonNull(nameOrDialectClass, "Dialect Name Or Dialect Class must not be null");
-        return SUPPORTED_DIALECT.stream()
-                .filter(dialect -> nameOrDialectClass.equalsIgnoreCase(dialect.getDialectName())
-                        || nameOrDialectClass.equalsIgnoreCase(dialect.getClass().getName()))
-                .findFirst().orElse(Dialects.UNKNOWN);
+        ObjectUtil.requireNonNull(nameOrDialectClass, "Dialect Name Or Dialect Class must not be null");
+        for (Dialect dialect : SUPPORTED_DIALECT) {
+            if (nameOrDialectClass.equalsIgnoreCase(dialect.getDialectName())
+                    || nameOrDialectClass.equalsIgnoreCase(dialect.getClass().getName())) {
+                return dialect;
+            }
+        }
+        return Dialects.UNKNOWN;
     }
 
     static void injectWithLimitKey(BuilderContext builderContext) {

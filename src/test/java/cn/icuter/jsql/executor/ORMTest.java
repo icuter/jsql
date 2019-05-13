@@ -46,9 +46,11 @@ public class ORMTest {
 
     @AfterClass
     public static void tearDown() throws Exception {
-        try (JdbcExecutor jdbcExecutor = dataSource.getJdbcExecutor()) {
+        JdbcExecutor jdbcExecutor = dataSource.getJdbcExecutor();
+        try {
             dataSource.sql("DROP table " + TABLE_NAME).execUpdate(jdbcExecutor);
         } finally {
+            jdbcExecutor.close();
             dataSource.close();
             dataSource = null;
         }
@@ -84,7 +86,8 @@ public class ORMTest {
         } finally {
             txExecutor.close();
         }
-        try (JdbcExecutor jdbcExecutor = dataSource.getJdbcExecutor()) {
+        JdbcExecutor jdbcExecutor = dataSource.getJdbcExecutor();
+        try {
             List<ORMTable> ormTableList = dataSource
                     .select()
                     .from(TABLE_NAME)
@@ -113,12 +116,15 @@ public class ORMTest {
             int deleted = dataSource.delete().from(TABLE_NAME).where().eq("orm_id", ormTable.getOrmId()).execUpdate(jdbcExecutor);
 
             Assert.assertEquals(1, deleted);
+        } finally {
+            jdbcExecutor.close();
         }
     }
 
     @Test
     public void testLob() throws Exception {
-        try (JdbcExecutor jdbcExecutor = dataSource.getJdbcExecutor()) {
+        JdbcExecutor jdbcExecutor = dataSource.getJdbcExecutor();
+        try {
             ORMTable ormTable = createOrmTable();
 
             dataSource.insert(TABLE_NAME).values(ormTable).execUpdate(jdbcExecutor);
@@ -142,6 +148,8 @@ public class ORMTest {
             Assert.assertEquals(ormTableSelect.getfClob(), clobString);
             Assert.assertEquals(ormTable.getfClobObj().getSubString(1L, (int) ormTable.getfClobObj().length()), clobString);
 
+        } finally {
+            jdbcExecutor.close();
         }
     }
 

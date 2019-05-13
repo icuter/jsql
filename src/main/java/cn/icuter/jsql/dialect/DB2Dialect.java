@@ -7,7 +7,7 @@ import cn.icuter.jsql.builder.SQLStringBuilder;
  * @author edward
  * @since 2018-09-01
  */
-public class DB2Dialect implements Dialect {
+public class DB2Dialect extends AbstractDialect {
     @Override
     public String getDriverClassName() {
         return "com.ibm.db2.jcc.DB2Driver";

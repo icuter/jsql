@@ -2,6 +2,7 @@ package cn.icuter.jsql.builder;
 
 import cn.icuter.jsql.condition.PrepareType;
 import cn.icuter.jsql.dialect.Dialect;
+import cn.icuter.jsql.util.CollectionUtil;
 
 /**
  * @author edward
@@ -21,7 +22,7 @@ public class SelectBuilder extends AbstractBuilder implements DQLBuilder {
     public Builder forUpdate(String... columns) {
         sqlStringBuilder.append("for update", "for-update");
         if (columns != null && columns.length > 0) {
-            sqlStringBuilder.append("of").append(String.join(",", columns));
+            sqlStringBuilder.append("of").append(CollectionUtil.join(columns, ","));
         }
         return this;
     }
@@ -32,7 +33,7 @@ public class SelectBuilder extends AbstractBuilder implements DQLBuilder {
             throw new IllegalArgumentException("must define [order by] columns!");
         }
         sqlStringBuilder.append("order by", "order-by")
-                .append(String.join(",", columns));
+                .append(CollectionUtil.join(columns, ","));
         builderContext.hasOrderBy = true;
         return this;
     }

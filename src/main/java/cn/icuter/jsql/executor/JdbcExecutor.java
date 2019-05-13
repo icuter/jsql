@@ -23,7 +23,5 @@ public interface JdbcExecutor extends Closeable {
 
     void execBatch(List<Builder> builders) throws JSQLException;
 
-    default void close() throws IOException {
-        // noop
-    }
+    void close() throws IOException;
 }
