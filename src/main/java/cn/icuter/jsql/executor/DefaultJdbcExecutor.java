@@ -57,7 +57,9 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
                 setPreparedStatementValues(ps, builder);
                 return ps.executeUpdate();
             } finally {
-                closePreparedStatement(ps);
+                if (ps != null) {
+                    ps.close();
+                }
             }
         } catch (SQLException e) {
             LOGGER.error("executing update error builder detail: " + builder, e);
@@ -303,7 +305,9 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
                 }
                 ps.executeBatch();
             } finally {
-                closePreparedStatement(ps);
+                if (ps != null) {
+                    ps.close();
+                }
             }
         } catch (SQLException e) {
             List<Object> values = new LinkedList<Object>();
@@ -346,12 +350,6 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
     private void checkAndBuild(Builder builder) {
         if (!builder.getBuilderContext().hasBuilt()) {
             builder.build();
-        }
-    }
-
-    protected void closePreparedStatement(PreparedStatement ps) throws SQLException {
-        if (ps != null && !ps.isClosed()) {
-            ps.close();
         }
     }
 
