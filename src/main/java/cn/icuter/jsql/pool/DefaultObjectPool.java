@@ -370,16 +370,17 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
     private static final JSQLLogger TASK_LOGGER = Logs.getLogger(DefaultObjectPool.IdleObjectTimeoutTask.class);
 
     class IdleObjectTimeoutTask implements Runnable {
-        PooledObject<T> pooledObject;
+        private int identityHashCode;
 
         IdleObjectTimeoutTask(PooledObject<T> pooledObject) {
-            this.pooledObject = pooledObject;
+            this.identityHashCode = System.identityHashCode(pooledObject.getObject());
         }
 
         @Override
         public void run() {
+            PooledObject<T> pooledObject = allPooledObjects.get(identityHashCode);
             // actually, while object pool has been closed, that would never run its' scheduled task
-            if (!pooledObject.isBorrowed() && !isPoolClosed() && isPoolObjectIdleTimeout(pooledObject)) {
+            if (pooledObject != null && !pooledObject.isBorrowed() && !isPoolClosed() && isPoolObjectIdleTimeout(pooledObject)) {
                 try {
                     if (idlePooledObjects.removeIf(p -> p == pooledObject)) {
                         invalidPooledObject(pooledObject);
