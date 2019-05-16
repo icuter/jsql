@@ -381,7 +381,7 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
         public void run() {
             final PooledObject<T> pooledObject = allPooledObjects.get(identityHashCode);
             // actually, while object pool has been closed, that would never run its' scheduled task
-            if (!pooledObject.isBorrowed() && !isPoolClosed() && isPoolObjectIdleTimeout(pooledObject)) {
+            if (pooledObject != null && !pooledObject.isBorrowed() && !isPoolClosed() && isPoolObjectIdleTimeout(pooledObject)) {
                 CollectionUtil.iterate(idlePooledObjects, new RemoveFilter<PooledObject<T>>() {
                     @Override
                     public boolean removeIf(PooledObject<T> p) {
