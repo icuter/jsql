@@ -10,6 +10,7 @@ import cn.icuter.jsql.exception.ExecutionException;
 import cn.icuter.jsql.exception.JSQLException;
 import cn.icuter.jsql.log.JSQLLogger;
 import cn.icuter.jsql.log.Logs;
+import cn.icuter.jsql.operation.Operation;
 import cn.icuter.jsql.orm.ORMapper;
 import cn.icuter.jsql.util.ObjectUtil;
 
@@ -31,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * @author edward
@@ -304,6 +306,24 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
     @FunctionalInterface
     interface QueryExecutor<T> {
         T doExec(ResultSet rs, ResultSetMetaData meta) throws Exception;
+    }
+
+    public <T> T execQuery(Operation dmlOperation, QueryExecutor<T> queryExecutor) throws JSQLException {
+        if (dmlOperation.getOperationType() != Operation.DML) {
+            throw new JSQLException("invalid operation");
+        }
+        try (PreparedStatement ps = connection.prepareStatement(dmlOperation.getWildcardSql())) {
+            List<Object> preparedValues = dmlOperation.getPreparedValueList();
+            for (int i = 0, len = preparedValues.size(); i < len; i++) {
+                ps.setObject(i + 1, preparedValues.get(i));
+            }
+            ResultSet rs = ps.executeQuery();
+            ResultSetMetaData meta = rs.getMetaData();
+            return queryExecutor.doExec(rs, meta);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new ExecutionException("executing query error, builder detail: " + dmlOperation, e);
+        }
     }
 
 }
