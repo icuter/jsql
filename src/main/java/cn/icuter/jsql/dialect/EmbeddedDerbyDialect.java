@@ -73,4 +73,9 @@ public class EmbeddedDerbyDialect implements Dialect {
     public boolean requireUserPassword() {
         return false;
     }
+
+    @Override
+    public String getQuoteString() {
+        return "\"";
+    }
 }

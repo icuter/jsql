@@ -49,7 +49,7 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
     public int execUpdate(Builder builder) throws JSQLException {
         checkAndBuild(builder);
         LOGGER.info("executing sql: " + builder.getSql());
-        LOGGER.info("executing values: " + builder.getPreparedValues());
+        LOGGER.debug("executing values: " + builder.getPreparedValues());
         try (PreparedStatement ps = connection.prepareStatement(builder.getSql())) {
             setPreparedStatementValues(ps, builder);
             return ps.executeUpdate();
@@ -196,7 +196,7 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
         checkAndBuild(builder);
 
         LOGGER.info("executing query sql: " + builder.getSql());
-        LOGGER.info("executing query values: " + builder.getPreparedValues());
+        LOGGER.debug("executing query values: " + builder.getPreparedValues());
         PreparedStatement ps = null;
         BuilderContext builderContext = builder.getBuilderContext();
         try {

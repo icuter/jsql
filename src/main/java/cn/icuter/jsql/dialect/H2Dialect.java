@@ -26,4 +26,9 @@ public class H2Dialect implements Dialect {
     public boolean supportOffsetLimit() {
         return true;
     }
+
+    @Override
+    public String getQuoteString() {
+        return "\"";
+    }
 }

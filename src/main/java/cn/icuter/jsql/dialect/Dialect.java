@@ -8,9 +8,7 @@ import cn.icuter.jsql.builder.BuilderContext;
  */
 public interface Dialect {
     String getDriverClassName();
-    default String getDialectName() {
-        return null;
-    }
+    String getDialectName();
 
     default void injectOffsetLimit(BuilderContext builderCtx) {
         throw new UnsupportedOperationException();
@@ -46,5 +44,9 @@ public interface Dialect {
     }
     default boolean requireUserPassword() {
         return true;
+    }
+
+    default String getQuoteString() {
+        return "";
     }
 }

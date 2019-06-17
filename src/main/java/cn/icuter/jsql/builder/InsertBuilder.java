@@ -5,6 +5,7 @@ import cn.icuter.jsql.condition.Condition;
 import cn.icuter.jsql.condition.Eq;
 import cn.icuter.jsql.dialect.Dialect;
 import cn.icuter.jsql.orm.ORMapper;
+import cn.icuter.jsql.security.Injections;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -29,8 +30,10 @@ public class InsertBuilder extends AbstractBuilder implements DMLBuilder {
 
     @Override
     public Builder insert(String tableName, String... columns) {
+        Injections.check(tableName, dialect.getQuoteString());
         sqlStringBuilder.append("insert into").append(tableName);
         if (columns != null && columns.length > 0) {
+            Injections.check(columns, dialect.getQuoteString());
             sqlStringBuilder.append("(" + String.join(",", columns) + ")");
         }
         return this;

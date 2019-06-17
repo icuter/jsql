@@ -14,4 +14,9 @@ public class NetworkDerbyDialect extends EmbeddedDerbyDialect {
     public String getDialectName() {
         return "derby://";
     }
+
+    @Override
+    public String getQuoteString() {
+        return "\"";
+    }
 }

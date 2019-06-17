@@ -11,11 +11,6 @@ public class Value extends AbstractCondition {
     }
 
     @Override
-    public String getField() {
-        throw new UnsupportedOperationException("getField does not support in Value Condition");
-    }
-
-    @Override
     protected Operation assignOp() {
         return Operation.NOOP;
     }
@@ -27,6 +22,6 @@ public class Value extends AbstractCondition {
 
     @Override
     public String toString() {
-        return "value: " + String.valueOf(value);
+        return "value: " + value;
     }
 }

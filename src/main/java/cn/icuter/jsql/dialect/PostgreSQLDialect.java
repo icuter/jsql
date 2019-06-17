@@ -41,4 +41,9 @@ public class PostgreSQLDialect implements Dialect {
     public boolean supportNClob() {
         return false;
     }
+
+    @Override
+    public String getQuoteString() {
+        return "\"";
+    }
 }

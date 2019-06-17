@@ -46,4 +46,9 @@ public class SQLiteDialect implements Dialect {
     public boolean requireUserPassword() {
         return false;
     }
+
+    @Override
+    public String getQuoteString() {
+        return "\"";
+    }
 }

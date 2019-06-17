@@ -8,6 +8,7 @@ import cn.icuter.jsql.dialect.Dialects;
 import cn.icuter.jsql.exception.ExecutionException;
 import cn.icuter.jsql.exception.JSQLException;
 import cn.icuter.jsql.executor.JdbcExecutor;
+import cn.icuter.jsql.security.Injections;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -28,11 +29,11 @@ public abstract class AbstractBuilder implements Builder {
     protected BuilderContext builderContext;
 
     SQLStringBuilder sqlStringBuilder = new SQLStringBuilder();
-    protected List<Condition> conditionList = new LinkedList<>();
+    private List<Condition> conditionList = new LinkedList<>();
     private List<Object> preparedValueList;
     private int offset;
     private int limit;
-    private Dialect dialect;
+    protected Dialect dialect;
 
     public AbstractBuilder() {
         this(Dialects.UNKNOWN);
@@ -56,6 +57,7 @@ public abstract class AbstractBuilder implements Builder {
     public Builder select(String... columns) {
         String columnStr = "*";
         if (columns != null && columns.length > 0) {
+            Injections.check(columns, dialect.getQuoteString());
             columnStr = String.join(", ", columns);
         }
         boolean existsTopSelect = sqlStringBuilder.existsType("top-select");
@@ -65,8 +67,9 @@ public abstract class AbstractBuilder implements Builder {
     }
 
     @Override
-    public Builder from(String... tableName) {
-        sqlStringBuilder.append("from").append(String.join(",", tableName));
+    public Builder from(String... tableNames) {
+        Injections.check(tableNames, dialect.getQuoteString());
+        sqlStringBuilder.append("from").append(String.join(",", tableNames));
         return this;
     }
 
@@ -136,6 +139,7 @@ public abstract class AbstractBuilder implements Builder {
         if (columns == null || columns.length <= 0) {
             throw new IllegalArgumentException("columns must not be null or empty! ");
         }
+        Injections.check(columns, dialect.getQuoteString());
         String columnStr = String.join(",", columns);
         sqlStringBuilder.append("group by").append(columnStr);
         return this;
@@ -193,6 +197,7 @@ public abstract class AbstractBuilder implements Builder {
     }
 
     private void joinOn(String keyword, String tableName, Condition... conditions) {
+        Injections.check(tableName, dialect.getQuoteString());
         Condition condition = Cond.and(conditions);
         addCondition(condition);
         sqlStringBuilder.append(keyword).append(tableName).append("on").append(condition.toSql());
@@ -202,6 +207,8 @@ public abstract class AbstractBuilder implements Builder {
         if (columns == null || columns.length <= 0) {
             throw new IllegalArgumentException("No column defined in USING condition !");
         }
+        Injections.check(tableName, dialect.getQuoteString());
+        Injections.check(columns, dialect.getQuoteString());
         sqlStringBuilder.append(keyword).append(tableName)
                 .append("using (")
                 .append(String.join(",", columns))
@@ -295,14 +302,14 @@ public abstract class AbstractBuilder implements Builder {
     @Override
     public Builder exists(Builder builder) {
         sqlStringBuilder.append("exists").append("(" + builder.getSql() + ")", "exists");
-        addCondition(builder.getConditionList());
+        conditionList.addAll(builder.getConditionList());
         return this;
     }
 
     @Override
     public Builder notExists(Builder builder) {
         sqlStringBuilder.append("not exists").append("(" + builder.getSql() + ")", "not-exists");
-        addCondition(builder.getConditionList());
+        conditionList.addAll(builder.getConditionList());
         return this;
     }
 
@@ -412,6 +419,7 @@ public abstract class AbstractBuilder implements Builder {
 
     @Override
     public Builder var(String field, String field2) {
+        Injections.check(field2, dialect.getQuoteString());
         Condition condition = Cond.var(field, field2);
         addCondition(condition);
         sqlStringBuilder.append(condition.toSql());
@@ -488,19 +496,22 @@ public abstract class AbstractBuilder implements Builder {
     }
 
     protected void addCondition(Condition... conditions) {
-        if (conditions != null && conditions.length > 0) {
-            conditionList.addAll(Arrays.asList(conditions));
-        }
+        addCondition(Arrays.asList(conditions));
     }
 
     protected void addCondition(Collection<Condition> conditions) {
         if (conditions != null && !conditions.isEmpty()) {
-            conditionList.addAll(conditions);
+            for (Condition condition : conditions) {
+                if (condition.getField() != null) {
+                    Injections.check(condition.getField(), dialect.getQuoteString());
+                }
+                conditionList.add(condition);
+            }
         }
     }
 
     @Override
     public String toString() {
-        return builderContext.hasBuilt() ? ("sql: " + buildSql + ", values:" + preparedValueList) : "Builder not build yet";
+        return builderContext.hasBuilt() ? ("sql: " + buildSql) : "Builder not build yet";
     }
 }

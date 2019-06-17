@@ -37,7 +37,7 @@ public class Conditions implements Condition {
 
     @Override
     public String getField() {
-        throw new UnsupportedOperationException("getField does not support in Conditions");
+        return null;
     }
 
     @Override

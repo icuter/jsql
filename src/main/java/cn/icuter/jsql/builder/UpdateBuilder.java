@@ -5,6 +5,7 @@ import cn.icuter.jsql.condition.Condition;
 import cn.icuter.jsql.condition.Eq;
 import cn.icuter.jsql.dialect.Dialect;
 import cn.icuter.jsql.orm.ORMapper;
+import cn.icuter.jsql.security.Injections;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -29,6 +30,7 @@ public class UpdateBuilder extends AbstractBuilder implements DMLBuilder {
 
     @Override
     public Builder update(String tableName) {
+        Injections.check(tableName, dialect.getQuoteString());
         sqlStringBuilder.append("update").append(tableName);
         return this;
     }
