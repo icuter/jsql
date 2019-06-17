@@ -26,4 +26,9 @@ public class MySQLDialect extends AbstractDialect {
     public boolean supportOffsetLimit() {
         return true;
     }
+
+    @Override
+    public String getQuoteString() {
+        return "`";
+    }
 }

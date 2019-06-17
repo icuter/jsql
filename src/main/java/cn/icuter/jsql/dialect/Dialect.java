@@ -23,4 +23,5 @@ public interface Dialect {
     boolean supportClob();
     boolean supportNClob();
     boolean requireUserPassword();
+    String getQuoteString();
 }

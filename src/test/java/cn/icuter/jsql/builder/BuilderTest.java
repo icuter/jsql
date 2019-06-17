@@ -547,6 +547,133 @@ public class BuilderTest {
         assertArrayEquals(new Object[]{ 123456789 }, delete.getPreparedValues().toArray());
     }
 
+    @Test
+    public void testInjection() {
+        new SelectBuilder(Dialects.MARIADB)
+                            .select("`col--` as `%alias%%``")
+                            .from("`table#` `table@`")
+                            .where().eq("`key`", "value")
+                            .build();
+        new UpdateBuilder(Dialects.ORACLE).update("\"table%\"");
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testInjectionSelect() {
+        new SelectBuilder(Dialects.MARIADB)
+                            .select("col-- as %alias%%")
+                            .build();
+    }
+    @Test(expected = IllegalArgumentException.class)
+    public void testInjectionUpdate() {
+        new UpdateBuilder(Dialects.MARIADB)
+                            .update("alias%%")
+                            .build();
+    }
+    @Test(expected = IllegalArgumentException.class)
+    public void testInjectionFrom() {
+        new SelectBuilder(Dialects.MARIADB)
+                            .select("col as alias")
+                            .from("table# table@")
+                            .build();
+    }
+    @Test(expected = IllegalArgumentException.class)
+    public void testInjectionWhere() {
+        new SelectBuilder(Dialects.MARIADB)
+                            .select("col as alias")
+                            .from("table table2")
+                            .where().eq("key@", "value")
+                            .build();
+    }
+    @Test
+    public void testInjectionWhere2() {
+        new SelectBuilder(Dialects.MARIADB)
+                            .select("col as alias")
+                            .from("table table2")
+                            .where().eq("`key@`", "value")
+                            .build();
+    }
+    @Test(expected = IllegalArgumentException.class)
+    public void testInjectionOrderBy() {
+        new SelectBuilder(Dialects.MARIADB)
+                            .select("col as alias")
+                            .from("table table2")
+                            .where().eq("key", "value")
+                            .orderBy("key--")
+                            .build();
+    }
+    @Test
+    public void testInjectionOrderBy2() {
+        new SelectBuilder(Dialects.MARIADB)
+                            .select("col as alias")
+                            .from("table table2")
+                            .where().eq("key", "value")
+                            .orderBy("`key--`")
+                            .build();
+    }
+    @Test(expected = IllegalArgumentException.class)
+    public void testInjectionGroupBy() {
+        new SelectBuilder(Dialects.MARIADB)
+                            .select("col as alias")
+                            .from("table table2")
+                            .where().eq("key", "value")
+                            .groupBy("key--")
+                            .build();
+    }
+    @Test
+    public void testInjectionGroupBy2() {
+        new SelectBuilder(Dialects.MARIADB)
+                            .select("col as alias")
+                            .from("table table2")
+                            .where().eq("key", "value")
+                            .groupBy("`key--`")
+                            .build();
+    }
+    @Test(expected = IllegalArgumentException.class)
+    public void testInjectionForUpdate() {
+        new SelectBuilder(Dialects.MARIADB)
+                            .select("col as alias")
+                            .from("table")
+                            .forUpdate("update-col--")
+                            .build();
+    }
+    @Test(expected = IllegalArgumentException.class)
+    public void testInjectionConditionVar() {
+        new SelectBuilder(Dialects.MARIADB)
+                            .select("col as alias")
+                            .from("table table2")
+                            .where().var("key", "value--")
+                            .build();
+    }
+    @Test
+    public void testInjectionConditionVar2() {
+        new SelectBuilder(Dialects.MARIADB)
+                            .select("col as alias")
+                            .from("table table2")
+                            .where().var("key", "`value--`")
+                            .build();
+    }
+    @Test(expected = IllegalArgumentException.class)
+    public void testInjectionField() {
+        new SelectBuilder().select("col as alias--").from("table");
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testInjectionTable() {
+        new SelectBuilder().select("col").from("table as t--table");
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testInjectionCondition() {
+        new SelectBuilder().select("col").from("table").where().eq("key/%", "value");
+    }
+    @Test(expected = IllegalArgumentException.class)
+    public void testInjectionInsertOfTable() {
+        new InsertBuilder().insert("table--");
+    }
+    @Test(expected = IllegalArgumentException.class)
+    public void testInjectionInsertOfColumns() {
+        new InsertBuilder().insert("table", "col1", "col2--");
+    }
     @Test(expected = UnsupportedOperationException.class)
     public void testSelectException() throws Exception {
         Builder select = new SelectBuilder();

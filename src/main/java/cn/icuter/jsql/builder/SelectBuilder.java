@@ -3,6 +3,7 @@ package cn.icuter.jsql.builder;
 import cn.icuter.jsql.condition.PrepareType;
 import cn.icuter.jsql.dialect.Dialect;
 import cn.icuter.jsql.util.CollectionUtil;
+import cn.icuter.jsql.security.Injections;
 
 /**
  * @author edward
@@ -22,6 +23,7 @@ public class SelectBuilder extends AbstractBuilder implements DQLBuilder {
     public Builder forUpdate(String... columns) {
         sqlStringBuilder.append("for update", "for-update");
         if (columns != null && columns.length > 0) {
+            Injections.check(columns, dialect.getQuoteString());
             sqlStringBuilder.append("of").append(CollectionUtil.join(columns, ","));
         }
         return this;
@@ -32,6 +34,7 @@ public class SelectBuilder extends AbstractBuilder implements DQLBuilder {
         if (columns == null || columns.length <= 0) {
             throw new IllegalArgumentException("must define [order by] columns!");
         }
+        Injections.check(columns, dialect.getQuoteString());
         sqlStringBuilder.append("order by", "order-by")
                 .append(CollectionUtil.join(columns, ","));
         builderContext.hasOrderBy = true;

@@ -46,4 +46,9 @@ public class CubridDialect extends AbstractDialect {
     public boolean supportNClob() {
         return false;
     }
+
+    @Override
+    public String getQuoteString() {
+        return "\"";
+    }
 }

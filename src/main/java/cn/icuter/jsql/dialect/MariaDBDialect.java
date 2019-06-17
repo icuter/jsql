@@ -14,4 +14,9 @@ public class MariaDBDialect extends MySQLDialect {
     public String getDialectName() {
         return "mariadb";
     }
+
+    @Override
+    public String getQuoteString() {
+        return "`";
+    }
 }

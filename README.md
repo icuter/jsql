@@ -54,16 +54,16 @@ JSQL for Reasons:
 <dependency>
   <groupId>cn.icuter</groupId>
   <artifactId>jsql</artifactId>
-  <version>1.0.7</version>
+  <version>1.0.8</version>
 </dependency>
 
 <!-- for jdk1.6+ -->
 <dependency>
   <groupId>cn.icuter</groupId>
   <artifactId>jsql-jdk1.6</artifactId>
-  <version>1.0.7</version>
+  <version>1.0.8</version>
 </dependency>
-```
+````
 
 ### Examples
 
@@ -132,6 +132,14 @@ Find more documentation [here](https://www.icuter.cn).
 9. [Logging Customization](https://www.icuter.cn/logging.html)
 
 ## Release Notes
+### 1.0.8
+features
+- support validating field name and table name injection
+
+### 1.0.7
+bug fixes
+- fix NPE while checking idle object
+
 ### 1.0.6
 bug fixes
 - fix top-select in `SelectBuilder.select`

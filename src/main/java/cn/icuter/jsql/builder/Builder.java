@@ -13,7 +13,7 @@ public interface Builder extends ConditionBuilder, ExecutableBuilder {
 
     Builder select(String... columns);
 
-    Builder from(String... tableName);
+    Builder from(String... tableNames);
 
     Builder distinct();
 

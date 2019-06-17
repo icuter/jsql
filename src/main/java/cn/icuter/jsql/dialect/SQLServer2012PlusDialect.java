@@ -45,4 +45,9 @@ public class SQLServer2012PlusDialect extends AbstractDialect {
     public boolean supportOffsetLimit() {
         return true;
     }
+
+    @Override
+    public String getQuoteString() {
+        return "\"";
+    }
 }

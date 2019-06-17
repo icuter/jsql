@@ -14,4 +14,9 @@ public class SQLServerDialect extends AbstractDialect {
     public String getDialectName() {
         return "sqlserver";
     }
+
+    @Override
+    public String getQuoteString() {
+        return "\"";
+    }
 }

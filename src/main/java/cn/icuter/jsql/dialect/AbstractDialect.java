@@ -46,4 +46,7 @@ public abstract class AbstractDialect implements Dialect {
     public boolean requireUserPassword() {
         return true;
     }
+    public String getQuoteString() {
+        return "";
+    }
 }

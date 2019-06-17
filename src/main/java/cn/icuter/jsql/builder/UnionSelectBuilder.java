@@ -137,15 +137,16 @@ public class UnionSelectBuilder extends SelectBuilder {
             SQLStringBuilder unionSQLBuilder = new SQLStringBuilder();
             boolean isMultipleSelectBuilder = unionBuilderDescriptors.size() > 1;
             UnionBuilderDescriptor firstDescriptor = unionBuilderDescriptors.get(0);
-            unionSQLBuilder.append((isMultipleSelectBuilder ? "select * from (" : "")
-                    + wrapOffsetLimit(firstDescriptor.builder) + (isMultipleSelectBuilder ? ") t" : ""));
-            addCondition(firstDescriptor.builder.getConditionList());
+            unionSQLBuilder.append((isMultipleSelectBuilder
+                    ? "select * from (" : "") + wrapOffsetLimit(firstDescriptor.builder) + (isMultipleSelectBuilder ? ") t"
+                    : ""));
+            getConditionList().addAll(firstDescriptor.builder.getConditionList());
             if (isMultipleSelectBuilder) {
                 for (int i = 1; i < unionBuilderDescriptors.size(); i++) {
                     UnionBuilderDescriptor descriptor = unionBuilderDescriptors.get(i);
                     unionSQLBuilder.append(descriptor.isUnionAll ? "union all" : "union")
                             .append("select * from (" + wrapOffsetLimit(descriptor.builder) + ") t");
-                    addCondition(descriptor.builder.getConditionList());
+                    getConditionList().addAll(descriptor.builder.getConditionList());
                 }
             }
             builderContext.sqlLevel = unionBuilderDescriptors.size();
@@ -165,7 +166,7 @@ public class UnionSelectBuilder extends SelectBuilder {
     }
 
     @Override
-    public Builder from(String... tableName) {
+    public Builder from(String... tableNames) {
         throw new UnsupportedOperationException("Please use SelectBuilder instead");
     }
 

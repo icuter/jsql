@@ -46,4 +46,9 @@ public class SQLiteDialect extends AbstractDialect {
     public boolean requireUserPassword() {
         return false;
     }
+
+    @Override
+    public String getQuoteString() {
+        return "\"";
+    }
 }
