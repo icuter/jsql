@@ -277,7 +277,7 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
             }
             closed = true;
             if (idleObjectExecutor != null) {
-                idleObjectExecutor.shutdown();
+                idleObjectExecutor.shutdownNow();
             }
             PooledObject<T> pooledObject;
             while ((pooledObject = idlePooledObjects.poll()) != null) {
