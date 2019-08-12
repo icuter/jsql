@@ -2,7 +2,7 @@ package cn.icuter.jsql.security;
 
 public abstract class Injections {
 
-    private static volatile String[] blacklistPattern = {";", "--", "/*", "#", "%", "?", "@"};
+    private static volatile String[] blacklistPattern = {";", "--", "/*", "#", "%", "?", "@", "'", "\"", "(", ")"};
 
     public static void setBlacklistPattern(String[] blacklistPattern) {
         Injections.blacklistPattern = blacklistPattern;
@@ -76,7 +76,7 @@ public abstract class Injections {
         }
         for (String blacklistStr : blacklistPattern) {
             int idx = field.indexOf(blacklistStr);
-            if (idx > 0) {
+            if (idx >= 0) {
                 throw new IllegalArgumentException("insecure field: " + field);
             }
         }

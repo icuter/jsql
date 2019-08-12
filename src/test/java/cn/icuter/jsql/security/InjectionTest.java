@@ -27,4 +27,20 @@ public class InjectionTest {
     public void testIllegalAs() {
         Injections.check("col as alias%", "\"");
     }
+    @Test(expected = IllegalArgumentException.class)
+    public void testIllegalQuote() {
+        Injections.check("col as \"alias", "\"");
+    }
+    @Test(expected = IllegalArgumentException.class)
+    public void testIllegalQuote2() {
+        Injections.check("col as 'alias", "\"");
+    }
+    @Test(expected = IllegalArgumentException.class)
+    public void testIllegalBracket() {
+        Injections.check("col as )alias", "\"");
+    }
+    @Test(expected = IllegalArgumentException.class)
+    public void testIllegalBracket2() {
+        Injections.check("col as (alias", "\"");
+    }
 }
