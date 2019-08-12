@@ -61,7 +61,7 @@ class InjectionWords {
         }
     }
     private void buildFail() {
-        Queue<TrieNode> queue = new LinkedList<>();
+        Queue<TrieNode> queue = new LinkedList<TrieNode>();
         queue.add(root);
         while (!queue.isEmpty()) {
             TrieNode parent = queue.poll();
@@ -89,7 +89,7 @@ class InjectionWords {
         }
         char val;      // root val is (char) 0
         TrieNode fail; // root.fail is null
-        Map<Character, TrieNode> children = new HashMap<>();
+        Map<Character, TrieNode> children = new HashMap<Character, TrieNode>();
         boolean isWord;
     }
 }
