@@ -142,7 +142,7 @@ public class JSQLDataSource extends AbstractBuilderDataSource implements javax.s
         this.url = url;
         this.driverClassName = driverClassName;
         this.dialect = dialect;
-        if (dialect.requireUserPassword()
+        if (dialect != null && dialect.requireUserPassword()
                 && !driverProps.containsKey(PROP_USER)
                 && !driverProps.containsKey(PROP_PASSWORD)) {
             ObjectUtil.requireNonEmpty(username, "username must not be empty");
