@@ -2,22 +2,12 @@ package cn.icuter.jsql.security;
 
 public abstract class Injections {
 
-    private static volatile String[] blacklistPattern = {";", "--", "/*", "#", "%", "?", "@", "'", "\"", "(", ")"};
-
     public static void setBlacklistPattern(String[] blacklistPattern) {
-        Injections.blacklistPattern = blacklistPattern;
+        InjectionWords.getInstance().resetWords(blacklistPattern);
     }
 
     public static void addBlacklistPattern(String[] blacklistPattern) {
-        String[] newPatternArr = new String[blacklistPattern.length + Injections.blacklistPattern.length];
-        for (int i = 0; i < newPatternArr.length; i++) {
-            if (i < Injections.blacklistPattern.length) {
-                newPatternArr[i] = Injections.blacklistPattern[i];
-            } else {
-                newPatternArr[i] = blacklistPattern[i - Injections.blacklistPattern.length];
-            }
-        }
-        Injections.blacklistPattern = newPatternArr;
+        InjectionWords.getInstance().addWords(blacklistPattern);
     }
 
     public static void check(String[] fields, String quoteString) {
@@ -28,57 +18,69 @@ public abstract class Injections {
         }
     }
 
+    /**
+     * <pre>
+     * Check as following field patterns
+     *   1. t.col as alias => "t"."col" as "alias"
+     *   2. t.col alias    => "t"."col"    "alias"
+     *   3. col as alias   =>     "col" as "alias"
+     *   4. col alias      =>     "col"    "alias"
+     *   5. t.*            => Unsupported
+     *   6. *              => Unsupported
+     * </pre>
+     * @param field columns in sql
+     * @param quoteString valid quote string
+     * @throws IllegalArgumentException if columns with black list pattern
+     */
     public static void check(String field, String quoteString) {
         if (field == null) {
             return;
         }
-        if (isQuoted(field, quoteString)) {
-            return;
+        String tableName = null;
+        int refIdx = field.indexOf('.');
+        if (refIdx > 0) {
+            tableName = field.substring(0, refIdx);
+            field = field.substring(refIdx + 1);
+        }
+        if (isNotQuoted(tableName, quoteString)) {
+            validateIsInBlackList(tableName);
         }
         field = field.toLowerCase();
         String colName = field;
         String colAlias = null;
-        int asIdx = field.indexOf(" as ");
+        int asIdx = field.lastIndexOf(" as ");
         if (asIdx > 0) {
-            // col as alias
             colName = field.substring(0, asIdx).trim();
             colAlias = field.substring(" as ".length() + asIdx).trim();
         } else if (field.contains(" ")) {
-            // col alias
-            int spIdx = field.indexOf(" ");
+            int spIdx = field.lastIndexOf(" ");
             colName = field.substring(0, spIdx).trim();
             colAlias = field.substring(spIdx + 1).trim();
         }
-        if (colName.length() > 0) {
-            if (quoteString != null && quoteString.length() > 0 && isQuoted(colName, quoteString)) {
-                return;
-            }
+        if (isNotQuoted(colName, quoteString)) {
             validateIsInBlackList(colName);
         }
-        if (colAlias != null) {
-            if (quoteString != null && quoteString.length() > 0 && isQuoted(colAlias, quoteString)) {
-                return;
-            }
+        if (isNotQuoted(colAlias, quoteString)) {
             validateIsInBlackList(colAlias);
         }
     }
 
-    private static boolean isQuoted(String field, String quoteString) {
+    private static boolean isNotQuoted(String field, String quoteString) {
         if (field == null || field.length() <= 0) {
+            return false;
+        }
+        if (quoteString == null || quoteString.length() <= 0) {
             return true;
         }
-        return field.indexOf(quoteString) == 0 && field.lastIndexOf(quoteString) == field.length() - 1;
+        return field.indexOf(quoteString) != 0 || field.lastIndexOf(quoteString) != field.length() - 1;
     }
 
     private static void validateIsInBlackList(String field) {
         if (field == null || field.length() <= 0) {
             return;
         }
-        for (String blacklistStr : blacklistPattern) {
-            int idx = field.indexOf(blacklistStr);
-            if (idx >= 0) {
-                throw new IllegalArgumentException("insecure field: " + field);
-            }
+        if (InjectionWords.getInstance().detect(field)) {
+            throw new IllegalArgumentException("insecure field: " + field);
         }
     }
 }
