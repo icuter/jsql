@@ -90,6 +90,7 @@ dataSource.transaction(tx -> {
     tx.insert("table")
       .values(Cond.eq("col1", "val1"), Cond.eq("col2", 102),Cond.eq("col3", "val3"))
       .execUpdate();
+    // if exception thrown will call tx.rollback()
     // tx.commit(); // auto commit if transaction ended
 });
 ```
