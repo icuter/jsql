@@ -19,6 +19,8 @@ import java.util.Set;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.RunnableScheduledFuture;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
@@ -50,7 +52,7 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
 
     private volatile boolean closed;
     private PoolStats poolStats = new PoolStats();
-    private ScheduledThreadPoolExecutor idleObjectExecutor;
+    private IdleObjectScheduledExecutor idleObjectExecutor;
 
     public DefaultObjectPool(PooledObjectManager<T> manager) {
         this(manager, PoolConfiguration.defaultPoolCfg());
@@ -73,7 +75,7 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
 
         long idleObjectTimeout = poolCfg.getIdleTimeout();
         if (idleObjectTimeout > 0) {
-            idleObjectExecutor = new ScheduledThreadPoolExecutor(1);
+            idleObjectExecutor = new IdleObjectScheduledExecutor(1);
             if (poolCfg.getScheduledThreadLifeTime() > 0) {
                 idleObjectExecutor.setKeepAliveTime(poolCfg.getScheduledThreadLifeTime(), TimeUnit.MILLISECONDS);
                 idleObjectExecutor.allowCoreThreadTimeOut(true);
@@ -89,6 +91,7 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
         }
         pc.markBorrowed();
         pc.updateLastBorrowedTime();
+        poolStats.updateBorrowStats();
         poolStats.updateLastAccessTime();
         return pc.getObject();
     }
@@ -160,7 +163,6 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
                 opLock.unlock();
             }
         } while (true);
-        poolStats.updateBorrowStats();
         return pooledObject;
     }
 
@@ -236,10 +238,12 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
             opLock.lock();
             if (isPoolClosed() || isAlwaysIdleTimeout() || validateFailOnReturn(pooledObject)) {
                 invalidPooledObject(pooledObject);
+                removeIdleScheduledTask(pooledObject);
                 return;
             }
             pooledObject.markReturned();
             pooledObject.updateLastReturnedTime();
+            removeIdleScheduledTask(pooledObject);
             scheduleIdleTimeoutTask(pooledObject);
             idlePooledObjects.addLast(pooledObject);
             poolStats.updateReturnStats();
@@ -248,13 +252,19 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
         }
     }
 
+    private void removeIdleScheduledTask(PooledObject<T> pooledObject) {
+        if (idleObjectExecutor != null) {
+            idleObjectExecutor.getQueue().remove(pooledObject.scheduledFuture);
+        }
+    }
+
     private boolean validateFailOnReturn(PooledObject<T> pooledObject) throws JSQLException {
         return poolCfg.isValidateOnReturn() && !manager.validate(pooledObject);
     }
 
     private void scheduleIdleTimeoutTask(PooledObject<T> pooledObject) {
-        if (idleObjectExecutor != null && poolCfg.getIdleTimeout() > 0) {
-            idleObjectExecutor.schedule(new IdleObjectTimeoutTask(pooledObject),
+        if (idleObjectExecutor != null) {
+            idleObjectExecutor.scheduleIdleTask(new IdleObjectTimeoutTask(pooledObject),
                     poolCfg.getIdleTimeout() + IDLE_SCHEDULE_OFFSET_MILLISECONDS, TimeUnit.MILLISECONDS);
         }
     }
@@ -327,8 +337,8 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
         long invalidCnt;
         long borrowedCnt;
         long returnedCnt;
-        long lastAccessTime;
-        String formattedLastAccessTime;
+        volatile long lastAccessTime;
+        volatile String formattedLastAccessTime;
 
         PoolStats() {
             lastAccessTime = System.currentTimeMillis();
@@ -351,7 +361,7 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
         synchronized void updateReturnStats() {
             returnedCnt++;
         }
-        synchronized void updateLastAccessTime() {
+        void updateLastAccessTime() {
             lastAccessTime = System.currentTimeMillis();
             SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
             formattedLastAccessTime = dateFormat.format(new Date(lastAccessTime));
@@ -368,18 +378,25 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
         }
     }
 
+    class IdleObjectScheduledExecutor extends ScheduledThreadPoolExecutor {
+        IdleObjectScheduledExecutor(int corePoolSize) {
+            super(corePoolSize);
+        }
+        ScheduledFuture<?> scheduleIdleTask(IdleObjectTimeoutTask task, long delay, TimeUnit unit) {
+            task.pooledObject.scheduledFuture = (RunnableScheduledFuture) schedule(task, delay, unit);
+            return task.pooledObject.scheduledFuture;
+        }
+    }
     private static final JSQLLogger TASK_LOGGER = Logs.getLogger(DefaultObjectPool.IdleObjectTimeoutTask.class);
-
     class IdleObjectTimeoutTask implements Runnable {
-        private int identityHashCode;
+        private PooledObject<T> pooledObject;
 
         IdleObjectTimeoutTask(PooledObject<T> pooledObject) {
-            this.identityHashCode = System.identityHashCode(pooledObject.getObject());
+            this.pooledObject = pooledObject;
         }
 
         @Override
         public void run() {
-            final PooledObject<T> pooledObject = allPooledObjects.get(identityHashCode);
             // actually, while object pool has been closed, that would never run its' scheduled task
             if (pooledObject != null && !pooledObject.isBorrowed() && !isPoolClosed() && isPoolObjectIdleTimeout(pooledObject)) {
                 CollectionUtil.iterate(idlePooledObjects, new RemoveFilter<PooledObject<T>>() {

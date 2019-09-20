@@ -1,5 +1,7 @@
 package cn.icuter.jsql.pool;
 
+import java.util.concurrent.RunnableScheduledFuture;
+
 /**
  * @author edward
  * @since 2018-08-18
@@ -12,6 +14,7 @@ public class PooledObject<T> {
     private boolean borrowed;
     private final T object;
     private ObjectPool<T> objectPool;
+    RunnableScheduledFuture<?> scheduledFuture; // maintains idle task object
 
     public PooledObject(T object) {
         this.object = object;
