@@ -54,14 +54,14 @@ JSQL for Reasons:
 <dependency>
   <groupId>cn.icuter</groupId>
   <artifactId>jsql</artifactId>
-  <version>1.0.8</version>
+  <version>1.1.0</version>
 </dependency>
 
 <!-- for jdk1.6+ -->
 <dependency>
   <groupId>cn.icuter</groupId>
   <artifactId>jsql-jdk1.6</artifactId>
-  <version>1.0.8</version>
+  <version>1.1.0</version>
 </dependency>
 ````
 
@@ -132,6 +132,18 @@ Find more documentation [here](https://www.icuter.cn).
 9. [Logging Customization](https://www.icuter.cn/logging.html)
 
 ## Release Notes
+### 1.1.0
+bug fixes
+- fix fields injection
+
+performance
+- optimize injection checking
+- avoid inflating schedule tasks 
+
+### 1.0.9
+bug fixes
+- fix idle object schedule thread can't shutdown immediately
+
 ### 1.0.8
 features
 - support validating field name and table name injection
