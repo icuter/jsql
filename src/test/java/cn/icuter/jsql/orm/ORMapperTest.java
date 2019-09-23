@@ -7,6 +7,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.sql.Blob;
 import java.sql.Clob;
 import java.util.Map;
@@ -69,7 +70,7 @@ public class ORMapperTest {
         ormTable.setfDouble(100.00d);
         ormTable.setOrmId(UUID.randomUUID().toString());
         ormTable.setfClobObj(new JSQLClob("test jsql clob"));
-        ormTable.setfBlobObj(new JSQLBlob("test jsql clob".getBytes()));
+        ormTable.setfBlobObj(new JSQLBlob("test jsql clob".getBytes(StandardCharsets.UTF_8)));
         return ormTable;
     }
 

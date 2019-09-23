@@ -95,7 +95,7 @@ public class JSQLDataSource extends AbstractBuilderDataSource implements javax.s
         } else {
             dialect = Dialects.parseUrl(jdbcProp.getProperty("url"));
         }
-        int loginTimeout = Integer.valueOf(jdbcProp.getProperty("loginTimeout", "5"));
+        int loginTimeout = Integer.parseInt(jdbcProp.getProperty("loginTimeout", "5"));
         setDriverProps(jdbcProp);
         init(jdbcProp.getProperty("url"), jdbcProp.getProperty("username"), jdbcProp.getProperty("password"),
                 jdbcProp.getProperty("driverClass"), loginTimeout, dialect);
@@ -172,25 +172,25 @@ public class JSQLDataSource extends AbstractBuilderDataSource implements javax.s
     private void initPool(Properties poolProp) {
         PoolConfiguration poolConfiguration = PoolConfiguration.defaultPoolCfg();
         if (poolProp.containsKey("pool.maxPoolSize")) {
-            poolConfiguration.setMaxPoolSize(Integer.valueOf(poolProp.getProperty("pool.maxPoolSize")));
+            poolConfiguration.setMaxPoolSize(Integer.parseInt(poolProp.getProperty("pool.maxPoolSize")));
         }
         if (poolProp.containsKey("pool.idleTimeout")) {
-            poolConfiguration.setIdleTimeout(Long.valueOf(poolProp.getProperty("pool.idleTimeout")));
+            poolConfiguration.setIdleTimeout(Long.parseLong(poolProp.getProperty("pool.idleTimeout")));
         }
         if (poolProp.containsKey("pool.validateOnBorrow")) {
-            poolConfiguration.setValidateOnBorrow(Boolean.valueOf(poolProp.getProperty("pool.validateOnBorrow")));
+            poolConfiguration.setValidateOnBorrow(Boolean.parseBoolean(poolProp.getProperty("pool.validateOnBorrow")));
         }
         if (poolProp.containsKey("pool.validateOnReturn")) {
-            poolConfiguration.setValidateOnReturn(Boolean.valueOf(poolProp.getProperty("pool.validateOnReturn")));
+            poolConfiguration.setValidateOnReturn(Boolean.parseBoolean(poolProp.getProperty("pool.validateOnReturn")));
         }
         if (poolProp.containsKey("pool.pollTimeout")) {
-            poolConfiguration.setPollTimeout(Long.valueOf(poolProp.getProperty("pool.pollTimeout")));
+            poolConfiguration.setPollTimeout(Long.parseLong(poolProp.getProperty("pool.pollTimeout")));
         }
         if (poolProp.containsKey("pool.createRetryCount")) {
-            poolConfiguration.setCreateRetryCount(Integer.valueOf(poolProp.getProperty("pool.createRetryCount")));
+            poolConfiguration.setCreateRetryCount(Integer.parseInt(poolProp.getProperty("pool.createRetryCount")));
         }
         if (poolProp.containsKey("pool.scheduledThreadLifeTime")) {
-            poolConfiguration.setScheduledThreadLifeTime(Long.valueOf(poolProp.getProperty("pool.scheduledThreadLifeTime")));
+            poolConfiguration.setScheduledThreadLifeTime(Long.parseLong(poolProp.getProperty("pool.scheduledThreadLifeTime")));
         }
         ObjectPool<Connection> objectPool = createConnectionObjectPool(poolConfiguration);
         connectionPool = new ConnectionPool(objectPool);

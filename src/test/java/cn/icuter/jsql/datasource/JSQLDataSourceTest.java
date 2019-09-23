@@ -35,7 +35,7 @@ public class JSQLDataSourceTest {
         JSQLDataSource dataSource = new JSQLDataSource(props);
         Assert.assertEquals(Dialects.MARIADB.getDriverClassName(), dataSource.getDriverClassName());
         Assert.assertEquals(Dialects.MARIADB, dataSource.getDialect());
-        Assert.assertEquals(Integer.valueOf(props.getProperty("loginTimeout")).intValue(), dataSource.getLoginTimeout());
+        Assert.assertEquals(Integer.parseInt(props.getProperty("loginTimeout")), dataSource.getLoginTimeout());
         Properties driverProps = dataSource.getDriverProperties();
         Assert.assertEquals(props.getProperty("driver.user"), driverProps.getProperty("user"));
         Assert.assertEquals(props.getProperty("driver.password"), driverProps.getProperty("password"));

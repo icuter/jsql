@@ -14,12 +14,10 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.RunnableScheduledFuture;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
@@ -264,7 +262,7 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
     private void scheduleIdleTimeoutTask(PooledObject<T> pooledObject) {
         if (idleObjectExecutor != null) {
             idleObjectExecutor.scheduleIdleTask(new IdleObjectTimeoutTask(pooledObject),
-                    poolCfg.getIdleTimeout() + IDLE_SCHEDULE_OFFSET_MILLISECONDS, TimeUnit.MILLISECONDS);
+                    poolCfg.getIdleTimeout() + IDLE_SCHEDULE_OFFSET_MILLISECONDS);
         }
     }
 
@@ -299,18 +297,19 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
     }
 
     @Override
-    public final void finalize() throws Throwable {
-        close();
-        // force to invalid all pooled object
-        forceInvalidPooledObjects();
-        super.finalize();
+    protected final void finalize() throws Throwable {
+        try {
+            close();
+            // force to invalid all pooled object
+            forceInvalidPooledObjects();
+        } finally {
+            super.finalize();
+        }
     }
 
     private void forceInvalidPooledObjects() throws Exception {
-        Set<Integer> pooledObjKeys = allPooledObjects.keySet();
-        for (Integer key : pooledObjKeys) {
-            PooledObject<T> pooledObject = allPooledObjects.get(key);
-            invalidPooledObject(pooledObject);
+        for (Map.Entry<Integer, PooledObject<T>> entry : allPooledObjects.entrySet()) {
+            invalidPooledObject(entry.getValue());
         }
     }
 
@@ -381,9 +380,8 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
         IdleObjectScheduledExecutor(int corePoolSize) {
             super(corePoolSize);
         }
-        ScheduledFuture<?> scheduleIdleTask(IdleObjectTimeoutTask task, long delay, TimeUnit unit) {
-            task.pooledObject.scheduledFuture = (RunnableScheduledFuture) schedule(task, delay, unit);
-            return task.pooledObject.scheduledFuture;
+        void scheduleIdleTask(IdleObjectTimeoutTask task, long delay) {
+            task.pooledObject.scheduledFuture = (RunnableScheduledFuture) schedule(task, delay, TimeUnit.MILLISECONDS);
         }
     }
     private static final JSQLLogger TASK_LOGGER = Logs.getLogger(DefaultObjectPool.IdleObjectTimeoutTask.class);

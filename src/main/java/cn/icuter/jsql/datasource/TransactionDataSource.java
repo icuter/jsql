@@ -84,7 +84,7 @@ public class TransactionDataSource extends AbstractBuilderDataSource implements 
         executor.transactionExecutor.close();
     }
 
-    class IgnoreCloseableTransactionExecutor implements JdbcExecutor {
+    static class IgnoreCloseableTransactionExecutor implements JdbcExecutor {
         final TransactionExecutor transactionExecutor;
         IgnoreCloseableTransactionExecutor(TransactionExecutor transactionExecutor) {
             this.transactionExecutor = transactionExecutor;

@@ -3,6 +3,7 @@ package cn.icuter.jsql.data;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 
 /**
  * @author edward
@@ -20,7 +21,7 @@ public class LobOutputStream extends OutputStream {
 
     LobOutputStream(JSQLClob clob, long position) {
         this.clob = clob;
-        init(clob.data.toString().getBytes(), position);
+        init(clob.data.toString().getBytes(StandardCharsets.UTF_8), position);
     }
 
     private void init(byte[] srcBytes, long position) {
@@ -38,7 +39,7 @@ public class LobOutputStream extends OutputStream {
     @Override
     public void flush() throws IOException {
         if (clob != null) {
-            String replacing = out.toString();
+            String replacing = out.toString("UTF-8");
             clob.data.replace(0, replacing.length(), replacing);
         }
         if (blob != null) {

@@ -7,6 +7,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Reader;
 import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 
 import static org.junit.Assert.*;
@@ -63,7 +64,7 @@ public class JSQLClobTest {
     @Test
     public void getAsciiStream() throws Exception {
         JSQLClob clob = new JSQLClob(SRC);
-        byte[] srcBytes = SRC.getBytes();
+        byte[] srcBytes = SRC.getBytes(StandardCharsets.UTF_8);
         byte[] readBytes = new byte[srcBytes.length];
         try (InputStream in = clob.getAsciiStream()) {
             assertEquals(srcBytes.length, in.read(readBytes));
@@ -101,7 +102,7 @@ public class JSQLClobTest {
         JSQLClob clob = new JSQLClob(SRC);
         String setStr = "icuter";
         try (OutputStream out = clob.setAsciiStream(1L)) {
-            out.write(setStr.getBytes());
+            out.write(setStr.getBytes(StandardCharsets.UTF_8));
         }
         Assert.assertEquals(SRC.length(), clob.length());
         Assert.assertEquals(SRC.replaceFirst("^.{" + setStr.length() + "}", setStr),
@@ -110,15 +111,15 @@ public class JSQLClobTest {
         int pos = 6;
         clob = new JSQLClob(SRC);
         try (OutputStream out = clob.setAsciiStream(pos)) {
-            out.write(setStr.getBytes());
+            out.write(setStr.getBytes(StandardCharsets.UTF_8));
         }
         Assert.assertEquals(SRC.length(), clob.length());
         Assert.assertEquals("test " + setStr + "lob", clob.getSubString(1L, (int) clob.length()));
 
-        pos = SRC.getBytes().length + 1;
+        pos = SRC.getBytes(StandardCharsets.UTF_8).length + 1;
         clob = new JSQLClob(SRC);
         try (OutputStream out = clob.setAsciiStream(pos)) {
-            out.write(setStr.getBytes());
+            out.write(setStr.getBytes(StandardCharsets.UTF_8));
         }
         Assert.assertEquals(SRC.length() + setStr.length(), clob.length());
         Assert.assertEquals((SRC + setStr), clob.getSubString(1L, (int) clob.length()));

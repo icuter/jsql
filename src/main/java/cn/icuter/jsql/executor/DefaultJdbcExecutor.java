@@ -198,6 +198,7 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
         LOGGER.info("executing query sql: " + builder.getSql());
         LOGGER.debug("executing query values: " + builder.getPreparedValues());
         PreparedStatement ps = null;
+        ResultSet rs = null;
         BuilderContext builderContext = builder.getBuilderContext();
         try {
             if (!builderContext.getDialect().supportOffsetLimit() && builderContext.getOffset() > 0) {
@@ -210,7 +211,7 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
             for (int i = 0, len = preparedValues.size(); i < len; i++) {
                 ps.setObject(i + 1, preparedValues.get(i));
             }
-            ResultSet rs = ps.executeQuery();
+            rs = ps.executeQuery();
             ResultSetMetaData meta = rs.getMetaData();
 
             if (!builderContext.getDialect().supportOffsetLimit()) {
@@ -233,6 +234,13 @@ public class DefaultJdbcExecutor implements JdbcExecutor {
                     ps.close();
                 } catch (SQLException e) {
                     LOGGER.error("closing PreparedStatement error, builder detail: " + builder, e);
+                }
+            }
+            if (rs != null) {
+                try {
+                    rs.close();
+                } catch (SQLException e) {
+                    LOGGER.error("closing ResultSet error, builder detail: " + builder, e);
                 }
             }
         }

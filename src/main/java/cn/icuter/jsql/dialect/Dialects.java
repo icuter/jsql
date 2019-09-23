@@ -27,7 +27,7 @@ public abstract class Dialects {
     public static final Dialect SQLITE = new SQLiteDialect();
     public static final Dialect UNKNOWN = new UnknownDialect();
 
-    public static final Set<Dialect> SUPPORTED_DIALECT = new LinkedHashSet<>();
+    private static final Set<Dialect> SUPPORTED_DIALECT = new LinkedHashSet<>();
     static {
         SUPPORTED_DIALECT.add(MYSQL);
         SUPPORTED_DIALECT.add(MARIADB);
