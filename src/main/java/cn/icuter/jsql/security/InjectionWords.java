@@ -89,17 +89,16 @@ class InjectionWords {
             TrieNode parent = queue.poll();
             for (TrieNode child : parent.children.values()) {
                 TrieNode fail = parent.fail;
-                TrieNode currentChild = child;
                 while (fail != null) {
                     TrieNode failChild = fail.children.get(child.val);
                     if (failChild != null) {
-                        currentChild.fail = failChild;
-                        currentChild = failChild;
+                        child.fail = failChild;
+                        break;
                     }
                     fail = fail.fail;
                 }
-                if (currentChild.fail == null) {
-                    currentChild.fail = root;
+                if (child.fail == null) {
+                    child.fail = root;
                 }
                 queue.add(child);
             }
