@@ -23,8 +23,8 @@ class InjectionWords {
         return INSTANCE;
     }
     void resetWords(String[] words) {
+        writeLock.lock();
         try {
-            writeLock.lock();
             root = new TrieNode((char) 0);
             buildTrie(words);
             buildFail();
@@ -33,8 +33,8 @@ class InjectionWords {
         }
     }
     void addWords(String[] words) {
+        writeLock.lock();
         try {
-            writeLock.lock();
             buildTrie(words);
             buildFail();
         } finally {
@@ -42,8 +42,8 @@ class InjectionWords {
         }
     }
     boolean detect(String src) {
+        readLock.lock();
         try {
-            readLock.lock();
             TrieNode streamNode = root;
             for (int i = 0; i < src.length(); i++) {
                 char c = src.charAt(i);

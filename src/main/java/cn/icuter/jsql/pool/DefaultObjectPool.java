@@ -96,16 +96,16 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
     private PooledObject<T> getPooledObject() throws JSQLException {
         PooledObject<T> pooledObject;
         do {
+            opLock.lock();
             try {
-                opLock.lock();
                 if (isPoolClosed()) {
                     throw new PoolException("get pooled object fail, due to pool was already closed!");
                 }
                 pooledObject = idlePooledObjects.pollFirst();
                 // queue is empty and pool not full, try to create one
                 if (pooledObject == null && isPoolNotFull()) {
+                    createLock.lock();
                     try {
-                        createLock.lock();
                         if (isPoolNotFull()) {
                             pooledObject = tryToCreate(0);
                             if (pooledObject == null) {
@@ -231,8 +231,8 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
             throw new PooledObjectReturnException("Object has been returned!");
         }
         poolStats.updateLastAccessTime();
+        opLock.lock();
         try {
-            opLock.lock();
             if (isPoolClosed() || isAlwaysIdleTimeout() || validateFailOnReturn(pooledObject)) {
                 invalidPooledObject(pooledObject);
                 removeIdleScheduledTask(pooledObject);
@@ -276,8 +276,8 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
             LOGGER.warn("object pool has been closed, would not close again");
             return;
         }
+        closeLock.lock();
         try {
-            closeLock.lock();
             if (isPoolClosed()) {
                 LOGGER.warn("object pool has been closed, would not close again");
                 return;
