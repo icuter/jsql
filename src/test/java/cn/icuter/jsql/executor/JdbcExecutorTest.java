@@ -127,6 +127,27 @@ public class JdbcExecutorTest {
         }
     }
 
+    /*@Test
+    public void testStress() throws InterruptedException {
+        Thread[] testers = new Thread[20];
+        for (int i=0; i < testers.length; i++) {
+            testers[i] = new Thread(() -> {
+                for (int j=0; j < 10000; j++) {
+                    try {
+                        dataSource.select().from(TABLE_NAME).execQuery();
+                    } catch (JSQLException e) {
+                        e.printStackTrace();
+                        break;
+                    }
+                }
+            });
+            testers[i].start();
+        }
+        for (Thread t : testers) {
+            t.join();
+        }
+    }*/
+
     @Test
     public void testRollbackSavepoint() throws Exception {
         Dialect dialect = dataSource.getDialect();

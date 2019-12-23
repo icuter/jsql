@@ -9,9 +9,10 @@ import java.util.concurrent.RunnableScheduledFuture;
 public class PooledObject<T> {
 
     private final long createTime;
-    private long lastBorrowedTime;
-    private long lastReturnedTime;
-    private boolean borrowed;
+    private volatile long lastBorrowedTime;
+    private volatile long lastReturnedTime;
+    private volatile boolean borrowed;
+    private volatile boolean valid = true;
     private final T object;
     private ObjectPool<T> objectPool;
     RunnableScheduledFuture<?> scheduledFuture; // maintains idle task object
@@ -35,6 +36,10 @@ public class PooledObject<T> {
 
     public boolean isBorrowed() {
         return borrowed;
+    }
+
+    public boolean isValid() {
+        return valid;
     }
 
     public T getObject() {
@@ -65,6 +70,10 @@ public class PooledObject<T> {
         borrowed = false;
     }
 
+    void markInvalid() {
+        valid = false;
+    }
+
     @Override
     public String toString() {
         return new StringBuilder("PooledObject{")
@@ -72,6 +81,7 @@ public class PooledObject<T> {
                 .append(", lastBorrowedTime=").append(lastBorrowedTime)
                 .append(", lastReturnedTime=").append(lastReturnedTime)
                 .append(", borrowed=").append(borrowed)
+                .append(", valid=").append(valid)
                 .append(", objectType=").append(object == null ? null : object.getClass().getName())
                 .append('}').toString();
     }
