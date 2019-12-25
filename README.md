@@ -54,14 +54,14 @@ JSQL for Reasons:
 <dependency>
   <groupId>cn.icuter</groupId>
   <artifactId>jsql</artifactId>
-  <version>1.1.0</version>
+  <version>1.1.1</version>
 </dependency>
 
 <!-- for jdk1.6+ -->
 <dependency>
   <groupId>cn.icuter</groupId>
   <artifactId>jsql-jdk1.6</artifactId>
-  <version>1.1.0</version>
+  <version>1.1.1</version>
 </dependency>
 ````
 
@@ -133,6 +133,14 @@ Find more documentation [here](https://www.icuter.cn).
 9. [Logging Customization](https://www.icuter.cn/logging.html)
 
 ## Release Notes
+### 1.1.1
+bug fixes
+- fix ReentrantLock.lock() prior to try-finally block
+- fix bugs which have been detected by FindBugs tools
+
+performance
+- optimize scheduled task checking and invalidation
+
 ### 1.1.0
 bug fixes
 - fix fields injection
