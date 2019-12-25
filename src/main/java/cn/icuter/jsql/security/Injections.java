@@ -21,12 +21,12 @@ public abstract class Injections {
     /**
      * <pre>
      * Check as following field patterns
-     *   1. t.col as alias => "t"."col" as "alias"
-     *   2. t.col alias    => "t"."col"    "alias"
-     *   3. col as alias   =>     "col" as "alias"
-     *   4. col alias      =>     "col"    "alias"
-     *   5. t.*            => Unsupported
-     *   6. *              => Unsupported
+     *   1. t.col as alias  or  "t"."col" as "alias"
+     *   2. t.col alias     or  "t"."col"    "alias"
+     *   3. col as alias    or      "col" as "alias"
+     *   4. col alias       or      "col"    "alias"
+     *   5. t.*             or  Unsupported
+     *   6. *               or  Unsupported
      * </pre>
      * @param field columns in sql
      * @param quoteString valid quote string
