@@ -6,6 +6,7 @@ import java.io.OutputStream;
 import java.io.Reader;
 import java.io.StringReader;
 import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import java.sql.Clob;
 import java.sql.SQLException;
 
@@ -47,7 +48,7 @@ public class JSQLClob implements java.sql.Clob {
 
     @Override
     public InputStream getAsciiStream() throws SQLException {
-        return new ByteArrayInputStream(data.toString().getBytes());
+        return new ByteArrayInputStream(data.toString().getBytes(StandardCharsets.UTF_8));
     }
 
     @Override
@@ -79,7 +80,7 @@ public class JSQLClob implements java.sql.Clob {
 
     @Override
     public OutputStream setAsciiStream(long pos) throws SQLException {
-        if (pos <= 0 || pos > data.toString().getBytes().length + 1) {
+        if (pos <= 0 || pos > data.toString().getBytes(StandardCharsets.UTF_8).length + 1) {
             throw new SQLException("Position Parameter " + pos + " is out of acceptable position between 1 and "
                     + (data.length() + 1));
         }

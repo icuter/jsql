@@ -28,12 +28,10 @@ public class ClobWriter extends Writer {
 
     @Override
     public void flush() throws IOException {
-        if (writer.size() > clob.data.length()) {
-            clob.data = new StringBuilder(writer.toString());
-        } else {
+        if (writer.size() <= clob.data.length()) {
             writer.write(clob.data.toString(), writer.size(), clob.data.length() - writer.size());
-            clob.data = new StringBuilder(writer.toString());
         }
+        clob.data = new StringBuilder(writer.toString());
     }
 
     @Override

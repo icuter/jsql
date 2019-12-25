@@ -13,15 +13,14 @@ import java.util.Arrays;
  * @since 2019-02-06
  */
 public class JSQLBlob implements java.sql.Blob {
-    byte[] data = new byte[0];
+    byte[] data;
 
     public JSQLBlob() {
+        this(null);
     }
 
     public JSQLBlob(byte[] initData) {
-        if (initData != null) {
-            data = initData;
-        }
+        data = initData != null ? initData : new byte[0];
     }
 
     @Override

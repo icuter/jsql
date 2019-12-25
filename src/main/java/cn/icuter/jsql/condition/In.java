@@ -17,7 +17,6 @@ public class In extends AbstractCondition {
 
     In(String field, Builder value) {
         super(field, value);
-        checkIsBuilderValue(value);
     }
 
     private void checkListOrArray(Object value) {
@@ -25,10 +24,6 @@ public class In extends AbstractCondition {
         if (!Collection.class.isAssignableFrom(valClass) && !valClass.isArray()) {
             throw new IllegalArgumentException("value must be a collection or array! ");
         }
-    }
-
-    private boolean checkIsBuilderValue(Object value) {
-        return Builder.class.isAssignableFrom(value.getClass());
     }
 
     @Override

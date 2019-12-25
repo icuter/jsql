@@ -14,6 +14,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.sql.Blob;
 import java.sql.Clob;
 import java.util.List;
@@ -73,7 +74,7 @@ public class ORMTest {
 
         txExecutor = dataSource.getTransactionExecutor();
         try {
-            ormTable.setfBlob("hello blob update".getBytes());
+            ormTable.setfBlob("hello blob update".getBytes(StandardCharsets.UTF_8));
             ormTable.setfClob("hello clob update");
             ormTable.setfString("hello string update");
             ormTable.setfBlobObj(null);
@@ -191,7 +192,7 @@ public class ORMTest {
     private ORMTable createOrmTable() {
         ORMTable ormTable = new ORMTable();
         ormTable.setOrmId(UUID.randomUUID().toString());
-        ormTable.setfBlobObj(dataSource.createBlob("created from JSQL Blob".getBytes()));
+        ormTable.setfBlobObj(dataSource.createBlob("created from JSQL Blob".getBytes(StandardCharsets.UTF_8)));
         ormTable.setfClobObj(dataSource.createClob("created from JSQL Clob"));
         ormTable.setfDecimal(new BigDecimal("10.002"));
         ormTable.setfInt(100);

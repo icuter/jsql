@@ -8,19 +8,15 @@ import cn.icuter.jsql.exception.PooledObjectPollTimeoutException;
 import cn.icuter.jsql.exception.PooledObjectReturnException;
 import cn.icuter.jsql.log.JSQLLogger;
 import cn.icuter.jsql.log.Logs;
-import cn.icuter.jsql.util.CollectionUtil;
 import cn.icuter.jsql.util.ObjectUtil;
-import cn.icuter.jsql.util.RemoveFilter;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.RunnableScheduledFuture;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
@@ -47,8 +43,8 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
 
     private ReentrantLock createLock = new ReentrantLock();
     private ReadWriteLock poolLock = new ReentrantReadWriteLock();
-    private Lock closeLock = poolLock.writeLock();
-    private Lock opLock = poolLock.readLock();
+    private Lock writeLock = poolLock.writeLock();
+    private Lock readLock = poolLock.readLock();
 
     private volatile boolean closed;
     private PoolStats poolStats = new PoolStats();
@@ -85,83 +81,82 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
 
     @Override
     public T borrowObject() throws JSQLException {
-        PooledObject<T> pc = getPooledObject();
-        if (pc == null) {
-            return null;
+        readLock.lock();
+        try {
+            PooledObject<T> pc = getPooledObject();
+            if (pc == null) {
+                return null;
+            }
+            pc.markBorrowed();
+            pc.updateLastBorrowedTime();
+            poolStats.updateBorrowStats();
+            poolStats.updateLastAccessTime();
+            return pc.getObject();
+        } finally {
+            readLock.unlock();
         }
-        pc.markBorrowed();
-        pc.updateLastBorrowedTime();
-        poolStats.updateBorrowStats();
-        poolStats.updateLastAccessTime();
-        return pc.getObject();
     }
 
     private PooledObject<T> getPooledObject() throws JSQLException {
         PooledObject<T> pooledObject;
         do {
-            try {
-                opLock.lock();
-                if (isPoolClosed()) {
-                    throw new PoolException("get pooled object fail, due to pool was already closed!");
-                }
-                pooledObject = idlePooledObjects.pollFirst();
-                // queue is empty and pool not full, try to create one
-                if (pooledObject == null && isPoolNotFull()) {
-                    try {
-                        createLock.lock();
-                        if (isPoolNotFull()) {
-                            pooledObject = tryToCreate(0);
-                            if (pooledObject == null) {
-                                // should never happen
-                                throw new PooledObjectCreationException("create pool object error!");
-                            }
-                            pooledObject.setObjectPool(this);
-                            allPooledObjects.put(System.identityHashCode(pooledObject.getObject()), pooledObject);
-                            poolStats.updateCreateStats();
+            if (isPoolClosed()) {
+                throw new PoolException("get pooled object fail, due to pool was already closed!");
+            }
+            pooledObject = idlePooledObjects.pollFirst();
+            // queue is empty and pool not full, try to create one
+            if (pooledObject == null && isPoolNotFull()) {
+                createLock.lock();
+                try {
+                    if (isPoolNotFull()) {
+                        pooledObject = tryToCreate(0);
+                        if (pooledObject == null) {
+                            throw new PooledObjectCreationException("create pool object error!");
+                        }
+                        pooledObject.setObjectPool(this);
+                        allPooledObjects.put(System.identityHashCode(pooledObject.getObject()), pooledObject);
+                        poolStats.updateCreateStats();
 
-                            LOGGER.trace("pooled object has been created, object detail: " + pooledObject);
-                            break;
-                        }
-                    } finally {
-                        createLock.unlock();
-                    }
-                }
-                // pool reach the max size
-                if (pooledObject == null) {
-                    if (poolCfg.getPollTimeout() > 0) {
-                        try {
-                            pooledObject = idlePooledObjects.pollFirst(poolCfg.getPollTimeout(), TimeUnit.MILLISECONDS);
-                            if (pooledObject == null) {
-                                throw new PooledObjectPollTimeoutException("get pool object timeout, waited for "
-                                        + poolCfg.getPollTimeout() + "ms");
-                            }
-                        } catch (InterruptedException e) {
-                            throw new PoolException("get pool object fail!", e);
-                        }
-                    } else {
-                        try {
-                            // setting poll timeout args for releasing CPU resource
-                            pooledObject = idlePooledObjects.pollFirst(100L, TimeUnit.MILLISECONDS);
-                        } catch (InterruptedException e) {
-                            // ignore
-                        }
-                    }
-                }
-                if (pooledObject != null) {
-                    if (validateFailOnBorrow(pooledObject)) {
-                        invalidPooledObject(pooledObject);
-                        continue;
-                    } else {
+                        LOGGER.trace("pooled object has been created, object detail: " + pooledObject);
                         break;
                     }
+                } finally {
+                    createLock.unlock();
                 }
-                if (isPollNoWait()) {
-                    return null;
-                }
-                LOGGER.trace("get pooled object failed, continue to get the next");
-            } finally {
-                opLock.unlock();
             }
+            // pool reach the max size
+            if (pooledObject == null) {
+                if (poolCfg.getPollTimeout() > 0) {
+                    try {
+                        pooledObject = idlePooledObjects.pollFirst(poolCfg.getPollTimeout(), TimeUnit.MILLISECONDS);
+                        if (pooledObject == null) {
+                            throw new PooledObjectPollTimeoutException("get pool object timeout, waited for "
+                                    + poolCfg.getPollTimeout() + "ms");
+                        }
+                    } catch (InterruptedException e) {
+                        throw new PoolException("get pool object fail!", e);
+                    }
+                } else {
+                    try {
+                        // setting poll timeout args for releasing CPU resource
+                        pooledObject = idlePooledObjects.pollFirst(100L, TimeUnit.MILLISECONDS);
+                    } catch (InterruptedException e) {
+                        // ignore
+                    }
+                }
+            }
+            if (pooledObject != null) {
+                // check whether removed by idle object schedule task
+                if (!pooledObject.isValid() || validateFailOnBorrow(pooledObject)) {
+                    invalidPooledObject(pooledObject);
+                    continue;
+                }
+                break;
+            }
+            if (isPollNoWait()) {
+                return null;
+            }
+            LOGGER.trace("get pooled object failed, continue to get the next");
         } while (true);
         return pooledObject;
     }
@@ -215,6 +210,7 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
     private void invalidPooledObject(PooledObject<T> pooledObject) throws JSQLException {
         if (allPooledObjects.remove(System.identityHashCode(pooledObject.getObject())) != null) {
             manager.invalid(pooledObject);
+            pooledObject.markInvalid();
             poolStats.updateRemoveStats();
         }
     }
@@ -234,9 +230,9 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
             throw new PooledObjectReturnException("Object has been returned!");
         }
         poolStats.updateLastAccessTime();
+        readLock.lock();
         try {
-            opLock.lock();
-            if (isPoolClosed() || isAlwaysIdleTimeout() || validateFailOnReturn(pooledObject)) {
+            if (isPoolClosed() || isAlwaysIdleTimeout() || !pooledObject.isValid() || validateFailOnReturn(pooledObject)) {
                 invalidPooledObject(pooledObject);
                 removeIdleScheduledTask(pooledObject);
                 return;
@@ -248,7 +244,7 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
             idlePooledObjects.addLast(pooledObject);
             poolStats.updateReturnStats();
         } finally {
-            opLock.unlock();
+            readLock.unlock();
         }
     }
 
@@ -265,7 +261,7 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
     private void scheduleIdleTimeoutTask(PooledObject<T> pooledObject) {
         if (idleObjectExecutor != null) {
             idleObjectExecutor.scheduleIdleTask(new IdleObjectTimeoutTask(pooledObject),
-                    poolCfg.getIdleTimeout() + IDLE_SCHEDULE_OFFSET_MILLISECONDS, TimeUnit.MILLISECONDS);
+                    poolCfg.getIdleTimeout() + IDLE_SCHEDULE_OFFSET_MILLISECONDS);
         }
     }
 
@@ -276,13 +272,11 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
     @Override
     public void close() throws JSQLException {
         if (isPoolClosed()) {
-            LOGGER.warn("object pool has been closed, would not close again");
             return;
         }
+        writeLock.lock();
         try {
-            closeLock.lock();
             if (isPoolClosed()) {
-                LOGGER.warn("object pool has been closed, would not close again");
                 return;
             }
             closed = true;
@@ -294,24 +288,25 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
                 invalidPooledObject(pooledObject);
             }
         } finally {
-            closeLock.unlock();
+            writeLock.unlock();
         }
         LOGGER.debug("succeed in closing object pool, for more info: " + debugInfo());
     }
 
     @Override
-    public final void finalize() throws Throwable {
-        close();
-        // force to invalid all pooled object
-        forceInvalidPooledObjects();
-        super.finalize();
+    protected final void finalize() throws Throwable {
+        try {
+            close();
+            // force to invalid all pooled objects
+            forceInvalidPooledObjects();
+        } finally {
+            super.finalize();
+        }
     }
 
     private void forceInvalidPooledObjects() throws Exception {
-        Set<Integer> pooledObjKeys = allPooledObjects.keySet();
-        for (Integer key : pooledObjKeys) {
-            PooledObject<T> pooledObject = allPooledObjects.get(key);
-            invalidPooledObject(pooledObject);
+        for (Map.Entry<Integer, PooledObject<T>> entry : allPooledObjects.entrySet()) {
+            invalidPooledObject(entry.getValue());
         }
     }
 
@@ -382,11 +377,11 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
         IdleObjectScheduledExecutor(int corePoolSize) {
             super(corePoolSize);
         }
-        ScheduledFuture<?> scheduleIdleTask(IdleObjectTimeoutTask task, long delay, TimeUnit unit) {
-            task.pooledObject.scheduledFuture = (RunnableScheduledFuture) schedule(task, delay, unit);
-            return task.pooledObject.scheduledFuture;
+        void scheduleIdleTask(IdleObjectTimeoutTask task, long delay) {
+            task.pooledObject.scheduledFuture = (RunnableScheduledFuture) schedule(task, delay, TimeUnit.MILLISECONDS);
         }
     }
+
     private static final JSQLLogger TASK_LOGGER = Logs.getLogger(DefaultObjectPool.IdleObjectTimeoutTask.class);
     class IdleObjectTimeoutTask implements Runnable {
         private PooledObject<T> pooledObject;
@@ -397,22 +392,20 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
 
         @Override
         public void run() {
-            // actually, while object pool has been closed, that would never run its' scheduled task
-            if (pooledObject != null && !pooledObject.isBorrowed() && !isPoolClosed() && isPoolObjectIdleTimeout(pooledObject)) {
-                CollectionUtil.iterate(idlePooledObjects, new RemoveFilter<PooledObject<T>>() {
-                    @Override
-                    public boolean removeIf(PooledObject<T> p) {
-                        if (p == pooledObject) {
-                            try {
-                                invalidPooledObject(pooledObject);
-                            } catch (JSQLException e) {
-                                TASK_LOGGER.error("invaliding pooled object error", e);
-                            }
-                            return true;
-                        }
-                        return false;
+            // If ObjectPool has been closed, that would never run its' scheduled task
+            if (pooledObject != null && pooledObject.isValid()
+                    && !pooledObject.isBorrowed() && !isPoolClosed() && isPoolObjectIdleTimeout(pooledObject)) {
+                writeLock.lock();
+                try {
+                    if (pooledObject.isValid() && !pooledObject.isBorrowed()) {
+                        invalidPooledObject(pooledObject);
+                        TASK_LOGGER.debug("invalidate pooled object: " + pooledObject);
                     }
-                });
+                } catch (JSQLException e) {
+                    TASK_LOGGER.error("invalidating pooled object error", e);
+                } finally {
+                    writeLock.unlock();
+                }
             }
         }
     }

@@ -22,16 +22,13 @@ public class PooledConnectionManager implements PooledObjectManager<Connection> 
     private static final JSQLLogger LOGGER = Logs.getLogger(PooledConnectionManager.class);
 
     private int checkValidTimeout; // seconds, default 5s
-    private int invalidTimeout;    // milliseconds, default -1 set invalid immediately
     private JSQLDataSource dataSource;
 
     PooledConnectionManager(JSQLDataSource dataSource) {
-        this(dataSource, -1, 5);
+        this(dataSource, 5);
     }
-
-    PooledConnectionManager(JSQLDataSource dataSource, int invalidTimeout, int checkValidTimeout) {
+    PooledConnectionManager(JSQLDataSource dataSource, int checkValidTimeout) {
         this.dataSource = dataSource;
-        this.invalidTimeout = invalidTimeout;
         this.checkValidTimeout = checkValidTimeout;
     }
 
@@ -49,7 +46,7 @@ public class PooledConnectionManager implements PooledObjectManager<Connection> 
         }
     }
 
-    protected Connection newConnection() throws SQLException {
+    private Connection newConnection() throws SQLException {
         try {
             return dataSource.createConnection();
         } catch (Exception e) {
@@ -61,19 +58,6 @@ public class PooledConnectionManager implements PooledObjectManager<Connection> 
     public void invalid(PooledObject<Connection> pooledObject) throws JSQLException {
         Connection connection = getRawConnection(pooledObject);
         try {
-            while (pooledObject.isBorrowed() && !connection.isClosed()) {
-                if (invalidTimeout > 0) {
-                    long now = System.currentTimeMillis();
-                    if (now - pooledObject.getLastBorrowedTime() > invalidTimeout) {
-                        LOGGER.debug("Connection is closing after waited " + invalidTimeout + "ms");
-                        break;
-                    }
-                } else {
-                    // set invalid immediately
-                    LOGGER.debug("Connection is closing immediately");
-                    break;
-                }
-            }
             if (!connection.isClosed()) {
                 connection.close();
             }
@@ -133,13 +117,5 @@ public class PooledConnectionManager implements PooledObjectManager<Connection> 
             return ((PooledConnection) connection).connection;
         }
         return connection;
-    }
-
-    public void setInvalidTimeout(int invalidTimeout) {
-        this.invalidTimeout = invalidTimeout;
-    }
-
-    public void setCheckValidTimeout(int checkValidTimeout) {
-        this.checkValidTimeout = checkValidTimeout;
     }
 }

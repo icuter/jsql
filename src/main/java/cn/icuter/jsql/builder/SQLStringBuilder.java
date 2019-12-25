@@ -174,7 +174,7 @@ public class SQLStringBuilder {
         this.delimiter = delimiter;
     }
 
-    public class SQLItem {
+    public static class SQLItem {
         String sql;
         String type;
         int sqlPosition;

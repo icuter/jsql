@@ -15,8 +15,8 @@ import java.util.Properties;
  * @since 2019-02-12
  */
 public abstract class TestUtils {
-    public static String DB_TYPE_KEY = "dbType";
-    public static String DEFAULT_DB_TYPE = "derby";
+    public static final String DB_TYPE_KEY = "dbType";
+    public static final String DEFAULT_DB_TYPE = "derby";
 
     public static JSQLDataSource getDataSource() {
         Properties properties = new Properties();

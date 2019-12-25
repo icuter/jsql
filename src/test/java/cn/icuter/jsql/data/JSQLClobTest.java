@@ -69,7 +69,7 @@ public class JSQLClobTest {
     @Test
     public void getAsciiStream() throws Exception {
         JSQLClob clob = new JSQLClob(SRC);
-        byte[] srcBytes = SRC.getBytes();
+        byte[] srcBytes = SRC.getBytes("UTF-8");
         byte[] readBytes = new byte[srcBytes.length];
         InputStream in = clob.getAsciiStream();
         try {
@@ -111,7 +111,7 @@ public class JSQLClobTest {
         String setStr = "icuter";
         OutputStream out = clob.setAsciiStream(1L);
         try {
-            out.write(setStr.getBytes());
+            out.write(setStr.getBytes("UTF-8"));
         } finally {
             out.close();
         }
@@ -123,18 +123,18 @@ public class JSQLClobTest {
         clob = new JSQLClob(SRC);
         out = clob.setAsciiStream(pos);
         try {
-            out.write(setStr.getBytes());
+            out.write(setStr.getBytes("UTF-8"));
         } finally {
             out.close();
         }
         Assert.assertEquals(SRC.length(), clob.length());
         Assert.assertEquals("test " + setStr + "lob", clob.getSubString(1L, (int) clob.length()));
 
-        pos = SRC.getBytes().length + 1;
+        pos = SRC.getBytes("UTF-8").length + 1;
         clob = new JSQLClob(SRC);
         out = clob.setAsciiStream(pos);
         try {
-            out.write(setStr.getBytes());
+            out.write(setStr.getBytes("UTF-8"));
         } finally {
             out.close();
         }
