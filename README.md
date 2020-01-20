@@ -70,7 +70,7 @@ JSQL for Reasons:
 ### Auto Commit
 
 ```java
-JSQLDataSource dataSource = new JSQLDataSource("url", "username", "password");
+JSQLDataSource dataSource = JSQLDataSource.newDataSourceBuilder().url("jdbcUrl").user("jsql").password("pass").build();
 List<Map<String, Object>> list = dataSource.select()
                                            .from("table")
                                            .where().eq("name", "jsql")
@@ -85,7 +85,7 @@ Value: [jsql]
 ### Transaction
 
 ```java
-JSQLDataSource dataSource = new JSQLDataSource("url", "username", "password");
+JSQLDataSource dataSource = JSQLDataSource.newDataSourceBuilder().url("jdbcUrl").user("jsql").password("pass").build();
 dataSource.transaction(tx -> {
     tx.insert("table")
       .values(Cond.eq("col1", "val1"), Cond.eq("col2", 102),Cond.eq("col3", "val3"))
@@ -103,7 +103,7 @@ VALUE: ["val1", 102, "val3"]
 Using standalone Transaction to control commit or rollback operation as your favour
 
 ```java
-JSQLDataSource dataSource = new JSQLDataSource("url", "username", "password");
+JSQLDataSource dataSource = JSQLDataSource.newDataSourceBuilder().url("jdbcUrl").user("jsql").password("pass").build();
 TransactionDataSource tx = dataSource.transaction();
 tx.insert("table")
   .values(Cond.eq("col1", "val1"), Cond.eq("col2", 102),Cond.eq("col3", "val3"))

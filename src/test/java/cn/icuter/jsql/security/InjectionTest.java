@@ -1,5 +1,6 @@
 package cn.icuter.jsql.security;
 
+import cn.icuter.jsql.TestUtils;
 import org.junit.Test;
 
 public class InjectionTest {
@@ -29,46 +30,17 @@ public class InjectionTest {
         Injections.check("col", "");
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testIllegalField() {
-        Injections.check("col--", "\"");
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void testIllegalAlias() {
-        Injections.check("col/* \"alias/*\"", "\"");
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void testIllegalAlias2() {
-        Injections.check("\"t.col as ?alias\"", "\"");
-    }
-    @Test(expected = IllegalArgumentException.class)
-    public void testIllegalAs() {
-        Injections.check("col as alias%", "\"");
-    }
-    @Test(expected = IllegalArgumentException.class)
-    public void testIllegalQuote() {
-        Injections.check("col as \"alias", "\"");
-    }
-    @Test(expected = IllegalArgumentException.class)
-    public void testIllegalQuote2() {
-        Injections.check("col as 'alias", "\"");
-    }
-    @Test(expected = IllegalArgumentException.class)
-    public void testIllegalBracket() {
-        Injections.check("col as @alias", "\"");
-    }
-    @Test(expected = IllegalArgumentException.class)
-    public void testIllegalTable() {
-        Injections.check("t--.\"col\" as \"alias\"", "\"");
-    }
-    @Test(expected = IllegalArgumentException.class)
-    public void testIllegalTable2() {
-        Injections.check("\"t--.col as alias\"", "\"");
-    }
-    @Test(expected = IllegalArgumentException.class)
-    public void testIllegalFunc() {
-        Injections.check("test_func(t.col) as ?alias\"", "\"");
+        TestUtils.assertThrows(IllegalArgumentException.class, () -> Injections.check("col--", "\""));
+        TestUtils.assertThrows(IllegalArgumentException.class, () -> Injections.check("col/* \"alias/*\"", "\""));
+        TestUtils.assertThrows(IllegalArgumentException.class, () -> Injections.check("\"t.col as ?alias\"", "\""));
+        TestUtils.assertThrows(IllegalArgumentException.class, () -> Injections.check("col as alias%", "\""));
+        TestUtils.assertThrows(IllegalArgumentException.class, () -> Injections.check("col as \"alias", "\""));
+        TestUtils.assertThrows(IllegalArgumentException.class, () -> Injections.check("col as 'alias", "\""));
+        TestUtils.assertThrows(IllegalArgumentException.class, () -> Injections.check("col as @alias", "\""));
+        TestUtils.assertThrows(IllegalArgumentException.class, () -> Injections.check("t--.\"col\" as \"alias\"", "\""));
+        TestUtils.assertThrows(IllegalArgumentException.class, () -> Injections.check("\"t--.col as alias\"", "\""));
+        TestUtils.assertThrows(IllegalArgumentException.class, () -> Injections.check("test_func(t.col) as ?alias\"", "\""));
     }
 }
