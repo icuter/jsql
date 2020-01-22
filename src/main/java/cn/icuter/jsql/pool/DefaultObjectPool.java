@@ -139,10 +139,10 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
                     }
                 } else {
                     try {
-                        // setting poll timeout args for releasing CPU resource
-                        pooledObject = idlePooledObjects.pollFirst(100L, TimeUnit.MILLISECONDS);
+                        // setting poll timeout args for releasing CPU resource instead of Thread.yield()
+                        pooledObject = idlePooledObjects.pollFirst(1000L, TimeUnit.NANOSECONDS);
                     } catch (InterruptedException e) {
-                        // ignore
+                        throw new PoolException("get pool object fail!", e);
                     }
                 }
             }

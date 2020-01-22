@@ -59,8 +59,8 @@ public class PoolConfiguration {
         PoolConfiguration poolConfiguration = new PoolConfiguration();
         poolConfiguration.setMaxPoolSize(20);
         poolConfiguration.setPollTimeout(10000);
-        poolConfiguration.setIdleTimeout(TimeUnit.MILLISECONDS.convert(30, TimeUnit.MINUTES));
-        poolConfiguration.setScheduledThreadLifeTime(TimeUnit.MILLISECONDS.convert(5, TimeUnit.MINUTES));
+        poolConfiguration.setIdleTimeout(TimeUnit.MINUTES.toMillis(30));
+        poolConfiguration.setScheduledThreadLifeTime(TimeUnit.MINUTES.toMillis(5));
         poolConfiguration.setValidateOnBorrow(true);
         poolConfiguration.setValidateOnReturn(false);
         return poolConfiguration;
