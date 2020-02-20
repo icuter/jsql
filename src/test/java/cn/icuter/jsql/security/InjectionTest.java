@@ -1,6 +1,9 @@
 package cn.icuter.jsql.security;
 
+import org.junit.Assert;
 import org.junit.Test;
+
+import java.util.List;
 
 public class InjectionTest {
 
@@ -27,6 +30,31 @@ public class InjectionTest {
         Injections.check((String) null, "`");
         Injections.check("col", null);
         Injections.check("col", "");
+    }
+
+    @Test
+    public void testUpdateWords() {
+        InjectionWords.TrieNode root = InjectionWords.getInstance().getRoot();
+
+        Injections.setBlacklistPattern(new String[] {"'"});
+
+        List<String> wordList = InjectionWords.getInstance().wordList;
+        Assert.assertEquals(1, wordList.size());
+        Assert.assertEquals("'", wordList.get(0));
+        Assert.assertNotEquals(root, InjectionWords.getInstance().getRoot());
+
+        root = InjectionWords.getInstance().getRoot();
+        Injections.setBlacklistPattern(InjectionWords.DEFAULT_WORDS);
+        Assert.assertNotEquals(root, InjectionWords.getInstance().getRoot());
+
+        root = InjectionWords.getInstance().getRoot();
+        Injections.addBlacklistPattern(new String[] {"'"});
+        Assert.assertNotEquals(root, InjectionWords.getInstance().getRoot());
+
+        Assert.assertEquals(InjectionWords.DEFAULT_WORDS.length + 1, wordList.size());
+        Assert.assertEquals("'", wordList.get(wordList.size() - 1));
+
+        Injections.setBlacklistPattern(InjectionWords.DEFAULT_WORDS);
     }
 
     @Test(expected = IllegalArgumentException.class)
