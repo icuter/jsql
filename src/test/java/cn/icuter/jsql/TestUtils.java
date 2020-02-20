@@ -26,7 +26,7 @@ public abstract class TestUtils {
         File jdbcPropFile = new File(icuterHome, String.format("conf/%s.properties", dbType.toLowerCase()));
         try (InputStream in = new FileInputStream(jdbcPropFile)) {
             properties.load(in);
-            return JSQLDataSource.newDataSourceBuilder().addDriverProperties(properties).build();
+            return JSQLDataSource.newDataSourceBuilder().addProperties(properties).build();
         } catch (IOException e) {
             throw new IllegalArgumentException(e);
         }

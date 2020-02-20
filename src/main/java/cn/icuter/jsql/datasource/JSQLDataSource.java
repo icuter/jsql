@@ -470,6 +470,16 @@ public class JSQLDataSource extends AbstractBuilderDataSource implements javax.s
             }
             return this;
         }
+        public DataSourceBuilder addProperties(Properties jdbcProperties) {
+            if (jdbcProperties == null) {
+                // ignored processing if jdbcProperties is null
+                return this;
+            }
+            for (Map.Entry<Object, Object> entry : jdbcProperties.entrySet()) {
+                this.jdbcProperties.put(entry.getKey(), entry.getValue());
+            }
+            return this;
+        }
         public DataSourceBuilder addMapProperties(Supplier<Map<String, String>> supplier) {
             jdbcProperties.putAll(Optional.ofNullable(supplier.get()).orElse(Collections.emptyMap()));
             return this;
