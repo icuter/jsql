@@ -1,77 +1,90 @@
 package cn.icuter.jsql.security;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Queue;
 import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.locks.ReentrantLock;
 
 class InjectionWords {
-    private static final String[] WORDS = new String[] {";", "--", "/*", "#", "%", "?", "@", "'", "\""};
+    public static final String[] DEFAULT_WORDS = new String[] {";", "--", "/*", "#", "%", "?", "@", "'", "\""};
     private static final InjectionWords INSTANCE = new InjectionWords();
-    private TrieNode root;
-    private ReadWriteLock lock = new ReentrantReadWriteLock();
-    private Lock readLock = lock.readLock();
-    private Lock writeLock = lock.writeLock();
+    private transient volatile TrieNode root; // as a snapshot
+    List<String> wordList = new LinkedList<>();
+    private Lock lock = new ReentrantLock();
 
     private InjectionWords() {
-        resetWords(WORDS);
+        resetWords(DEFAULT_WORDS);
     }
+
     static InjectionWords getInstance() {
         return INSTANCE;
     }
+
     void resetWords(String[] words) {
-        writeLock.lock();
+        lock.lock();
         try {
-            root = new TrieNode((char) 0);
-            buildTrie(words);
-            buildFail();
+            wordList.clear();
+            wordList.addAll(Arrays.asList(words));
+            resetRoot();
         } finally {
-            writeLock.unlock();
+            lock.unlock();
         }
     }
+
     void addWords(String[] words) {
-        writeLock.lock();
+        lock.lock();
         try {
-            buildTrie(words);
-            buildFail();
+            wordList.addAll(Arrays.asList(words));
+            resetRoot();
         } finally {
-            writeLock.unlock();
+            lock.unlock();
         }
     }
+
+    private void resetRoot() {
+        TrieNode tempRoot = new TrieNode((char) 0);
+        buildTrie(tempRoot, wordList);
+        buildFail(tempRoot);
+        root = tempRoot;
+    }
+
     boolean detect(String src) {
-        readLock.lock();
-        try {
-            TrieNode streamNode = root;
-            for (int i = 0; i < src.length(); i++) {
-                char c = src.charAt(i);
-                TrieNode firstNode = streamNode.children.get(c);
-                TrieNode parent = streamNode;
-                while (parent.fail != null && firstNode == null) {
-                    parent = parent.fail;
-                    firstNode = parent.children.get(c);
-                }
-                streamNode = firstNode != null ? firstNode : root;
-                while (firstNode != null && !firstNode.isWord) {
-                    firstNode = firstNode.fail;
-                }
-                if (firstNode != null) {
-                    return true;
-                }
+        TrieNode snapshotRoot = getRoot();
+        TrieNode streamNode = snapshotRoot;
+        for (int i = 0; i < src.length(); i++) {
+            char c = src.charAt(i);
+            TrieNode firstNode = streamNode.children.get(c);
+            TrieNode parent = streamNode;
+            while (parent.fail != null && firstNode == null) {
+                parent = parent.fail;
+                firstNode = parent.children.get(c);
             }
-            return false;
-        } finally {
-            readLock.unlock();
+            streamNode = firstNode != null ? firstNode : snapshotRoot;
+            while (firstNode != null && !firstNode.isWord) {
+                firstNode = firstNode.fail;
+            }
+            if (firstNode != null) {
+                return true;
+            }
         }
+        return false;
     }
-    private void buildTrie(String[] words) {
+
+    TrieNode getRoot() {
+        return root;
+    }
+
+    private void buildTrie(TrieNode r, List<String> words) {
         for (String word : words) {
             if (word == null || word.length() <= 0) {
                 return;
             }
-            TrieNode current = root;
+            TrieNode current = r;
             for (int i = 0; i < word.length(); i++) {
                 char c = word.charAt(i);
                 if (current.children.get(c) == null) {
@@ -82,9 +95,12 @@ class InjectionWords {
             current.isWord = true;
         }
     }
-    private void buildFail() {
+
+    private void buildFail(TrieNode r) {
+        Objects.requireNonNull(r, "Root Parameter must not be null !");
+
         Queue<TrieNode> queue = new LinkedList<>();
-        queue.add(root);
+        queue.add(r);
         while (!queue.isEmpty()) {
             TrieNode parent = queue.poll();
             for (TrieNode child : parent.children.values()) {
@@ -98,7 +114,7 @@ class InjectionWords {
                     fail = fail.fail;
                 }
                 if (child.fail == null) {
-                    child.fail = root;
+                    child.fail = r;
                 }
                 queue.add(child);
             }
@@ -108,8 +124,8 @@ class InjectionWords {
         TrieNode(char val) {
             this.val = val;
         }
-        char val;      // root val is (char) 0
-        TrieNode fail; // root.fail is null
+        char val;      // root's val is (char) 0
+        TrieNode fail; // root's fail is null
         Map<Character, TrieNode> children = new HashMap<>();
         boolean isWord;
     }
