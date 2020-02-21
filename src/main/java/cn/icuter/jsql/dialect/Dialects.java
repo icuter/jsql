@@ -45,17 +45,17 @@ public abstract class Dialects {
     }
 
     public static Dialect parseUrl(String url) {
-        Objects.requireNonNull(url, "Url must not be null");
-        final String lowerCaseUrl = url.toLowerCase();
+        Objects.requireNonNull(url, "Try to parse Dialect from a null URL parameter");
         return SUPPORTED_DIALECT.stream()
-                .filter(dialect -> lowerCaseUrl.startsWith("jdbc:" + dialect.getDialectName().toLowerCase()))
+                .filter(dialect -> url.toLowerCase().startsWith("jdbc:" + dialect.getDialectName().toLowerCase()))
                 .findFirst().orElse(Dialects.UNKNOWN);
     }
 
     public static Dialect parseName(String nameOrDialectClass) {
         Objects.requireNonNull(nameOrDialectClass, "Dialect Name Or Dialect Class must not be null");
         return SUPPORTED_DIALECT.stream()
-                .filter(dialect -> nameOrDialectClass.equalsIgnoreCase(dialect.getDialectName())
+                .filter(dialect ->
+                        nameOrDialectClass.equalsIgnoreCase(dialect.getDialectName())
                         || nameOrDialectClass.equalsIgnoreCase(dialect.getClass().getName()))
                 .findFirst().orElse(Dialects.UNKNOWN);
     }

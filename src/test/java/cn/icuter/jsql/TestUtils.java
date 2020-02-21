@@ -3,6 +3,7 @@ package cn.icuter.jsql;
 import cn.icuter.jsql.datasource.JSQLDataSource;
 import cn.icuter.jsql.executor.JdbcExecutorTest;
 import cn.icuter.jsql.executor.ORMTest;
+import org.junit.Assert;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -25,7 +26,7 @@ public abstract class TestUtils {
         File jdbcPropFile = new File(icuterHome, String.format("conf/%s.properties", dbType.toLowerCase()));
         try (InputStream in = new FileInputStream(jdbcPropFile)) {
             properties.load(in);
-            return new JSQLDataSource(properties);
+            return JSQLDataSource.newDataSourceBuilder().addProperties(properties).build();
         } catch (IOException e) {
             throw new IllegalArgumentException(e);
         }
@@ -119,5 +120,18 @@ public abstract class TestUtils {
                 "  f_decimal decimal(10,3) NULL,\n" +
                 "  f_clob CLOB NULL,\n" +
                 "  PRIMARY KEY (orm_id))";
+    }
+
+    public static void assertThrows(Class<? extends Throwable> eType, ExceptionOperation operation) {
+        if (eType == null) {
+            throw new AssertionError("Expected exception type is null");
+        }
+        try {
+            operation.operate();
+        } catch (Throwable e) {
+            Assert.assertEquals(eType.getName(), e.getClass().getName());
+            return;
+        }
+        throw new AssertionError("Expect " + eType + ", but no exception thrown");
     }
 }
