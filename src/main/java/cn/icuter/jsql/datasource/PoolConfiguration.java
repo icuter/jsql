@@ -8,14 +8,12 @@ import java.util.concurrent.TimeUnit;
  */
 public class PoolConfiguration {
 
-    /**
-     * Setting of max objects size in pool, and default is 20
-     */
+    /** Setting of max objects size in pool, and default is 20 */
     private int maxPoolSize;
 
     /**
      * <pre>
-     * Setting of idle timeout with milliseconds, default is 30 minutes
+     * Pooled object idle timeout in milliseconds, default is 30 minutes
      *   -1 means never timeout
      *   0 means always timeout
      * </pre>
@@ -23,14 +21,14 @@ public class PoolConfiguration {
     private long idleTimeout;
 
     /**
-     * validate on borrowing an object from pool
+     * Validate on borrowing an object from pool
      * <br><br/>
      * <em>default: true</em>
      */
     private boolean validateOnBorrow;
 
     /**
-     * validate on returning an object to pool
+     * Validate on returning an object to pool
      * <br><br/>
      * <em>default: false</em>
      */
@@ -38,7 +36,7 @@ public class PoolConfiguration {
 
     /**
      * <pre>
-     * Poll object waiting for milliseconds time
+     * Poll object waiting in milliseconds
      *     0 : no wait, maybe return null
      *   0 < : wait permanently, will never return null
      * </pre>
@@ -46,13 +44,11 @@ public class PoolConfiguration {
      */
     private long pollTimeout;
 
-    /**
-     * retry to create pool object if exception occur, default 0
-     */
+    /** retry to create pool object if exception occur, default 0 */
     private int createRetryCount;
 
     /**
-     * Set the schedule thread's life time in milliseconds, but set it to negative or 0 means never timeout
+     * Life time of scheduled thread in milliseconds, but set it to negative or 0 means never timeout
      * <br>
      * <em>default 5 minutes</em>
      * @since v1.0.4
@@ -63,8 +59,8 @@ public class PoolConfiguration {
         PoolConfiguration poolConfiguration = new PoolConfiguration();
         poolConfiguration.setMaxPoolSize(20);
         poolConfiguration.setPollTimeout(10000);
-        poolConfiguration.setIdleTimeout(TimeUnit.MILLISECONDS.convert(30, TimeUnit.MINUTES));
-        poolConfiguration.setScheduledThreadLifeTime(TimeUnit.MILLISECONDS.convert(5, TimeUnit.MINUTES));
+        poolConfiguration.setIdleTimeout(TimeUnit.MINUTES.toMillis(30));
+        poolConfiguration.setScheduledThreadLifeTime(TimeUnit.MINUTES.toMillis(5));
         poolConfiguration.setValidateOnBorrow(true);
         poolConfiguration.setValidateOnReturn(false);
         return poolConfiguration;

@@ -62,27 +62,27 @@ public class PooledObject<T> {
         this.lastReturnedTime = System.currentTimeMillis();
     }
 
-    void markBorrowed() {
+    void setBorrowed() {
         borrowed = true;
     }
 
-    void markReturned() {
+    void setReturned() {
         borrowed = false;
     }
 
-    void markInvalid() {
+    void setInvalid() {
         valid = false;
     }
 
     @Override
     public String toString() {
-        return new StringBuilder("PooledObject{")
-                .append("createTime=").append(createTime)
-                .append(", lastBorrowedTime=").append(lastBorrowedTime)
-                .append(", lastReturnedTime=").append(lastReturnedTime)
-                .append(", borrowed=").append(borrowed)
-                .append(", valid=").append(valid)
-                .append(", objectType=").append(object == null ? null : object.getClass().getName())
-                .append('}').toString();
+        return "PooledObject {"
+                + "createTime=" + createTime
+                + ", lastBorrowedTime=" + lastBorrowedTime
+                + ", lastReturnedTime=" + lastReturnedTime
+                + ", borrowed=" + borrowed
+                + ", valid=" + valid
+                + ", objectType=" + (object == null ? null : object.getClass().getName())
+                + '}';
     }
 }

@@ -29,8 +29,13 @@ import java.sql.DriverManager;
 import java.sql.NClob;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
+import java.util.Collections;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
+import java.util.function.Supplier;
 import java.util.logging.Logger;
 
 /**
@@ -41,20 +46,45 @@ public class JSQLDataSource extends AbstractBuilderDataSource implements javax.s
 
     private static final JSQLLogger LOGGER = Logs.getLogger(JSQLDataSource.class);
 
-    private static final String PROP_PREFIX = "driver.";
-    private static final String PROP_USER = "user";
-    private static final String PROP_PASSWORD = "password";
+    static final String PROP_DRIVER_PREFIX = "driver.";
+    static final String PROP_USER = "user";
+    static final String PROP_PASSWORD = "password";
+    static final String PROP_URL = "url";
+    static final String PROP_DRIVER_CLASS = "driverClass";
+    static final String PROP_DIALECT = "dialect";
+    static final String PROP_LOGIN_TIMEOUT = "loginTimeout";
+    static final String PROP_POOL_MAX_POOL_SIZE = "pool.maxPoolSize";
+    static final String PROP_POOL_IDLE_TIMEOUT = "pool.idleTimeout";
+    static final String PROP_POOL_VALIDATE_ON_BORROW = "pool.validateOnBorrow";
+    static final String PROP_POOL_VALIDATE_ON_RETURN = "pool.validateOnReturn";
+    static final String PROP_POOL_POLL_TIMEOUT = "pool.pollTimeout";
+    static final String PROP_POOL_CREATE_RETRY_COUNT = "pool.createRetryCount";
+    static final String PROP_POOL_SCHEDULED_THREAD_LIFETIME = "pool.scheduledThreadLifeTime";
 
     private String url;
     private String driverClassName;
-    private Dialect dialect;        // parse by url or name or dialect class name
-    private int loginTimeout;       // default 5s
-    private Properties driverProps = new Properties(); // driver get connection properties
+
+    /** Makes compatible with different Databases such as MySQL / Oracle / DB2 ... */
+    private Dialect dialect;
+
+    /**
+     * Sets driver connection timeout globally, if negative will be ignored.
+     * Default 5s
+     */
+    private int loginTimeout;
+
+    /** Sets driver connection properties */
+    private Properties driverProps = new Properties();
     private ConnectionPool connectionPool;
     private JdbcExecutorPool executorPool;
 
     protected JSQLDataSource() {
     }
+
+    public static DataSourceBuilder newDataSourceBuilder() {
+        return new DataSourceBuilder();
+    }
+
     /**
      * <pre>
      * jdbc.properties
@@ -79,7 +109,16 @@ public class JSQLDataSource extends AbstractBuilderDataSource implements javax.s
      * @param jdbcProp jdbc properties in file or create by manually
      */
     public JSQLDataSource(final Properties jdbcProp) {
-        String dialectInProp = jdbcProp.getProperty("dialect");
+        setDialectByProperties(jdbcProp);
+        setDriverProps(jdbcProp);
+        int loginTimeout = Integer.parseInt(jdbcProp.getProperty(PROP_LOGIN_TIMEOUT, "5"));
+        init(jdbcProp.getProperty(PROP_URL), jdbcProp.getProperty("username"), jdbcProp.getProperty(PROP_PASSWORD),
+                jdbcProp.getProperty(PROP_DRIVER_CLASS), loginTimeout, dialect);
+        initPool(jdbcProp);
+    }
+
+    private void setDialectByProperties(Properties jdbcProp) {
+        String dialectInProp = jdbcProp.getProperty(PROP_DIALECT);
         if (dialectInProp != null) {
             dialect = Dialects.parseName(dialectInProp);
             // dialect name or dialectClass not found
@@ -96,21 +135,17 @@ public class JSQLDataSource extends AbstractBuilderDataSource implements javax.s
                 }
             }
         } else {
-            dialect = Dialects.parseUrl(jdbcProp.getProperty("url"));
+            dialect = Dialects.parseUrl(jdbcProp.getProperty(PROP_URL));
         }
-        int loginTimeout = Integer.parseInt(jdbcProp.getProperty("loginTimeout", "5"));
-        setDriverProps(jdbcProp);
-        init(jdbcProp.getProperty("url"), jdbcProp.getProperty("username"), jdbcProp.getProperty("password"),
-                jdbcProp.getProperty("driverClass"), loginTimeout, dialect);
-        initPool(jdbcProp);
     }
 
     private void setDriverProps(Properties jdbcProp) {
+        Objects.requireNonNull(jdbcProp, "Jdbc Properties must not be null");
         Set<Object> keySet = jdbcProp.keySet();
         for (Object keyObj : keySet) {
             String key = (String) keyObj;
-            if (key.startsWith(PROP_PREFIX)) {
-                driverProps.put(key.substring(PROP_PREFIX.length()), jdbcProp.getProperty(key));
+            if (key.startsWith(PROP_DRIVER_PREFIX)) {
+                driverProps.put(key.substring(PROP_DRIVER_PREFIX.length()), jdbcProp.getProperty(key));
             }
         }
     }
@@ -142,11 +177,14 @@ public class JSQLDataSource extends AbstractBuilderDataSource implements javax.s
         this.url = url;
         this.driverClassName = driverClassName;
         this.dialect = dialect;
-        if (dialect != null && dialect.requireUserPassword()
-                && !driverProps.containsKey(PROP_USER)
-                && !driverProps.containsKey(PROP_PASSWORD)) {
-            ObjectUtil.requireNonEmpty(username, "username must not be empty");
-            ObjectUtil.requireNonNull(password, "password must not be null");
+        if (dialect != null && dialect.requireUserPassword()) {
+            if (!driverProps.containsKey(PROP_USER)) {
+                ObjectUtil.requireNonEmpty(username, "username must not be empty");
+            }
+            // sometimes empty password may be acceptable
+            if (!driverProps.containsKey(PROP_PASSWORD)) {
+                ObjectUtil.requireNonNull(password, "password must not be null");
+            }
         }
         if ((this.driverClassName == null || this.driverClassName.length() <= 0) && this.dialect != null) {
             this.driverClassName = this.dialect.getDriverClassName();
@@ -173,31 +211,35 @@ public class JSQLDataSource extends AbstractBuilderDataSource implements javax.s
     }
 
     private void initPool(Properties poolProp) {
-        PoolConfiguration poolConfiguration = PoolConfiguration.defaultPoolCfg();
-        if (poolProp.containsKey("pool.maxPoolSize")) {
-            poolConfiguration.setMaxPoolSize(Integer.parseInt(poolProp.getProperty("pool.maxPoolSize")));
-        }
-        if (poolProp.containsKey("pool.idleTimeout")) {
-            poolConfiguration.setIdleTimeout(Long.parseLong(poolProp.getProperty("pool.idleTimeout")));
-        }
-        if (poolProp.containsKey("pool.validateOnBorrow")) {
-            poolConfiguration.setValidateOnBorrow(Boolean.parseBoolean(poolProp.getProperty("pool.validateOnBorrow")));
-        }
-        if (poolProp.containsKey("pool.validateOnReturn")) {
-            poolConfiguration.setValidateOnReturn(Boolean.parseBoolean(poolProp.getProperty("pool.validateOnReturn")));
-        }
-        if (poolProp.containsKey("pool.pollTimeout")) {
-            poolConfiguration.setPollTimeout(Long.parseLong(poolProp.getProperty("pool.pollTimeout")));
-        }
-        if (poolProp.containsKey("pool.createRetryCount")) {
-            poolConfiguration.setCreateRetryCount(Integer.parseInt(poolProp.getProperty("pool.createRetryCount")));
-        }
-        if (poolProp.containsKey("pool.scheduledThreadLifeTime")) {
-            poolConfiguration.setScheduledThreadLifeTime(Long.parseLong(poolProp.getProperty("pool.scheduledThreadLifeTime")));
-        }
-        ObjectPool<Connection> objectPool = createConnectionObjectPool(poolConfiguration);
+        ObjectPool<Connection> objectPool = createConnectionObjectPool(getPoolConfiguration(poolProp));
         connectionPool = new ConnectionPool(objectPool);
         executorPool = new JdbcExecutorPool(objectPool);
+    }
+
+    PoolConfiguration getPoolConfiguration(Properties poolProp) {
+        PoolConfiguration poolConfiguration = PoolConfiguration.defaultPoolCfg();
+        if (poolProp.containsKey(PROP_POOL_MAX_POOL_SIZE)) {
+            poolConfiguration.setMaxPoolSize(Integer.parseInt(poolProp.getProperty(PROP_POOL_MAX_POOL_SIZE)));
+        }
+        if (poolProp.containsKey(PROP_POOL_IDLE_TIMEOUT)) {
+            poolConfiguration.setIdleTimeout(Long.parseLong(poolProp.getProperty(PROP_POOL_IDLE_TIMEOUT)));
+        }
+        if (poolProp.containsKey(PROP_POOL_VALIDATE_ON_BORROW)) {
+            poolConfiguration.setValidateOnBorrow(Boolean.parseBoolean(poolProp.getProperty(PROP_POOL_VALIDATE_ON_BORROW)));
+        }
+        if (poolProp.containsKey(PROP_POOL_VALIDATE_ON_RETURN)) {
+            poolConfiguration.setValidateOnReturn(Boolean.parseBoolean(poolProp.getProperty(PROP_POOL_VALIDATE_ON_RETURN)));
+        }
+        if (poolProp.containsKey(PROP_POOL_POLL_TIMEOUT)) {
+            poolConfiguration.setPollTimeout(Long.parseLong(poolProp.getProperty(PROP_POOL_POLL_TIMEOUT)));
+        }
+        if (poolProp.containsKey(PROP_POOL_CREATE_RETRY_COUNT)) {
+            poolConfiguration.setCreateRetryCount(Integer.parseInt(poolProp.getProperty(PROP_POOL_CREATE_RETRY_COUNT)));
+        }
+        if (poolProp.containsKey(PROP_POOL_SCHEDULED_THREAD_LIFETIME)) {
+            poolConfiguration.setScheduledThreadLifeTime(Long.parseLong(poolProp.getProperty(PROP_POOL_SCHEDULED_THREAD_LIFETIME)));
+        }
+        return poolConfiguration;
     }
 
     public void transaction(TransactionOperation operation) throws Exception {
@@ -209,7 +251,7 @@ public class JSQLDataSource extends AbstractBuilderDataSource implements javax.s
             if (transactionDataSource != null) {
                 transactionDataSource.rollback();
             }
-            LOGGER.info("error occurs while doing transaction operation and has been rolled back");
+            LOGGER.info("error occurs while processing transaction and has been rolled back");
             throw e;
         } finally {
             if (transactionDataSource != null) {
@@ -331,29 +373,30 @@ public class JSQLDataSource extends AbstractBuilderDataSource implements javax.s
     }
 
     @Override
-    public PrintWriter getLogWriter() throws SQLException {
+    public PrintWriter getLogWriter() {
         return null;
     }
 
     @Override
-    public void setLogWriter(PrintWriter out) throws SQLException {
+    public void setLogWriter(PrintWriter out) {
     }
 
     @Override
-    public void setLoginTimeout(int seconds) throws SQLException {
+    public void setLoginTimeout(int seconds) {
         this.loginTimeout = seconds;
     }
+
     @Override
     public int getLoginTimeout() {
         return loginTimeout;
     }
 
-    public Logger getParentLogger() throws SQLFeatureNotSupportedException {
+    public Logger getParentLogger() {
         return null;
     }
 
     @Override
-    public PooledConnection getPooledConnection() throws SQLException {
+    public PooledConnection getPooledConnection() {
         return connectionPool;
     }
 
@@ -368,13 +411,13 @@ public class JSQLDataSource extends AbstractBuilderDataSource implements javax.s
 
     @Override
     public String toString() {
-        return new StringBuilder("JSQLDataSource{")
-                .append("url='").append(url).append('\'')
-                .append(", driverProps='").append(displayDriverProps()).append('\'')
-                .append(", driverClassName='").append(driverClassName).append('\'')
-                .append(", dialect='").append(dialect.getDialectName()).append('\'')
-                .append(", loginTimeout=").append(loginTimeout).append("s")
-                .append('}').toString();
+        return "JSQLDataSource {"
+                + "url='" + url + '\''
+                + ", driverProps='" + displayDriverProps() + '\''
+                + ", driverClassName='" + driverClassName + '\''
+                + ", dialect='" + dialect.getDialectName() + '\''
+                + ", loginTimeout=" + loginTimeout + "s"
+                + '}';
     }
 
     private String displayDriverProps() {
@@ -389,5 +432,94 @@ public class JSQLDataSource extends AbstractBuilderDataSource implements javax.s
             }
         }
         return driverDebugInfo.toString().replaceFirst(",\\s*$", "");
+    }
+
+    public static class DataSourceBuilder {
+        Properties jdbcProperties = new Properties();
+
+        private DataSourceBuilder() {
+        }
+        public DataSourceBuilder url(String jdbcUrl) {
+            jdbcProperties.setProperty(PROP_URL, jdbcUrl);
+            return this;
+        }
+        public DataSourceBuilder user(String user) {
+            jdbcProperties.setProperty(PROP_DRIVER_PREFIX + PROP_USER, user);
+            return this;
+        }
+        public DataSourceBuilder password(String password) {
+            jdbcProperties.setProperty(PROP_DRIVER_PREFIX + PROP_PASSWORD, password);
+            return this;
+        }
+        public DataSourceBuilder driverClass(String driverClass) {
+            jdbcProperties.setProperty(PROP_DRIVER_CLASS, driverClass);
+            return this;
+        }
+        public DataSourceBuilder dialect(String dialect) {
+            jdbcProperties.setProperty(PROP_DIALECT, dialect);
+            return this;
+        }
+        public DataSourceBuilder loginTimeout(int loginTimeout) {
+            jdbcProperties.setProperty(PROP_LOGIN_TIMEOUT, String.valueOf(loginTimeout));
+            return this;
+        }
+        public DataSourceBuilder addDriverProperties(Properties jdbcProperties) {
+            if (jdbcProperties == null) {
+                // ignored processing if jdbcProperties is null
+                return this;
+            }
+            for (Map.Entry<Object, Object> entry : jdbcProperties.entrySet()) {
+                this.jdbcProperties.put(PROP_DRIVER_PREFIX + entry.getKey(), entry.getValue());
+            }
+            return this;
+        }
+        public DataSourceBuilder addProperties(Properties jdbcProperties) {
+            if (jdbcProperties == null) {
+                // ignored processing if jdbcProperties is null
+                return this;
+            }
+            for (Map.Entry<Object, Object> entry : jdbcProperties.entrySet()) {
+                this.jdbcProperties.put(entry.getKey(), entry.getValue());
+            }
+            return this;
+        }
+        public DataSourceBuilder addMapProperties(Map<String, String> supplier) {
+            if (!supplier.isEmpty()) {
+                jdbcProperties.putAll(supplier);
+            }
+            return this;
+        }
+        public DataSourceBuilder poolMaxSize(int poolSize) {
+            jdbcProperties.setProperty(PROP_POOL_MAX_POOL_SIZE, String.valueOf(poolSize));
+            return this;
+        }
+        public DataSourceBuilder poolIdleTimeout(long poolIdleTimeout) {
+            jdbcProperties.setProperty(PROP_POOL_IDLE_TIMEOUT, String.valueOf(poolIdleTimeout));
+            return this;
+        }
+        public DataSourceBuilder poolValidationOnBorrow(boolean poolValidationOnBorrow) {
+            jdbcProperties.setProperty(PROP_POOL_VALIDATE_ON_BORROW, String.valueOf(poolValidationOnBorrow));
+            return this;
+        }
+        public DataSourceBuilder poolValidationOnReturn(boolean poolValidationOnReturn) {
+            jdbcProperties.setProperty(PROP_POOL_VALIDATE_ON_RETURN, String.valueOf(poolValidationOnReturn));
+            return this;
+        }
+        public DataSourceBuilder poolPollTimeout(long poolPollTimeout) {
+            jdbcProperties.setProperty(PROP_POOL_POLL_TIMEOUT, String.valueOf(poolPollTimeout));
+            return this;
+        }
+        public DataSourceBuilder poolObjectCreateRetryCount(int poolObjectCreateRetryCount) {
+            jdbcProperties.setProperty(PROP_POOL_CREATE_RETRY_COUNT, String.valueOf(poolObjectCreateRetryCount));
+            return this;
+        }
+        public DataSourceBuilder poolScheduleThreadLifeTime(long poolScheduleThreadLifeTime) {
+            jdbcProperties.setProperty(PROP_POOL_SCHEDULED_THREAD_LIFETIME, String.valueOf(poolScheduleThreadLifeTime));
+            return this;
+        }
+
+        public JSQLDataSource build() {
+            return new JSQLDataSource(jdbcProperties);
+        }
     }
 }

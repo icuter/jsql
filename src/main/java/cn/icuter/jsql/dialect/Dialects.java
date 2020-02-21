@@ -45,7 +45,7 @@ public abstract class Dialects {
     }
 
     public static Dialect parseUrl(String url) {
-        ObjectUtil.requireNonNull(url, "Url must not be null");
+        ObjectUtil.requireNonNull(url, "Try to parse Dialect from a null URL parameter");
         final String lowerCaseUrl = url.toLowerCase();
         for (Dialect dialect : SUPPORTED_DIALECT) {
             if (lowerCaseUrl.startsWith("jdbc:" + dialect.getDialectName().toLowerCase())) {

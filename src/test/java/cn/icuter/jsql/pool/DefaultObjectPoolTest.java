@@ -192,7 +192,7 @@ public class DefaultObjectPoolTest {
             for (int i = 0; i < cfg.getMaxPoolSize(); i++) {
                 pooledObjectList.add(pool.borrowObject());
             }
-            assertEquals(cfg.getMaxPoolSize(), pool.getPoolStats().getPoolSize());
+            assertEquals(cfg.getMaxPoolSize(), pool.getPoolStats().poolSize);
             assertEquals(cfg.getMaxPoolSize(), pool.getPoolStats().createdCnt);
             assertEquals(cfg.getMaxPoolSize(), pool.getPoolStats().borrowedCnt);
             for (Object obj : pooledObjectList) {

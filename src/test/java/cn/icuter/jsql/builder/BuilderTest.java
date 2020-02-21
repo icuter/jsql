@@ -1,14 +1,14 @@
 package cn.icuter.jsql.builder;
 
+import cn.icuter.jsql.ExceptionOperation;
 import cn.icuter.jsql.TestTable;
+import cn.icuter.jsql.TestUtils;
 import cn.icuter.jsql.condition.Cond;
 import cn.icuter.jsql.condition.Condition;
 import cn.icuter.jsql.condition.Eq;
 import cn.icuter.jsql.dialect.Dialects;
 import org.junit.Test;
 
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -22,7 +22,7 @@ import static org.junit.Assert.assertEquals;
 public class BuilderTest {
 
     @Test
-    public void testSelectBuilder() throws Exception {
+    public void testSelectBuilder() {
         Builder select = new SelectBuilder().select().distinct()
                 .from("t_table1").leftJoinOn("t_table2", Cond.var("t_table1.id", "t_table2.id"))
                 .where()
@@ -132,7 +132,7 @@ public class BuilderTest {
     }
 
     @Test
-    public void testBuilderJoinOn() throws Exception {
+    public void testBuilderJoinOn() {
         Builder builder = new SelectBuilder() {{
             select().from("table t")
                     .joinOn("table1 t1", Cond.var("t.id", "t1.id"), Cond.eq("t.framework", "jsql"))
@@ -181,7 +181,7 @@ public class BuilderTest {
     }
 
     @Test
-    public void testBuilderJoinUsing() throws Exception {
+    public void testBuilderJoinUsing() {
         Builder builder = new SelectBuilder() {{
             select().from("table t")
                     .joinUsing("table1 t1", "id")
@@ -216,7 +216,7 @@ public class BuilderTest {
     }
 
     @Test
-    public void testSelectBuilderOffsetLimitMySQL() throws Exception {
+    public void testSelectBuilderOffsetLimitMySQL() {
         Builder select = new SelectBuilder(Dialects.MYSQL)
                 .select().from("table").where().eq("id", "0123456789").offset(5).limit(10).build();
         assertEquals("select * from table where id = ? limit ?,?", select.getSql());
@@ -239,7 +239,7 @@ public class BuilderTest {
     }
 
     @Test
-    public void testSelectBuilderOffsetLimitMariaDB() throws Exception {
+    public void testSelectBuilderOffsetLimitMariaDB() {
         // same as MYSQLDialect
     }
 
@@ -247,7 +247,7 @@ public class BuilderTest {
      * DB2 dont support both FOR UPDATE and FETCH FIRST in one sql
      */
     @Test
-    public void testSelectBuilderOffsetLimitDB2() throws Exception {
+    public void testSelectBuilderOffsetLimitDB2() {
         Builder select = new SelectBuilder(Dialects.DB2)
                 .select().from("table").where().eq("id", "0123456789").offset(5).limit(10).build();
         assertEquals("select * from (select sub2_.*, rownumber() over(order by order of sub2_) as rownumber_0_ from (" +
@@ -262,7 +262,7 @@ public class BuilderTest {
     }
 
     @Test
-    public void testSelectBuilderOffsetLimitOracle() throws Exception {
+    public void testSelectBuilderOffsetLimitOracle() {
         Builder select = new SelectBuilder(Dialects.ORACLE)
                 .select().from("table").where().eq("id", "0123456789").offset(5).limit(10).build();
         assertEquals("select * from (select source_.*, rownum rownumber_0_ from ( " +
@@ -288,7 +288,7 @@ public class BuilderTest {
     }
 
     @Test
-    public void testSelectBuilderOffsetLimitDerby() throws Exception {
+    public void testSelectBuilderOffsetLimitDerby() {
         Builder select = new SelectBuilder(Dialects.EMBEDDED_DERBY)
                 .select().from("table").where().eq("id", "0123456789").offset(5).limit(10).build();
         assertEquals("select * from table where id = ? offset ? rows fetch next ? rows only", select.getSql());
@@ -321,7 +321,7 @@ public class BuilderTest {
     }
 
     @Test
-    public void testSelectBuilderOffsetLimitH2() throws Exception {
+    public void testSelectBuilderOffsetLimitH2() {
         Builder select = new SelectBuilder(Dialects.H2)
                 .select().from("table").where().eq("id", "0123456789").offset(5).limit(10).build();
         assertEquals("select * from table where id = ? limit ? offset ?", select.getSql());
@@ -344,17 +344,17 @@ public class BuilderTest {
     }
 
     @Test
-    public void testSelectBuilderOffsetLimitCUBRID() throws Exception {
+    public void testSelectBuilderOffsetLimitCUBRID() {
         // same as MYSQLDialect
     }
 
     @Test
-    public void testSelectBuilderOffsetLimitPostgreSQL() throws Exception {
+    public void testSelectBuilderOffsetLimitPostgreSQL() {
         // same as H2
     }
 
     @Test
-    public void testSelectBuilderOffsetLimitSQLServer2012() throws Exception {
+    public void testSelectBuilderOffsetLimitSQLServer2012() {
         Builder select = new SelectBuilder(Dialects.SQLSERVER2012_PLUS)
                 .select().from("table").where().eq("id", "0123456789").orderBy("id desc").offset(5).limit(10).build();
         assertEquals("select * from table where id = ? order by id desc offset ? rows fetch next ? rows only", select.getSql());
@@ -367,7 +367,7 @@ public class BuilderTest {
     }
 
     @Test(expected = IllegalArgumentException.class)
-    public void testSelectBuilderOffsetLimitSQLServer2012Exception() throws Exception {
+    public void testSelectBuilderOffsetLimitSQLServer2012Exception() {
         Builder select = new SelectBuilder(Dialects.SQLSERVER2012_PLUS)
                 .select().from("table").where().eq("id", "0123456789").offset(5).limit(10).build();
         assertEquals("select * from table where id = ? offset ? rows fetch next ? rows only", select.getSql());
@@ -453,7 +453,7 @@ public class BuilderTest {
     }
 
     @Test
-    public void testBuilderValue() throws Exception {
+    public void testBuilderValue() {
         Builder selectMaxAge = new SelectBuilder();
         selectMaxAge.select("max(age)").from("t_person").where().eq("class", "net engine 01").build();
         Builder select = new SelectBuilder();
@@ -464,7 +464,7 @@ public class BuilderTest {
     }
 
     @Test
-    public void testUpdateBuilder() throws Exception {
+    public void testUpdateBuilder() {
         Builder update = new UpdateBuilder()
                 .update("t_table")
                 .set(
@@ -480,7 +480,7 @@ public class BuilderTest {
     }
 
     @Test
-    public void testInsertBuilder() throws Exception {
+    public void testInsertBuilder() {
         Builder insert = new InsertBuilder()
                 .insert("t_table")
                 .values(
@@ -548,7 +548,7 @@ public class BuilderTest {
     }
 
     @Test
-    public void testInjection() {
+    public void testAgainstInjection() {
         new SelectBuilder(Dialects.MARIADB)
                             .select("`col--` as `%alias%%``")
                             .from("`table#` `table@`")
@@ -557,50 +557,58 @@ public class BuilderTest {
         new UpdateBuilder(Dialects.ORACLE).update("\"table%\"");
     }
 
-    @Test(expected = IllegalArgumentException.class)
-    public void testInjectionSelect() {
-        new SelectBuilder(Dialects.MARIADB)
-                            .select("col-- as %alias%%")
-                            .build();
-    }
-    @Test(expected = IllegalArgumentException.class)
-    public void testInjectionUpdate() {
-        new UpdateBuilder(Dialects.MARIADB)
-                            .update("alias%%")
-                            .build();
-    }
-    @Test(expected = IllegalArgumentException.class)
-    public void testInjectionFrom() {
-        new SelectBuilder(Dialects.MARIADB)
-                            .select("col as alias")
-                            .from("table# table@")
-                            .build();
-    }
-    @Test(expected = IllegalArgumentException.class)
-    public void testInjectionWhere() {
-        new SelectBuilder(Dialects.MARIADB)
-                            .select("col as alias")
-                            .from("table table2")
-                            .where().eq("key@", "value")
-                            .build();
-    }
     @Test
-    public void testInjectionWhere2() {
-        new SelectBuilder(Dialects.MARIADB)
-                            .select("col as alias")
-                            .from("table table2")
-                            .where().eq("`key@`", "value")
-                            .build();
+    public void testInjectionException() {
+        TestUtils.assertThrows(IllegalArgumentException.class, new ExceptionOperation() {
+            @Override
+            public void operate() throws Throwable {
+                new SelectBuilder(Dialects.MARIADB).select("col-- as %alias%%").build();
+            }
+        });
+        TestUtils.assertThrows(IllegalArgumentException.class, new ExceptionOperation() {
+            @Override
+            public void operate() throws Throwable {
+                new UpdateBuilder(Dialects.MARIADB).update("alias%%").build();
+            }
+        });
+        TestUtils.assertThrows(IllegalArgumentException.class, new ExceptionOperation() {
+            @Override
+            public void operate() throws Throwable {
+                new SelectBuilder(Dialects.MARIADB).select("col as alias").from("table# table@").build();
+            }
+        });
+        TestUtils.assertThrows(IllegalArgumentException.class, new ExceptionOperation() {
+            @Override
+            public void operate() throws Throwable {
+                new SelectBuilder(Dialects.MARIADB)
+                        .select("col as alias")
+                        .from("table table2")
+                        .where().eq("key@", "value")
+                        .build();
+            }
+        });
+        TestUtils.assertThrows(IllegalArgumentException.class, new ExceptionOperation() {
+            @Override
+            public void operate() throws Throwable {
+                new SelectBuilder(Dialects.MARIADB)
+                        .select("col as alias")
+                        .from("table table2")
+                        .where().eq("key", "value")
+                        .orderBy("key--")
+                        .build();
+            }
+        });
     }
-    @Test(expected = IllegalArgumentException.class)
-    public void testInjectionOrderBy() {
+
+    @Test
+    public void testAgainstInjectionWhere() {
         new SelectBuilder(Dialects.MARIADB)
-                            .select("col as alias")
-                            .from("table table2")
-                            .where().eq("key", "value")
-                            .orderBy("key--")
-                            .build();
+                .select("col as alias")
+                .from("table table2")
+                .where().eq("`key@`", "value")
+                .build();
     }
+
     @Test
     public void testInjectionOrderBy2() {
         new SelectBuilder(Dialects.MARIADB)
@@ -608,15 +616,6 @@ public class BuilderTest {
                             .from("table table2")
                             .where().eq("key", "value")
                             .orderBy("`key--`")
-                            .build();
-    }
-    @Test(expected = IllegalArgumentException.class)
-    public void testInjectionGroupBy() {
-        new SelectBuilder(Dialects.MARIADB)
-                            .select("col as alias")
-                            .from("table table2")
-                            .where().eq("key", "value")
-                            .groupBy("key--")
                             .build();
     }
     @Test
@@ -628,73 +627,104 @@ public class BuilderTest {
                             .groupBy("`key--`")
                             .build();
     }
-    @Test(expected = IllegalArgumentException.class)
-    public void testInjectionForUpdate() {
-        new SelectBuilder(Dialects.MARIADB)
-                            .select("col as alias")
-                            .from("table")
-                            .forUpdate("update-col--")
-                            .build();
-    }
-    @Test(expected = IllegalArgumentException.class)
-    public void testInjectionConditionVar() {
-        new SelectBuilder(Dialects.MARIADB)
-                            .select("col as alias")
-                            .from("table table2")
-                            .where().var("key", "value--")
-                            .build();
-    }
     @Test
     public void testInjectionConditionVar2() {
         new SelectBuilder(Dialects.MARIADB)
-                            .select("col as alias")
-                            .from("table table2")
-                            .where().var("key", "`value--`")
-                            .build();
+                .select("col as alias")
+                .from("table table2")
+                .where().var("key", "`value--`")
+                .build();
     }
-    @Test(expected = IllegalArgumentException.class)
-    public void testInjectionField() {
-        new SelectBuilder().select("col as alias--").from("table");
+    @Test
+    public void testInjectionGroupBy() {
+        TestUtils.assertThrows(IllegalArgumentException.class, new ExceptionOperation() {
+            @Override
+            public void operate() throws Throwable {
+                new SelectBuilder(Dialects.MARIADB)
+                        .select("col as alias")
+                        .from("table table2")
+                        .where().eq("key", "value")
+                        .groupBy("key--")
+                        .build();
+            }
+        });
+        TestUtils.assertThrows(IllegalArgumentException.class, new ExceptionOperation() {
+            @Override
+            public void operate() throws Throwable {
+                new SelectBuilder(Dialects.MARIADB)
+                        .select("col as alias")
+                        .from("table")
+                        .forUpdate("update-col--")
+                        .build();
+            }
+        });
+        TestUtils.assertThrows(IllegalArgumentException.class, new ExceptionOperation() {
+            @Override
+            public void operate() throws Throwable {
+                new SelectBuilder(Dialects.MARIADB)
+                        .select("col as alias")
+                        .from("table table2")
+                        .where().var("key", "value--")
+                        .build();
+            }
+        });
+        TestUtils.assertThrows(IllegalArgumentException.class, new ExceptionOperation() {
+            @Override
+            public void operate() throws Throwable {
+                new SelectBuilder().select("col as alias--").from("table");
+            }
+        });
+        TestUtils.assertThrows(IllegalArgumentException.class, new ExceptionOperation() {
+            @Override
+            public void operate() throws Throwable {
+                new SelectBuilder().select("col").from("table as t--table");
+            }
+        });
+        TestUtils.assertThrows(IllegalArgumentException.class, new ExceptionOperation() {
+            @Override
+            public void operate() throws Throwable {
+                new SelectBuilder().select("col").from("table").where().eq("key/%", "value");
+            }
+        });
+        TestUtils.assertThrows(IllegalArgumentException.class, new ExceptionOperation() {
+            @Override
+            public void operate() throws Throwable {
+                new InsertBuilder().insert("table--");
+            }
+        });
+        TestUtils.assertThrows(IllegalArgumentException.class, new ExceptionOperation() {
+            @Override
+            public void operate() throws Throwable {
+                new InsertBuilder().insert("table", "col1", "col2--");
+            }
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
-    public void testInjectionTable() {
-        new SelectBuilder().select("col").from("table as t--table");
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void testInjectionCondition() {
-        new SelectBuilder().select("col").from("table").where().eq("key/%", "value");
-    }
-    @Test(expected = IllegalArgumentException.class)
-    public void testInjectionInsertOfTable() {
-        new InsertBuilder().insert("table--");
-    }
-    @Test(expected = IllegalArgumentException.class)
-    public void testInjectionInsertOfColumns() {
-        new InsertBuilder().insert("table", "col1", "col2--");
-    }
-    @Test(expected = UnsupportedOperationException.class)
-    public void testSelectException() throws Exception {
-        Builder select = new SelectBuilder();
-        select.update("t_table");
-    }
-
-    @Test(expected = UnsupportedOperationException.class)
-    public void testUpdateException() throws Exception {
-        Builder update = new UpdateBuilder();
-        update.forUpdate();
-    }
-
-    @Test(expected = UnsupportedOperationException.class)
-    public void testInsertException() throws Exception {
-        Builder insert = new InsertBuilder();
-        insert.delete();
-    }
-
-    @Test(expected = UnsupportedOperationException.class)
-    public void testDeleteException() throws Exception {
-        Builder delete = new DeleteBuilder();
-        delete.set(Cond.eq("id", "test"));
+    @Test
+    public void testSelectException() {
+        TestUtils.assertThrows(UnsupportedOperationException.class, new ExceptionOperation() {
+            @Override
+            public void operate() throws Throwable {
+                new SelectBuilder().update("t_table");
+            }
+        });
+        TestUtils.assertThrows(UnsupportedOperationException.class, new ExceptionOperation() {
+            @Override
+            public void operate() throws Throwable {
+                new UpdateBuilder().forUpdate();
+            }
+        });
+        TestUtils.assertThrows(UnsupportedOperationException.class, new ExceptionOperation() {
+            @Override
+            public void operate() throws Throwable {
+                new InsertBuilder().delete();
+            }
+        });
+        TestUtils.assertThrows(UnsupportedOperationException.class, new ExceptionOperation() {
+            @Override
+            public void operate() throws Throwable {
+                new DeleteBuilder().set(Cond.eq("id", "test"));
+            }
+        });
     }
 }
