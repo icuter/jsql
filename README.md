@@ -54,14 +54,14 @@ JSQL for Reasons:
 <dependency>
   <groupId>cn.icuter</groupId>
   <artifactId>jsql</artifactId>
-  <version>1.1.1</version>
+  <version>1.1.2</version>
 </dependency>
 
 <!-- for jdk1.6+ -->
 <dependency>
   <groupId>cn.icuter</groupId>
   <artifactId>jsql-jdk1.6</artifactId>
-  <version>1.1.1</version>
+  <version>1.1.2</version>
 </dependency>
 ````
 
@@ -70,7 +70,8 @@ JSQL for Reasons:
 ### Auto Commit
 
 ```java
-JSQLDataSource dataSource = JSQLDataSource.newDataSourceBuilder().url("jdbcUrl").user("jsql").password("pass").build();
+JSQLDataSource dataSource = JSQLDataSource.newDataSourceBuilder()
+                            .url("jdbcUrl").user("jsql").password("pass").build();
 List<Map<String, Object>> list = dataSource.select()
                                            .from("table")
                                            .where().eq("name", "jsql")
@@ -85,7 +86,8 @@ Value: [jsql]
 ### Transaction
 
 ```java
-JSQLDataSource dataSource = JSQLDataSource.newDataSourceBuilder().url("jdbcUrl").user("jsql").password("pass").build();
+JSQLDataSource dataSource = JSQLDataSource.newDataSourceBuilder()
+                            .url("jdbcUrl").user("jsql").password("pass").build();
 dataSource.transaction(tx -> {
     tx.insert("table")
       .values(Cond.eq("col1", "val1"), Cond.eq("col2", 102),Cond.eq("col3", "val3"))
@@ -103,7 +105,8 @@ VALUE: ["val1", 102, "val3"]
 Using standalone Transaction to control commit or rollback operation as your favour
 
 ```java
-JSQLDataSource dataSource = JSQLDataSource.newDataSourceBuilder().url("jdbcUrl").user("jsql").password("pass").build();
+JSQLDataSource dataSource = JSQLDataSource.newDataSourceBuilder()
+                            .url("jdbcUrl").user("jsql").password("pass").build();
 TransactionDataSource tx = dataSource.transaction();
 tx.insert("table")
   .values(Cond.eq("col1", "val1"), Cond.eq("col2", 102),Cond.eq("col3", "val3"))
@@ -133,6 +136,17 @@ Find more documentation [here](https://www.icuter.cn).
 9. [Logging Customization](https://www.icuter.cn/logging.html)
 
 ## Release Notes
+### 1.1.2
+performance
+- remove Injection's read lock and add snapshot root node for improvement
+
+features
+- use builder patterns to create `JSQLDatasource` more easier
+
+others
+- update checkstyle version
+- simplify Test Unit Exception checking with Lamda
+
 ### 1.1.1
 bug fixes
 - fix ReentrantLock.lock() prior to try-finally block
