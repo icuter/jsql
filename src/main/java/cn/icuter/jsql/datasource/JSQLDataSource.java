@@ -29,13 +29,9 @@ import java.sql.DriverManager;
 import java.sql.NClob;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
-import java.util.Collections;
 import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
-import java.util.function.Supplier;
 import java.util.logging.Logger;
 
 /**
@@ -140,7 +136,7 @@ public class JSQLDataSource extends AbstractBuilderDataSource implements javax.s
     }
 
     private void setDriverProps(Properties jdbcProp) {
-        Objects.requireNonNull(jdbcProp, "Jdbc Properties must not be null");
+        ObjectUtil.requireNonNull(jdbcProp, "Jdbc Properties must not be null");
         Set<Object> keySet = jdbcProp.keySet();
         for (Object keyObj : keySet) {
             String key = (String) keyObj;
