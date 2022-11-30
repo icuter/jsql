@@ -39,16 +39,16 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
 
     private PoolConfiguration poolCfg;
     private final PooledObjectManager<T> manager;
-    private BlockingDeque<PooledObject<T>> idlePooledObjects = new LinkedBlockingDeque<>();
+    private final BlockingDeque<PooledObject<T>> idlePooledObjects = new LinkedBlockingDeque<>();
     private Map<Integer, PooledObject<T>> allPooledObjects;
 
-    private ReentrantLock createLock = new ReentrantLock();
-    private ReadWriteLock poolLock = new ReentrantReadWriteLock();
-    private Lock writeLock = poolLock.writeLock();
-    private Lock readLock = poolLock.readLock();
+    private final ReentrantLock createLock = new ReentrantLock();
+    private final ReadWriteLock poolLock = new ReentrantReadWriteLock();
+    private final Lock writeLock = poolLock.writeLock();
+    private final Lock readLock = poolLock.readLock();
 
     private volatile boolean closed;
-    private PoolStats poolStats = new PoolStats();
+    private final PoolStats poolStats = new PoolStats();
     private IdleObjectScheduledExecutor idleObjectExecutor;
 
     public DefaultObjectPool(PooledObjectManager<T> manager) {
@@ -73,6 +73,12 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
         long idleObjectTimeout = poolCfg.getIdleTimeout();
         if (idleObjectTimeout > 0) {
             idleObjectExecutor = new IdleObjectScheduledExecutor(1);
+            idleObjectExecutor.setThreadFactory(r -> {
+                Thread result = new Thread(r);
+                result.setName("jsql-object-pool");
+                result.setDaemon(true); // terminate while JVM shutdown
+                return result;
+            });
             if (poolCfg.getScheduledThreadLifeTime() > 0) {
                 idleObjectExecutor.setKeepAliveTime(poolCfg.getScheduledThreadLifeTime(), TimeUnit.MILLISECONDS);
                 idleObjectExecutor.allowCoreThreadTimeOut(true);
@@ -247,6 +253,7 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
 
     private void removeIdleScheduledTask(PooledObject<T> pooledObject) {
         if (idleObjectExecutor != null) {
+            //noinspection ResultOfMethodCallIgnored
             idleObjectExecutor.getQueue().remove(pooledObject.scheduledFuture);
         }
     }
@@ -391,7 +398,7 @@ public class DefaultObjectPool<T> implements ObjectPool<T> {
     private static final JSQLLogger TASK_LOGGER = Logs.getLogger(DefaultObjectPool.IdleObjectTimeoutTask.class);
 
     class IdleObjectTimeoutTask implements Runnable {
-        private PooledObject<T> pooledObject;
+        private final PooledObject<T> pooledObject;
 
         IdleObjectTimeoutTask(PooledObject<T> pooledObject) {
             this.pooledObject = pooledObject;
